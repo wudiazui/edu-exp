@@ -86,12 +86,19 @@ function cleanPTags(html) {
 }
 
 
+function createEvent(eventName) {
+  const event = new Event(eventName, { bubbles: true, cancelable: true });
+  return event;
+}
+
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "font_format") {
     const selectedElement = document.activeElement; // 获取当前激活的元素
     if (selectedElement) {
       console.log(selectedElement.outerHTML);
       selectedElement.outerHTML = cleanPTags(selectedElement.outerHTML);
+      selectedElement.dispatchEvent(createEvent('change'));
 
     }
     return true; // 必须返回 true 来允许异步响应
