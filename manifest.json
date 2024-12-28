@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json.schemastore.org/chrome-manifest.json",
+  "manifest_version": 3,
+  "version": "0.0.1",
+  "name": "edu-exp",
+  "description": "A minimum extension template. This template includes a manifest file.",
+  "author": "Your Name",
+  "permissions": [
+    "contextMenus"
+  ],
+  "background": {
+    "chromium:service_worker": "background.js",
+    "firefox:scripts": [
+      "background.js"
+    ]
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://easylearn.baidu.com/*"
+      ],
+      "js": [
+        "content/scripts.js"
+      ]
+    }
+  ]
+}
