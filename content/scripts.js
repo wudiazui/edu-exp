@@ -1,4 +1,11 @@
+import { math2img} from "../lib.js";
+
+
 console.log('hello from content_scripts');
+
+const img = await math2img("\frac{2}{3}");
+
+console.log(img);
 
 
 function cleanPTags(html) {
@@ -11,8 +18,11 @@ function cleanPTags(html) {
 
   // 移除所有style属性
   function removeStyles(element) {
-    element.removeAttribute('style');
-    Array.from(element.children).forEach(child => removeStyles(child));
+    // 如果是 img 标签则跳过
+    if (element.tagName.toLowerCase() !== 'img') {
+      element.removeAttribute('style');
+      Array.from(element.children).forEach(child => removeStyles(child));
+    }
   }
 
   // 第一步：将所有非p标签的内容块转换为p标签
@@ -37,38 +47,56 @@ function cleanPTags(html) {
 
   // 第二步：处理p标签内容，保留文本、图片和换行
   function cleanParagraph(p) {
-    // 保存所有img标签
-    const images = Array.from(p.getElementsByTagName('img'));
-
-    // 替换<br>为特殊标记
-    p.innerHTML = p.innerHTML.replace(/<br\s*\/?>/gi, '§LINEBREAK§');
-
-    // 获取文本内容
-    const text = p.textContent;
+    // 将所有节点转换为数组并记录其类型
+    const nodes = Array.from(p.childNodes).map(node => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        return {
+          type: 'text',
+          content: node.textContent
+        };
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        if (node.tagName.toLowerCase() === 'img') {
+          return {
+            type: 'img',
+            node: node.cloneNode(true)
+          };
+        } else if (node.tagName.toLowerCase() === 'br') {
+          return {
+            type: 'br'
+          };
+        }
+      }
+      return {
+        type: 'text',
+        content: node.textContent
+      };
+    });
 
     // 清空当前内容
     while (p.firstChild) {
       p.removeChild(p.firstChild);
     }
 
-    // 处理文本和换行
-    const segments = text.split('§LINEBREAK§');
-    segments.forEach((segment, index) => {
-      if (segment) {
-        p.appendChild(doc.createTextNode(segment));
+    // 按原始顺序重建内容
+    nodes.forEach(item => {
+      if (item.type === 'text') {
+        const text = item.content
+          .replace(/[\x20\t\n]/g, function(match) {
+            switch (match) {
+              case ' ': return ' '; // 保持原始空格
+              case '\t': return '\t';
+              case '\n': return '\n';
+              default: return match;
+            }
+          });
+        if (text) {
+          p.appendChild(document.createTextNode(text));
+        }
+      } else if (item.type === 'img') {
+        p.appendChild(item.node);
+      } else if (item.type === 'br') {
+        p.appendChild(document.createElement('br'));
       }
-      // 在非最后一个分段后添加<br>
-      if (index < segments.length - 1) {
-        p.appendChild(doc.createElement('br'));
-      }
-    });
-
-    // 重新添加图片
-    images.forEach(img => {
-      // 清除img的样式属性
-      const cleanImg = img.cloneNode(true);
-      cleanImg.removeAttribute('style');
-      p.appendChild(cleanImg);
     });
   }
 
@@ -94,13 +122,41 @@ function createEvent(eventName) {
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "font_format") {
-    const selectedElement = document.activeElement; // 获取当前激活的元素
+    const selectedElement = document.activeElement;
     if (selectedElement) {
-      console.log(selectedElement.outerHTML);
-      selectedElement.outerHTML = cleanPTags(selectedElement.outerHTML);
-      selectedElement.dispatchEvent(createEvent('change'));
+      // 保存滚动位置
+      const scrollTop = selectedElement.scrollTop;
+      const scrollLeft = selectedElement.scrollLeft;
+      
+      // 保存选区位置
+      const selection = window.getSelection();
+      const range = selection.getRangeAt(0);
+      const startOffset = range.startOffset;
+      const endOffset = range.endOffset;
 
+      // 创建一个临时容器来解析清理后的HTML
+      const temp = document.createElement('div');
+      temp.innerHTML = cleanPTags(selectedElement.outerHTML);
+      const cleanedElement = temp.firstElementChild;
+
+      // 复制原始元素的属性到清理后的元素
+      Array.from(selectedElement.attributes).forEach(attr => {
+        cleanedElement.setAttribute(attr.name, attr.value);
+      });
+
+      // 使用 replaceWith 替换元素（保持引用）
+      selectedElement.replaceWith(cleanedElement);
+      
+      // 恢复滚动位置
+      cleanedElement.scrollTop = scrollTop;
+      cleanedElement.scrollLeft = scrollLeft;
+      
+      // 重新聚焦到元素
+      cleanedElement.focus();
+
+      // 触发change事件
+      cleanedElement.dispatchEvent(createEvent('change'));
     }
-    return true; // 必须返回 true 来允许异步响应
-   }
+    return true;
+  }
 });

@@ -1,12 +1,8 @@
 {
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/extension-js/extension.git",
-    "directory": "examples/init"
-  },
   "name": "edu-exp",
-  "description": "An Extension.js example.",
+  "description": "A baidu edu tools",
+  "type": "module",
   "version": "0.0.1",
   "keywords": [
     "extension",
@@ -23,10 +19,5 @@
   "devDependencies": {
     "extension": "latest"
   },
-  "private": true,
-  "author": {
-    "name": "Your Name",
-    "email": "your@email.com",
-    "url": "https://yourwebsite.com"
-  }
+  "private": true
 }
