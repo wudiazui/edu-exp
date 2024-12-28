@@ -3,7 +3,7 @@
   "manifest_version": 3,
   "version": "0.0.1",
   "name": "edu-exp",
-  "description": "A minimum extension template. This template includes a manifest file.",
+  "description": "A baidu edu tools",
   "author": "Your Name",
   "permissions": [
     "contextMenus"

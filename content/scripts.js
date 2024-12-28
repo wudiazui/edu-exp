@@ -9,13 +9,19 @@ function cleanPTags(html) {
   // 获取主容器
   const container = doc.body.firstElementChild;
 
+  // 移除所有style属性
+  function removeStyles(element) {
+    element.removeAttribute('style');
+    Array.from(element.children).forEach(child => removeStyles(child));
+  }
+
   // 第一步：将所有非p标签的内容块转换为p标签
   function convertToParagraphs(element) {
     const children = Array.from(element.children);
 
     children.forEach(child => {
       if (child.tagName.toLowerCase() !== 'p') {
-        // 如果是块级元素（如div, ul, li等），将其转换为p
+        // 如果是块级元素，将其转换为p
         if (getComputedStyle(child).display === 'block' ||
           ['div', 'ul', 'ol', 'li', 'section', 'article'].includes(child.tagName.toLowerCase())) {
             const newP = doc.createElement('p');
@@ -29,17 +35,15 @@ function cleanPTags(html) {
     });
   }
 
-  // 开始转换标签
-  convertToParagraphs(container);
-
-  // 第二步：清理所有p标签内容，保留文本和图片
-  const pElements = container.getElementsByTagName('p');
-
-  for (let p of pElements) {
+  // 第二步：处理p标签内容，保留文本、图片和换行
+  function cleanParagraph(p) {
     // 保存所有img标签
     const images = Array.from(p.getElementsByTagName('img'));
 
-    // 获取所有文本内容
+    // 替换<br>为特殊标记
+    p.innerHTML = p.innerHTML.replace(/<br\s*\/?>/gi, '§LINEBREAK§');
+
+    // 获取文本内容
     const text = p.textContent;
 
     // 清空当前内容
@@ -47,14 +51,36 @@ function cleanPTags(html) {
       p.removeChild(p.firstChild);
     }
 
-    // 添加文本
-    p.textContent = text;
+    // 处理文本和换行
+    const segments = text.split('§LINEBREAK§');
+    segments.forEach((segment, index) => {
+      if (segment) {
+        p.appendChild(doc.createTextNode(segment));
+      }
+      // 在非最后一个分段后添加<br>
+      if (index < segments.length - 1) {
+        p.appendChild(doc.createElement('br'));
+      }
+    });
 
     // 重新添加图片
     images.forEach(img => {
-      p.appendChild(img.cloneNode(true));
+      // 清除img的样式属性
+      const cleanImg = img.cloneNode(true);
+      cleanImg.removeAttribute('style');
+      p.appendChild(cleanImg);
     });
   }
+
+  // 移除所有样式
+  removeStyles(container);
+
+  // 转换标签
+  convertToParagraphs(container);
+
+  // 清理所有p标签
+  const pElements = container.getElementsByTagName('p');
+  Array.from(pElements).forEach(cleanParagraph);
 
   return container.outerHTML;
 }
@@ -66,10 +92,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (selectedElement) {
       console.log(selectedElement.outerHTML);
       selectedElement.outerHTML = cleanPTags(selectedElement.outerHTML);
-      sendResponse({ html: selectedElement.outerHTML });
-    } else {
-      sendResponse({ html: null });
+
     }
     return true; // 必须返回 true 来允许异步响应
-  }
+   }
 });
