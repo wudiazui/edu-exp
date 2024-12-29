@@ -1,4 +1,4 @@
-import { math2img} from "../lib.js";
+import { math2img, replacePunctuation} from "../lib.js";
 
 
 console.log('hello from content_scripts');
@@ -9,11 +9,8 @@ console.log('hello from content_scripts');
 
 
 function cleanPTags(html) {
-  // 创建一个DOM解析器
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
-
-  // 获取主容器
   const container = doc.body.firstElementChild;
 
   // 移除所有style属性
@@ -24,6 +21,21 @@ function cleanPTags(html) {
       Array.from(element.children).forEach(child => removeStyles(child));
     }
   }
+  // 修改文本处理函数，添加标点符号替换
+  function processTextContent(textNode) {
+    let text = textNode.textContent
+      .replace(/[\x20\t\n]/g, function(match) {
+        switch (match) {
+          case ' ': return ' ';
+          case '\t': return '\t';
+          case '\n': return '\n';
+          default: return match;
+        }
+      });
+
+    // 使用 replacePunctuation 处理文本
+    return replacePunctuation(text);
+  }
 
   // 第一步：将所有非p标签的内容块转换为p标签
   function convertToParagraphs(element) {
@@ -33,7 +45,7 @@ function cleanPTags(html) {
       if (child.tagName.toLowerCase() !== 'p') {
         // 如果是块级元素，将其转换为p
         if (getComputedStyle(child).display === 'block' ||
-          ['div', 'ul', 'ol', 'li', 'section', 'article'].includes(child.tagName.toLowerCase())) {
+          ['div', 'ul', 'ol', 'li', 'section', 'article', 'pre', 'code'].includes(child.tagName.toLowerCase())) {
             const newP = doc.createElement('p');
             // 复制原始元素的内容到新p标签
             newP.innerHTML = child.innerHTML;
@@ -52,7 +64,7 @@ function cleanPTags(html) {
       if (node.nodeType === Node.TEXT_NODE) {
         return {
           type: 'text',
-          content: node.textContent
+          content: processTextContent(node)
         };
       } else if (node.nodeType === Node.ELEMENT_NODE) {
         if (node.tagName.toLowerCase() === 'img') {
@@ -68,11 +80,10 @@ function cleanPTags(html) {
       }
       return {
         type: 'text',
-        content: node.textContent
+        content: processTextContent(node)
       };
     });
 
-    // 清空当前内容
     while (p.firstChild) {
       p.removeChild(p.firstChild);
     }
@@ -80,18 +91,7 @@ function cleanPTags(html) {
     // 按原始顺序重建内容
     nodes.forEach(item => {
       if (item.type === 'text') {
-        const text = item.content
-          .replace(/[\x20\t\n]/g, function(match) {
-            switch (match) {
-              case ' ': return ' '; // 保持原始空格
-              case '\t': return '\t';
-              case '\n': return '\n';
-              default: return match;
-            }
-          });
-        if (text) {
-          p.appendChild(document.createTextNode(text));
-        }
+        p.appendChild(document.createTextNode(item.content));
       } else if (item.type === 'img') {
         p.appendChild(item.node);
       } else if (item.type === 'br') {
@@ -102,11 +102,8 @@ function cleanPTags(html) {
 
   // 移除所有样式
   removeStyles(container);
-
-  // 转换标签
   convertToParagraphs(container);
 
-  // 清理所有p标签
   const pElements = container.getElementsByTagName('p');
   Array.from(pElements).forEach(cleanParagraph);
 

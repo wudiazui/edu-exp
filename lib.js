@@ -22,3 +22,31 @@ export function math2img(expr) {
       return null;
     });
 }
+
+
+export function replacePunctuation(text) {
+  const punctuationMap = {
+    '\\.': '。',
+    ',': '，',
+    '\\?': '？',
+    '!': '！',
+    ':': '：',
+    ';': '；',
+    //'\\(': '（',
+    //'\\)': '）',
+    //'\\[': '【',
+    //'\\]': '】',
+    //'\\{': '｛',
+    //'\\}': '｝',
+    //'-': '—', // 使用中文长破折号
+    //'"': '"', // 使用中文双引号
+   // "'": ''', // 使用中文单引号
+  };
+
+  let result = text;
+  for (const [englishPunctuation, chinesePunctuation] of Object.entries(punctuationMap)) {
+    result = result.replace(new RegExp(englishPunctuation, 'g'), chinesePunctuation);
+  }
+
+  return result;
+}
