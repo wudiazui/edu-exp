@@ -3,9 +3,9 @@ import { math2img} from "../lib.js";
 
 console.log('hello from content_scripts');
 
-const img = await math2img("\frac{2}{3}");
+//const img = await math2img("\frac{2}{3}");
 
-console.log(img);
+//console.log(img);
 
 
 function cleanPTags(html) {
@@ -120,6 +120,9 @@ function createEvent(eventName) {
 }
 
 
+// 添加一个变量来存储复制的HTML
+let copiedHTML = '';
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "font_format") {
     const selectedElement = document.activeElement;
@@ -127,7 +130,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       // 保存滚动位置
       const scrollTop = selectedElement.scrollTop;
       const scrollLeft = selectedElement.scrollLeft;
-      
+
       // 保存选区位置
       const selection = window.getSelection();
       const range = selection.getRangeAt(0);
@@ -146,17 +149,60 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
       // 使用 replaceWith 替换元素（保持引用）
       selectedElement.replaceWith(cleanedElement);
-      
+
       // 恢复滚动位置
       cleanedElement.scrollTop = scrollTop;
       cleanedElement.scrollLeft = scrollLeft;
-      
+
       // 重新聚焦到元素
       cleanedElement.focus();
 
       // 触发change事件
       cleanedElement.dispatchEvent(createEvent('change'));
     }
+    return true;
+  };
+
+  if (request.action === "copy_html") {
+    const selection = window.getSelection();
+    console.log(selection);
+    if (selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      // 创建一个新的容器来存储选中的内容
+      const container = document.createElement('div');
+      // 克隆选中内容，包括所有子元素和文本
+      container.appendChild(range.cloneContents());
+      // 获取完整的HTML，包括所有标签和文本内容
+      const fullHTML = container.innerHTML;
+      // 发送到background script存储
+      chrome.runtime.sendMessage({
+        action: "store_copied_html",
+        html: fullHTML
+      });
+    }
+    return true;
+  }
+
+  if (request.action === "paste_html") {
+    // 从background script获取存储的HTML
+    chrome.runtime.sendMessage({ action: "get_copied_html" }, response => {
+      if (response.html) {
+        // 获取当前活动元素
+        const activeElement = document.activeElement;
+
+        // 创建临时容器
+        const temp = document.createElement('div');
+        temp.innerHTML = response.html;
+
+        // 将所有内容（包括文本节点）追加到活动元素中
+        const fragment = document.createDocumentFragment();
+        while (temp.firstChild) {
+          fragment.appendChild(temp.firstChild);
+        }
+
+        activeElement.appendChild(fragment);
+      }
+    });
     return true;
   }
 });

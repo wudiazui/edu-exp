@@ -4,7 +4,12 @@
   "version": "0.0.1",
   "name": "edu-exp",
   "description": "A baidu edu tools",
-  "author": "Your Name",
+  "author": "pingfury@outlook.com",
+  "icons": {
+    "16": "icccc.jpg",
+    "48": "icccc.jpg",
+    "128": "icccc.jpg"
+  },
   "permissions": [
     "contextMenus"
   ],
