@@ -1,5 +1,19 @@
 console.log('Hello from the background script!')
 
+const isFirefoxLike =
+  process.env.EXTENSION_PUBLIC_BROWSER === 'firefox' ||
+    process.env.EXTENSION_PUBLIC_BROWSER === 'gecko-based'
+
+if (isFirefoxLike) {
+  browser.browserAction.onClicked.addListener(() => {
+    browser.sidebarAction.open()
+  })
+} else {
+  chrome.action.onClicked.addListener(() => {
+    chrome.sidePanel.setPanelBehavior({openPanelOnActionClick: true})
+  })
+}
+
 // 添加一个变量来存储复制的HTML
 let storedHTML = '';
 

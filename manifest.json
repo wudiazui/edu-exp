@@ -6,12 +6,13 @@
   "description": "A baidu edu tools",
   "author": "pingfury@outlook.com",
   "icons": {
-    "16": "icccc.jpg",
-    "48": "icccc.jpg",
-    "128": "icccc.jpg"
+    "16": "icccc.png",
+    "48": "icccc.png",
+    "128": "icccc.png"
   },
   "permissions": [
-    "contextMenus"
+    "contextMenus",
+    "sidePanel"
   ],
   "background": {
     "chromium:service_worker": "background.js",
@@ -28,5 +29,15 @@
         "content/scripts.js"
       ]
     }
-  ]
+  ],
+  "chromium:action": {
+    "default_icon": {
+      "48": "icccc.png"
+    },
+    "default_title": "打开侧边栏"
+  },
+  "chromium:side_panel": {
+    "default_path": "sidebar/index.html",
+    "default_title": "侧边栏内容"
+  }
 }
