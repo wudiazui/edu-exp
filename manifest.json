@@ -12,7 +12,8 @@
   },
   "permissions": [
     "contextMenus",
-    "sidePanel"
+    "sidePanel",
+    "clipboard-write"
   ],
   "background": {
     "chromium:service_worker": "background.js",

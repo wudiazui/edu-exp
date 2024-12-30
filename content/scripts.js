@@ -202,4 +202,49 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
     return true;
   }
+  if (request.action === "send_topic") {
+    const activeElement = document.activeElement;
+    if (activeElement) {
+      // 创建临时容器并复制内容
+      const temp = document.createElement('div');
+      temp.innerHTML = activeElement.innerHTML;
+      
+      // 提取文本内容，保留特殊字符
+      const extractText = (element) => {
+        let text = '';
+        const childNodes = element.childNodes;
+        
+        for (const node of childNodes) {
+          if (node.nodeType === Node.TEXT_NODE) {
+            // 保留空格、制表符和换行符
+            text += node.textContent.replace(/[\x20\t\n]/g, function(match) {
+              switch (match) {
+                case ' ': return ' ';
+                case '\t': return '\t';
+                case '\n': return '\n';
+                default: return match;
+              }
+            });
+          } else if (node.nodeType === Node.ELEMENT_NODE) {
+            // 对于 BR 标签，添加换行符
+            if (node.tagName.toLowerCase() === 'br') {
+              text += '\n';
+            }
+            // 递归处理子元素
+            text += extractText(node);
+          }
+        }
+        return text;
+      };
+
+      const cleanText = extractText(temp);
+      
+      // 发送到 background script
+      chrome.runtime.sendMessage({
+        action: "store_topic_html",
+        html: cleanText
+      });
+    }
+    return true;
+  }
 });

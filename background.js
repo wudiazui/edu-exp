@@ -1,3 +1,5 @@
+import {topic_formt} from "./lib.js";
+
 console.log('Hello from the background script!')
 
 const isFirefoxLike =
@@ -41,6 +43,12 @@ chrome.runtime.onInstalled.addListener(() => {
       parentId: "baidu-edu-tools",
       contexts: ["all"]
     });
+    chrome.contextMenus.create({
+      id: "send-topic",
+      title: "发送题干到侧边栏",
+      parentId: "baidu-edu-tools",
+      contexts: ["all"]
+    });
   });
 });
 
@@ -54,6 +62,9 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === "paste-html") {
     chrome.tabs.sendMessage(tab.id, { action: "paste_html" });
   }
+  if (info.menuItemId === "send-topic") {
+    chrome.tabs.sendMessage(tab.id, { action: "send_topic" });
+  }
 });
 
 // 添加消息监听器来处理HTML的存储和获取
@@ -65,5 +76,27 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "get_copied_html") {
     sendResponse({ html: storedHTML });
     return true;
+  }
+  if (request.action === "store_topic_html") {
+    // 转发给 sidebar
+    chrome.runtime.sendMessage({
+      type: 'SET_QUESTION',
+      data: request.html
+    });
+  }
+});
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'FORMAT_QUESTION') {
+    // 使用异步处理
+    (async () => {
+      try {
+        const formatted = await topic_formt(message.data);
+        sendResponse({ formatted });
+      } catch (error) {
+        sendResponse({ error: error.message });
+      }
+    })();
+    return true; // 保持消息通道开放以等待异步响应
   }
 });
