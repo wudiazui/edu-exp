@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 
 function Select(){
   return (<label className="form-control w-full max-w-xs">
@@ -43,6 +43,7 @@ export default function Main() {
   const [question, setQuestion] = React.useState('');
   const [answer, setAnswer] = React.useState('');
   const [analysis, setAnalysis] = React.useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   React.useEffect(() => {
     // 监听来自 background 的消息
@@ -57,15 +58,19 @@ export default function Main() {
     setQuestion(e.target.value);
   };
 
-  const handleFormat = () => {
-    chrome.runtime.sendMessage(
-      { type: 'FORMAT_QUESTION', data: question },
-      (response) => {
-        if (response && response.formatted) {
-          setQuestion(response.formatted);
-        }
+  const handleFormat = async () => {
+    setIsLoading(true);
+    try {
+      const response = await chrome.runtime.sendMessage(
+        { type: 'FORMAT_QUESTION', data: question }
+      );
+      if (response && response.formatted) {
+        setQuestion(response.formatted);
       }
-    );
+      // 处理其他响应...
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGenerateAnswer = () => {
@@ -109,9 +114,12 @@ export default function Main() {
                 <Select />
                 <div className="join m-2">
                   <button
-                    className="btn join-item"
+                    className={`join-item ${isLoading ? 'loading loading-spinner loading-sm' : 'btn'}`}
                     onClick={handleFormat}
-                  >整理题干</button>
+                    disabled={isLoading}
+                  >
+                    {isLoading ? '' : '整理题干'}
+                  </button>
                   <button className="btn join-item" onClick={handleGenerateAnswer}>
                     生成解答
                   </button>
