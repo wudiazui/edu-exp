@@ -1,4 +1,4 @@
-import {topic_formt} from "./lib.js";
+import {topic_formt, topic_answer, topic_analysis} from "./lib.js";
 
 console.log('Hello from the background script!')
 
@@ -87,16 +87,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === 'FORMAT_QUESTION') {
-    // 使用异步处理
-    (async () => {
-      try {
-        const formatted = await topic_formt(message.data);
-        sendResponse({ formatted });
-      } catch (error) {
-        sendResponse({ error: error.message });
+  const formatMessage = async (type, data) => {
+    try {
+      let formatted;
+      if (type === 'FORMAT_QUESTION') {
+        formatted = await topic_formt(data);
+      } else if (type === 'TOPIC_ANSWER') {
+        formatted = await topic_answer(data);
+      } else if (type === 'TOPIC_ANALYSIS') {
+        formatted = await topic_analysis(data);
       }
-    })();
+      sendResponse({ formatted });
+    } catch (error) {
+      sendResponse({ error: error.message });
+    }
+  };
+
+  if (['FORMAT_QUESTION', 'TOPIC_ANSWER', 'TOPIC_ANALYSIS'].includes(message.type)) {
+    formatMessage(message.type, message.data);
     return true; // 保持消息通道开放以等待异步响应
   }
 });

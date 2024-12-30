@@ -68,6 +68,28 @@ export default function Main() {
     );
   };
 
+  const handleGenerateAnswer = () => {
+    chrome.runtime.sendMessage(
+      { type: 'TOPIC_ANSWER', data: question },
+      (response) => {
+        if (response && response.formatted) {
+          setAnswer(response.formatted);
+        }
+      }
+    );
+  };
+
+  const handleGenerateAnalysis = () => {
+    chrome.runtime.sendMessage(
+      { type: 'TOPIC_ANALYSIS', data: question },
+      (response) => {
+        if (response && response.formatted) {
+          setAnalysis(response.formatted);
+        }
+      }
+    );
+  };
+
   return (<div className="container max-auto">
             <div className="card bg-base-100 shadow-xl w-full mt-2">
               <div className="card-body">
@@ -90,8 +112,12 @@ export default function Main() {
                     className="btn join-item"
                     onClick={handleFormat}
                   >整理题干</button>
-                  <button className="btn join-item">生成解答</button>
-                  <button className="btn join-item">生成解析</button>
+                  <button className="btn join-item" onClick={handleGenerateAnswer}>
+                    生成解答
+                  </button>
+                  <button className="btn join-item" onClick={handleGenerateAnalysis}>
+                    生成解析
+                  </button>
                 </div>
               </div>
             </div>

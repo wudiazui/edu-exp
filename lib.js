@@ -74,3 +74,49 @@ export async function topic_formt(text) {
     return null;
   }
 }
+
+export async function topic_answer(text) {
+  try {
+    const response = await fetch('http://127.0.0.1:8000/topic/answer', {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ text })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.topic;
+  } catch (error) {
+    console.error('Error formatting topic:', error);
+    return null;
+  }
+}
+
+export async function topic_analysis(text) {
+  try {
+    const response = await fetch('http://127.0.0.1:8000/topic/analysis', {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ text })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.topic;
+  } catch (error) {
+    console.error('Error formatting topic:', error);
+    return null;
+  }
+}
