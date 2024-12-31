@@ -49,6 +49,12 @@ chrome.runtime.onInstalled.addListener(() => {
       parentId: "baidu-edu-tools",
       contexts: ["all"]
     });
+    chrome.contextMenus.create({
+      id: "format-math",
+      title: "渲染数学公式",
+      parentId: "baidu-edu-tools",
+      contexts: ["all"]
+    });
   });
 });
 
@@ -64,6 +70,9 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   }
   if (info.menuItemId === "send-topic") {
     chrome.tabs.sendMessage(tab.id, { action: "send_topic" });
+  }
+  if (info.menuItemId === "format-math") {
+    chrome.tabs.sendMessage(tab.id, { action: "format_math" });
   }
 });
 

@@ -1,4 +1,4 @@
-import { math2img, replacePunctuation} from "../lib.js";
+import { math2img, replacePunctuation, replaceLatexWithImages} from "../lib.js";
 
 
 console.log('hello from content_scripts');
@@ -208,12 +208,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       // 创建临时容器并复制内容
       const temp = document.createElement('div');
       temp.innerHTML = activeElement.innerHTML;
-      
+
       // 提取文本内容，保留特殊字符
       const extractText = (element) => {
         let text = '';
         const childNodes = element.childNodes;
-        
+
         for (const node of childNodes) {
           if (node.nodeType === Node.TEXT_NODE) {
             // 保留空格、制表符和换行符
@@ -238,7 +238,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       };
 
       const cleanText = extractText(temp);
-      
+
       // 发送到 background script
       chrome.runtime.sendMessage({
         action: "store_topic_html",
@@ -247,4 +247,32 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
     return true;
   }
+
+  if (request.action === "format_math") {
+    // 把异步操作包装在立即执行的异步函数中
+    (async () => {
+      try {
+        const activeElement = document.activeElement;
+        if (!activeElement) {
+          sendResponse({ success: false, error: 'No active element found' });
+          return;
+        }
+
+        const temp = document.createElement('div');
+        temp.innerHTML = activeElement.innerHTML;
+        console.log("no-replace:   ", temp.innerHTML);
+
+        const result = await replaceLatexWithImages(temp.innerHTML);
+        console.log("replace:   ", result);
+        activeElement.innerHTML = result;
+
+        console.log({ success: true });
+      } catch (error) {
+        console.error({ success: false, error: error.message });
+      }
+    })();
+
+    return true; // 保持消息通道开启
+  }
+
 });

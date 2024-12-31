@@ -43,7 +43,9 @@ export default function Main() {
   const [question, setQuestion] = React.useState('');
   const [answer, setAnswer] = React.useState('');
   const [analysis, setAnalysis] = React.useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isFormatting, setIsFormatting] = useState(false);
+  const [isGeneratingAnswer, setIsGeneratingAnswer] = useState(false);
+  const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
 
   React.useEffect(() => {
     // 监听来自 background 的消息
@@ -59,7 +61,7 @@ export default function Main() {
   };
 
   const handleFormat = async () => {
-    setIsLoading(true);
+    setIsFormatting(true);
     try {
       const response = await chrome.runtime.sendMessage(
         { type: 'FORMAT_QUESTION', data: question }
@@ -69,30 +71,36 @@ export default function Main() {
       }
       // 处理其他响应...
     } finally {
-      setIsLoading(false);
+      setIsFormatting(false);
     }
   };
 
-  const handleGenerateAnswer = () => {
-    chrome.runtime.sendMessage(
-      { type: 'TOPIC_ANSWER', data: question },
-      (response) => {
-        if (response && response.formatted) {
-          setAnswer(response.formatted);
-        }
+  const handleGenerateAnswer = async () => {
+    setIsGeneratingAnswer(true);
+    try {
+      const response = await chrome.runtime.sendMessage(
+        { type: 'TOPIC_ANSWER', data: question }
+      );
+      if (response && response.formatted) {
+        setAnswer(response.formatted);
       }
-    );
+    } finally {
+      setIsGeneratingAnswer(false);
+    }
   };
 
-  const handleGenerateAnalysis = () => {
-    chrome.runtime.sendMessage(
-      { type: 'TOPIC_ANALYSIS', data: question },
-      (response) => {
-        if (response && response.formatted) {
-          setAnalysis(response.formatted);
-        }
+  const handleGenerateAnalysis = async () => {
+    setIsGeneratingAnalysis(true);
+    try {
+      const response = await chrome.runtime.sendMessage(
+        { type: 'TOPIC_ANALYSIS', data: question }
+      );
+      if (response && response.formatted) {
+        setAnalysis(response.formatted);
       }
-    );
+    } finally {
+      setIsGeneratingAnalysis(false);
+    }
   };
 
   return (<div className="container max-auto">
@@ -114,17 +122,25 @@ export default function Main() {
                 <Select />
                 <div className="join m-2">
                   <button
-                    className={`join-item ${isLoading ? 'loading loading-spinner loading-sm' : 'btn'}`}
+                    className={`join-item ${isFormatting ? 'loading loading-spinner loading-sm' : 'btn'}`}
                     onClick={handleFormat}
-                    disabled={isLoading}
+                    disabled={isFormatting}
                   >
-                    {isLoading ? '' : '整理题干'}
+                    {isFormatting ? '' : '整理题干'}
                   </button>
-                  <button className="btn join-item" onClick={handleGenerateAnswer}>
-                    生成解答
+                  <button
+                    className={`btn join-item ${isGeneratingAnswer ? 'loading loading-spinner loading-sm' : ''}`}
+                    onClick={handleGenerateAnswer}
+                    disabled={isGeneratingAnswer}
+                  >
+                    {isGeneratingAnswer ? '' : '生成解答'}
                   </button>
-                  <button className="btn join-item" onClick={handleGenerateAnalysis}>
-                    生成解析
+                  <button
+                    className={`btn join-item ${isGeneratingAnalysis ? 'loading loading-spinner loading-sm' : ''}`}
+                    onClick={handleGenerateAnalysis}
+                    disabled={isGeneratingAnalysis}
+                  >
+                    {isGeneratingAnalysis ? '' : '生成解析'}
                   </button>
                 </div>
               </div>

@@ -120,3 +120,18 @@ export async function topic_analysis(text) {
     return null;
   }
 }
+
+export async function replaceLatexWithImages(text) {
+  const regex = /\$([^$]+)\$/g;
+  let result = text;
+  const matches = [...text.matchAll(regex)];
+
+  for (const match of matches) {
+    const fullMatch = match[0];
+    const expression = match[1];
+    const imgElement = await math2img(expression);
+    result = result.replace(fullMatch, imgElement.outerHTML);
+  }
+
+  return result;
+}
