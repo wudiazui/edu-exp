@@ -5,10 +5,10 @@ function Select(){
             <div className="label">
               <span className="label-text">选择题型</span>
             </div>
-            <select className="select select-bordered">
-              <option selected>问答</option>
-              <option>单选</option>
-              <option>填空</option>
+            <select className="select select-bordered" defaultValue="问答">
+              <option value="问答">问答</option>
+              <option value="单选">单选</option>
+              <option value="填空">填空</option>
             </select>
           </label>)
 }
@@ -90,7 +90,6 @@ export default function Main() {
     setHost(newHost);
     // 更新 Chrome 存储
     chrome.storage.sync.set({ host: newHost }, () => {
-      console.log('Host URL saved:', newHost);
     });
   };
 
