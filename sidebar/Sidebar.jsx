@@ -46,12 +46,22 @@ export default function Main() {
   const [isFormatting, setIsFormatting] = useState(false);
   const [isGeneratingAnswer, setIsGeneratingAnswer] = useState(false);
   const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
+  const [host, setHost] = React.useState('http://127.0.0.1:8000');
 
   React.useEffect(() => {
     // 监听来自 background 的消息
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (message.type === 'SET_QUESTION') {
         setQuestion(message.data);
+      }
+    });
+  }, []);
+
+  React.useEffect(() => {
+    // 从 Chrome 存储中加载 host
+    chrome.storage.sync.get(['host'], (result) => {
+      if (result.host) {
+        setHost(result.host);
       }
     });
   }, []);
@@ -64,7 +74,7 @@ export default function Main() {
     setIsFormatting(true);
     try {
       const response = await chrome.runtime.sendMessage(
-        { type: 'FORMAT_QUESTION', data: question }
+        { type: 'FORMAT_QUESTION', data: question, host: host }
       );
       if (response && response.formatted) {
         setQuestion(response.formatted);
@@ -75,11 +85,20 @@ export default function Main() {
     }
   };
 
+  const handleHostChange = (e) => {
+    const newHost = e.target.value;
+    setHost(newHost);
+    // 更新 Chrome 存储
+    chrome.storage.sync.set({ host: newHost }, () => {
+      console.log('Host URL saved:', newHost);
+    });
+  };
+
   const handleGenerateAnswer = async () => {
     setIsGeneratingAnswer(true);
     try {
       const response = await chrome.runtime.sendMessage(
-        { type: 'TOPIC_ANSWER', data: question }
+        { type: 'TOPIC_ANSWER', data: question, host: host }
       );
       if (response && response.formatted) {
         setAnswer(response.formatted);
@@ -93,7 +112,7 @@ export default function Main() {
     setIsGeneratingAnalysis(true);
     try {
       const response = await chrome.runtime.sendMessage(
-        { type: 'TOPIC_ANALYSIS', data: question }
+        { type: 'TOPIC_ANALYSIS', data: question, host: host }
       );
       if (response && response.formatted) {
         setAnalysis(response.formatted);
@@ -119,6 +138,18 @@ export default function Main() {
             </div>
             <div className="card bg-base-100 shadow-xl w-full mt-2">
               <div className="card-body flex flex-col items-center">
+              <div className="form-control w-full max-w-xs mt-2">
+              <label className="label">
+                <span className="label-text">LLM API 地址</span>
+              </label>
+              <input
+                type="text"
+                value={host}
+                onChange={handleHostChange}
+                placeholder="输入 Host URL"
+                className="input input-bordered"
+              />
+            </div>
                 <Select />
                 <div className="join m-2">
                   <button

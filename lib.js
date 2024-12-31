@@ -26,7 +26,7 @@ export function math2img(expr) {
 
 export function replacePunctuation(text) {
   const punctuationMap = {
-    '\\.': '。',
+    '\\.$': '。',
     ',': '，',
     '\\?': '？',
     '!': '！',
@@ -52,9 +52,9 @@ export function replacePunctuation(text) {
 }
 
 
-export async function topic_formt(text) {
+export async function topic_formt(text, host = 'http://127.0.0.1:8000') {
   try {
-    const response = await fetch('http://127.0.0.1:8000/topic/formt', {
+    const response = await fetch(`${host}/topic/formt`, {
       method: 'POST',
       headers: {
         'accept': 'application/json',
@@ -75,9 +75,9 @@ export async function topic_formt(text) {
   }
 }
 
-export async function topic_answer(text) {
+export async function topic_answer(text, host = 'http://127.0.0.1:8000') {
   try {
-    const response = await fetch('http://127.0.0.1:8000/topic/answer', {
+    const response = await fetch(`${host}/topic/answer`, {
       method: 'POST',
       headers: {
         'accept': 'application/json',
@@ -98,9 +98,9 @@ export async function topic_answer(text) {
   }
 }
 
-export async function topic_analysis(text) {
+export async function topic_analysis(text, host = 'http://127.0.0.1:8000') {
   try {
-    const response = await fetch('http://127.0.0.1:8000/topic/analysis', {
+    const response = await fetch(`${host}/topic/analysis`, {
       method: 'POST',
       headers: {
         'accept': 'application/json',

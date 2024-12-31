@@ -12,7 +12,8 @@
   },
   "permissions": [
     "contextMenus",
-    "sidePanel"
+    "sidePanel",
+    "storage"
   ],
   "background": {
     "chromium:service_worker": "background.js",
