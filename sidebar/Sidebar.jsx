@@ -132,7 +132,8 @@ export default function Main() {
                   value={question}
                   onChange={handleQuestionChange}
                   placeholder="题干"
-                  className="textarea textarea-bordered textarea-lg w-full max-w-xs"></textarea>
+                  className="textarea textarea-bordered textarea-lg w-full h-full"
+                ></textarea>
               </div>
             </div>
             <div className="card bg-base-100 shadow-xl w-full mt-2">
@@ -185,7 +186,8 @@ export default function Main() {
                   value={answer}
                   onChange={(e) => setAnswer(e.target.value)}
                   placeholder="解答"
-                  className="textarea textarea-bordered textarea-lg w-full max-w-xs"></textarea>
+                  className="textarea textarea-bordered textarea-lg w-full h-full"
+                ></textarea>
               </div>
             </div>
             <div className="card bg-base-100 shadow-xl w-full mt-2">
@@ -198,7 +200,8 @@ export default function Main() {
                   value={analysis}
                   onChange={(e) => setAnalysis(e.target.value)}
                   placeholder="解析"
-                  className="textarea textarea-bordered textarea-lg w-full max-w-xs"></textarea>
+                  className="textarea textarea-bordered textarea-lg w-full h-full"
+                ></textarea>
               </div>
             </div>
           </div>)
