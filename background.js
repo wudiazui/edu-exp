@@ -73,7 +73,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   }
   if (info.menuItemId === "format-math") {
     chrome.tabs.sendMessage(tab.id, { action: "format_math" });
-  }
+   }
 });
 
 // 添加消息监听器来处理HTML的存储和获取
@@ -96,15 +96,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  const formatMessage = async (type, data) => {
+  const formatMessage = async (type, data, host) => {
     try {
       let formatted;
       if (type === 'FORMAT_QUESTION') {
-        formatted = await topic_formt(data);
+        formatted = await topic_formt(data, host);
       } else if (type === 'TOPIC_ANSWER') {
-        formatted = await topic_answer(data);
+        formatted = await topic_answer(data, host);
       } else if (type === 'TOPIC_ANALYSIS') {
-        formatted = await topic_analysis(data);
+        formatted = await topic_analysis(data, host);
       }
       sendResponse({ formatted });
     } catch (error) {
@@ -113,7 +113,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   };
 
   if (['FORMAT_QUESTION', 'TOPIC_ANSWER', 'TOPIC_ANALYSIS'].includes(message.type)) {
-    formatMessage(message.type, message.data);
+    formatMessage(message.type, message.data, message.host);
     return true; // 保持消息通道开放以等待异步响应
   }
 });

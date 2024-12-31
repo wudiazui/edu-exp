@@ -52,7 +52,7 @@ export function replacePunctuation(text) {
 }
 
 
-export async function topic_formt(text, host = 'http://127.0.0.1:8000') {
+export async function topic_formt(text, host) {
   try {
     const response = await fetch(`${host}/topic/formt`, {
       method: 'POST',
@@ -75,7 +75,7 @@ export async function topic_formt(text, host = 'http://127.0.0.1:8000') {
   }
 }
 
-export async function topic_answer(text, host = 'http://127.0.0.1:8000') {
+export async function topic_answer(text, host) {
   try {
     const response = await fetch(`${host}/topic/answer`, {
       method: 'POST',
@@ -98,7 +98,7 @@ export async function topic_answer(text, host = 'http://127.0.0.1:8000') {
   }
 }
 
-export async function topic_analysis(text, host = 'http://127.0.0.1:8000') {
+export async function topic_analysis(text, host) {
   try {
     const response = await fetch(`${host}/topic/analysis`, {
       method: 'POST',

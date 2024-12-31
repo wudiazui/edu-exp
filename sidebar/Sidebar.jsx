@@ -46,7 +46,7 @@ export default function Main() {
   const [isFormatting, setIsFormatting] = useState(false);
   const [isGeneratingAnswer, setIsGeneratingAnswer] = useState(false);
   const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
-  const [host, setHost] = React.useState('http://127.0.0.1:8000');
+  const [host, setHost] = React.useState('');
 
   React.useEffect(() => {
     // 监听来自 background 的消息
@@ -62,6 +62,8 @@ export default function Main() {
     chrome.storage.sync.get(['host'], (result) => {
       if (result.host) {
         setHost(result.host);
+      } else {
+        setHost('http://127.0.0.1:8000');
       }
     });
   }, []);
