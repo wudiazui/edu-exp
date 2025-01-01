@@ -1,5 +1,6 @@
 export function math2img(expr) {
-  let url = encodeURI(`/edushop/tiku/submit/genexprpic?expr=${expr}`);
+  console.log("math2img_expr: ", expr)
+  let url = `/edushop/tiku/submit/genexprpic?expr=${encodeURIComponent(expr)}`;
 
   return fetch(url)
     .then(response => {
@@ -30,9 +31,12 @@ export function replacePunctuation(text) {
     ',': '，',
     '\\?': '？',
     '!': '！',
-    ':': '：',
+    ':$': '：',
+    '：': ':',
     ';': '；',
     //'\\(': '（',
+    '\\（': '(',
+    '\\）': ')',
     //'\\)': '）',
     //'\\[': '【',
     //'\\]': '】',
@@ -43,10 +47,25 @@ export function replacePunctuation(text) {
    // "'": ''', // 使用中文单引号
   };
 
+  // 匹配数学表达式的正则
+  const mathRegex = /\$([^$]+)\$/g;
+
+  // 将文本中的数学表达式提取出来
+  const mathExpressions = [];
+  text = text.replace(mathRegex, (match) => {
+    mathExpressions.push(match);
+    return `{{math${mathExpressions.length - 1}}}`; // 用占位符替换
+  });
+
   let result = text;
   for (const [englishPunctuation, chinesePunctuation] of Object.entries(punctuationMap)) {
     result = result.replace(new RegExp(englishPunctuation, 'g'), chinesePunctuation);
   }
+
+  // 将占位符替换回原来的数学表达式
+  mathExpressions.forEach((expr, index) => {
+    result = result.replace(`{{math${index}}}`, expr);
+  });
 
   return result;
 }
@@ -129,6 +148,8 @@ export async function replaceLatexWithImages(text) {
   for (const match of matches) {
     const fullMatch = match[0];
     const expression = match[1];
+    console.log(fullMatch, expression)
+    console.log(match)
     const imgElement = await math2img(expression);
     result = result.replace(fullMatch, imgElement.outerHTML);
   }

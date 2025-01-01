@@ -210,28 +210,38 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       temp.innerHTML = activeElement.innerHTML;
 
       // 提取文本内容，保留特殊字符
-      const extractText = (element) => {
+      const extractText = (element, seenTexts = new Set()) => {
         let text = '';
         const childNodes = element.childNodes;
 
         for (const node of childNodes) {
           if (node.nodeType === Node.TEXT_NODE) {
-            // 保留空格、制表符和换行符
-            text += node.textContent.replace(/[\x20\t\n]/g, function(match) {
-              switch (match) {
-                case ' ': return ' ';
-                case '\t': return '\t';
-                case '\n': return '\n';
-                default: return match;
-              }
-            });
+            // 保留前后的空格
+            const content = node.textContent;
+            if (!seenTexts.has(content)) {
+              text += content; // 直接添加文本内容
+              seenTexts.add(content); // 记录已添加的文本
+            }
           } else if (node.nodeType === Node.ELEMENT_NODE) {
             // 对于 BR 标签，添加换行符
             if (node.tagName.toLowerCase() === 'br') {
-              text += '\n';
+              text += '\n'; // 添加换行符
+            } else if (node.tagName.toLowerCase() === 'p') {
+              // 逐行提取p标签的文本
+              text += extractText(node, seenTexts) + '\n'; // 添加换行符
+            } else if (node.tagName.toLowerCase() === 'img') {
+              // 提取data-math属性并用$包裹，进行URL解码
+              const mathValue = node.getAttribute('data-math');
+              if (mathValue) {
+                const decodedValue = decodeURIComponent(mathValue); // URL解码
+                if (!seenTexts.has(decodedValue)) {
+                  text += `$${decodedValue}$`; // 用$包裹
+                  seenTexts.add(decodedValue); // 记录已添加的文本
+                }
+              }
             }
             // 递归处理子元素
-            text += extractText(node);
+            text += extractText(node, seenTexts);
           }
         }
         return text;
