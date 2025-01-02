@@ -1,4 +1,4 @@
-import {topic_formt, topic_answer, topic_analysis} from "./lib.js";
+import {topic_formt, topic_answer, topic_analysis, text_format} from "./lib.js";
 
 console.log('Hello from the background script!')
 
@@ -105,6 +105,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         formatted = await topic_answer(data, host);
       } else if (type === 'TOPIC_ANALYSIS') {
         formatted = await topic_analysis(data, host);
+      } else if (type === 'TEXT_FORMAT') {
+        formatted = await topic_formt(data, host);
       }
       sendResponse({ formatted });
     } catch (error) {
@@ -112,7 +114,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
   };
 
-  if (['FORMAT_QUESTION', 'TOPIC_ANSWER', 'TOPIC_ANALYSIS'].includes(message.type)) {
+  if (['FORMAT_QUESTION', 'TOPIC_ANSWER', 'TOPIC_ANALYSIS', 'TEXT_FORMAT'].includes(message.type)) {
     formatMessage(message.type, message.data, message.host);
     return true; // 保持消息通道开放以等待异步响应
   }

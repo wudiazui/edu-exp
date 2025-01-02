@@ -1,14 +1,21 @@
-import { math2img, replacePunctuation, replaceLatexWithImages} from "../lib.js";
+import { math2img, replaceLatexWithImages, } from "../lib.js";
 
 
 console.log('hello from content_scripts');
 
-//const img = await math2img("\frac{2}{3}");
 
-//console.log(img);
+// 添加一个变量来存储复制的HTML
+let copiedHTML = '';
+
+let host; // 声明 host 变量
+
+// 从 Chrome 存储中同步读取 host 参数
+chrome.storage.sync.get(['host'], (result) => {
+  host = result.host; // 获取 host 值
+});
 
 
-function cleanPTags(html) {
+async function cleanPTags(html) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
   const container = doc.body.firstElementChild;
@@ -22,7 +29,7 @@ function cleanPTags(html) {
     }
   }
   // 修改文本处理函数，添加标点符号替换
-  function processTextContent(textNode) {
+  async function processTextContent(textNode) {
     let text = textNode.textContent
       .replace(/[\x20\t\n]/g, function(match) {
         switch (match) {
@@ -33,8 +40,18 @@ function cleanPTags(html) {
         }
       });
 
-    // 使用 replacePunctuation 处理文本
-    return replacePunctuation(text);
+    try {
+      const response = await chrome.runtime.sendMessage(
+        { type: 'TEXT_FORMAT', data: text, host: host }
+      );
+      if (response && response.formatted) {
+        return response.formatted;
+      }
+      console.log(response)
+      return text
+    } finally {
+      console.log("processTextContent end")
+    }
   }
 
   // 第一步：将所有非p标签的内容块转换为p标签
@@ -52,19 +69,19 @@ function cleanPTags(html) {
             child.parentNode.replaceChild(newP, child);
           }
         // 递归处理嵌套元素
-        convertToParagraphs(child);
+        convertToParagraphs(child); // 确保在转换后检查子元素
       }
     });
   }
 
   // 第二步：处理p标签内容，保留文本、图片和换行
-  function cleanParagraph(p) {
+  async function cleanParagraph(p) {
     // 将所有节点转换为数组并记录其类型
-    const nodes = Array.from(p.childNodes).map(node => {
+    const nodes = await Promise.all(Array.from(p.childNodes).map(async node => { // 使用 Promise.all
       if (node.nodeType === Node.TEXT_NODE) {
         return {
           type: 'text',
-          content: processTextContent(node)
+          content: await processTextContent(node) // 确保使用 await
         };
       } else if (node.nodeType === Node.ELEMENT_NODE) {
         if (node.tagName.toLowerCase() === 'img') {
@@ -80,9 +97,9 @@ function cleanPTags(html) {
       }
       return {
         type: 'text',
-        content: processTextContent(node)
+        content: await processTextContent(node) // 确保使用 await
       };
-    });
+    }));
 
     while (p.firstChild) {
       p.removeChild(p.firstChild);
@@ -105,7 +122,9 @@ function cleanPTags(html) {
   convertToParagraphs(container);
 
   const pElements = container.getElementsByTagName('p');
-  Array.from(pElements).forEach(cleanParagraph);
+  for (const p of pElements) { // 使用 for...of 循环
+    await cleanParagraph(p);
+  }
 
   return container.outerHTML;
 }
@@ -116,11 +135,7 @@ function createEvent(eventName) {
   return event;
 }
 
-
-// 添加一个变量来存储复制的HTML
-let copiedHTML = '';
-
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   if (request.action === "font_format") {
     const selectedElement = document.activeElement;
     if (selectedElement) {
@@ -136,7 +151,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
       // 创建一个临时容器来解析清理后的HTML
       const temp = document.createElement('div');
-      temp.innerHTML = cleanPTags(selectedElement.outerHTML);
+      temp.innerHTML = await cleanPTags(selectedElement.outerHTML);
       const cleanedElement = temp.firstElementChild;
 
       // 复制原始元素的属性到清理后的元素
@@ -284,5 +299,4 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     return true; // 保持消息通道开启
   }
-
 });

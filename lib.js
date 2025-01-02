@@ -140,6 +140,29 @@ export async function topic_analysis(text, host) {
   }
 }
 
+export async function text_format(text, host) {
+  try {
+    const response = await fetch(`${host}/text/format`, {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ text })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.topic;
+  } catch (error) {
+    console.error('Error formatting topic:', error);
+    return null;
+  }
+}
+
 export async function replaceLatexWithImages(text) {
   const regex = /\$([^$]+)\$/g;
   let result = text;
