@@ -1,4 +1,4 @@
-import { math2img, replaceLatexWithImages, } from "../lib.js";
+import { math2img, replaceLatexWithImages, replacePunctuation} from "../lib.js";
 
 
 console.log('hello from content_scripts');
@@ -40,6 +40,9 @@ async function cleanPTags(html) {
         }
       });
 
+    return replacePunctuation(text);
+
+    /*
     try {
       const response = await chrome.runtime.sendMessage(
         { type: 'TEXT_FORMAT', data: text, host: host }
@@ -52,6 +55,7 @@ async function cleanPTags(html) {
     } finally {
       console.log("processTextContent end")
     }
+     */
   }
 
   // 第一步：将所有非p标签的内容块转换为p标签
