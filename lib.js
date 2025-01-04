@@ -32,12 +32,12 @@ export function replacePunctuation(text) {
     '\\?': '？',
     '!': '！',
     ':$': '：',
-    '：': ':',
+    //'：': ':',
     ';': '；',
-    '\\(': '（',
+    //'\\(': '（',
     //'\\（': '(',
     //'\\）': ')',
-    '\\)': '）',
+    //'\\)': '）',
     //'\\[': '【',
     //'\\]': '】',
     //'\\{': '｛',
@@ -94,7 +94,7 @@ export async function topic_formt(text, host) {
   }
 }
 
-export async function topic_answer(text, host) {
+export async function topic_answer(text, host, image_url) {
   try {
     const response = await fetch(`${host}/topic/answer`, {
       method: 'POST',
@@ -102,7 +102,7 @@ export async function topic_answer(text, host) {
         'accept': 'application/json',
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ text })
+      body: JSON.stringify({ text, image_url })
     });
 
     if (!response.ok) {
@@ -117,7 +117,7 @@ export async function topic_answer(text, host) {
   }
 }
 
-export async function topic_analysis(text, host) {
+export async function topic_analysis(text, host, image_url) {
   try {
     const response = await fetch(`${host}/topic/analysis`, {
       method: 'POST',
@@ -125,7 +125,7 @@ export async function topic_analysis(text, host) {
         'accept': 'application/json',
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ text })
+      body: JSON.stringify({ text, image_url })
     });
 
     if (!response.ok) {
@@ -134,6 +134,30 @@ export async function topic_analysis(text, host) {
 
     const data = await response.json();
     return data.topic;
+  } catch (error) {
+    console.error('Error formatting topic:', error);
+    return null;
+  }
+}
+
+export async function run_llm(host, item, data) {
+  console.log("run_llm", host, item, data)
+  try {
+    const response = await fetch(`${host}/llm/run/${item}`, {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const responseData = await response.json();
+    return responseData.topic;
   } catch (error) {
     console.error('Error formatting topic:', error);
     return null;
@@ -146,7 +170,7 @@ export async function text_format(text, host) {
       method: 'POST',
       headers: {
         'accept': 'application/json',
-        'Content-Type': 'application/json'
+        'Content-Type': 'appLication/Json'
       },
       body: JSON.stringify({ text })
     });

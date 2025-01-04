@@ -47,6 +47,7 @@ export default function Main() {
   const [isGeneratingAnswer, setIsGeneratingAnswer] = useState(false);
   const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
   const [host, setHost] = React.useState('');
+  const [imageUrl, setImageUrl] = useState('');
 
   React.useEffect(() => {
     // 监听来自 background 的消息
@@ -76,7 +77,7 @@ export default function Main() {
     setIsFormatting(true);
     try {
       const response = await chrome.runtime.sendMessage(
-        { type: 'FORMAT_QUESTION', data: question, host: host }
+        { type: 'FORMAT_QUESTION', data: {'topic': question}, host: host }
       );
       if (response && response.formatted) {
         setQuestion(response.formatted);
@@ -99,7 +100,11 @@ export default function Main() {
     setIsGeneratingAnswer(true);
     try {
       const response = await chrome.runtime.sendMessage(
-        { type: 'TOPIC_ANSWER', data: question, host: host }
+        {
+          type: 'TOPIC_ANSWER',
+          host: host,
+          data: {'topic': question, 'image_url': imageUrl }
+        }
       );
       if (response && response.formatted) {
         setAnswer(response.formatted);
@@ -113,7 +118,11 @@ export default function Main() {
     setIsGeneratingAnalysis(true);
     try {
       const response = await chrome.runtime.sendMessage(
-        { type: 'TOPIC_ANALYSIS', data: question, host: host }
+        {
+          type: 'TOPIC_ANALYSIS',
+          host: host,
+          data: {'topic': question, 'answer': answer, 'image_url': imageUrl }
+        }
       );
       if (response && response.formatted) {
         setAnalysis(response.formatted);
@@ -136,6 +145,18 @@ export default function Main() {
                   placeholder="题干"
                   className="textarea textarea-bordered textarea-lg w-full h-full"
                 ></textarea>
+                <div className="form-control w-full max-w-xs mt-2">
+                  <label className="label">
+                    <span className="label-text">Image URL</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={imageUrl}
+                    onChange={(e) => setImageUrl(e.target.value)}
+                    placeholder="输入 Image URL"
+                    className="input input-bordered"
+                  />
+                </div>
               </div>
             </div>
             <div className="card bg-base-100 shadow-xl w-full mt-2">

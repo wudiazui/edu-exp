@@ -1,4 +1,4 @@
-import {topic_formt, topic_answer, topic_analysis, text_format} from "./lib.js";
+import {topic_formt, topic_answer, topic_analysis, text_format, run_llm} from "./lib.js";
 
 console.log('Hello from the background script!')
 
@@ -100,11 +100,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     try {
       let formatted;
       if (type === 'FORMAT_QUESTION') {
-        formatted = await topic_formt(data, host);
+        formatted = await run_llm(host,'topic_format', data);
       } else if (type === 'TOPIC_ANSWER') {
-        formatted = await topic_answer(data, host);
-      } else if (type === 'TOPIC_ANALYSIS') {
-        formatted = await topic_analysis(data, host);
+        formatted = await run_llm(host,'topic_answer', data);
+       } else if (type === 'TOPIC_ANALYSIS') {
+        formatted = await run_llm(host,'topic_analysis', data)
       } else if (type === 'TEXT_FORMAT') {
         formatted = await topic_formt(data, host);
       }
