@@ -43,8 +43,8 @@ export function replacePunctuation(text) {
     //'\\{': '｛',
     //'\\}': '｝',
     //'-': '—', // 使用中文长破折号
-    //'"': '"', // 使用中文双引号
-   // "'": ''', // 使用中文单引号
+    '"': '"', // 使用中文双引号
+    // "'": ''', // 使用中文单引号
   };
 
   // 匹配数学表达式的正则
@@ -56,6 +56,9 @@ export function replacePunctuation(text) {
     mathExpressions.push(match);
     return `{{math${mathExpressions.length - 1}}}`; // 用占位符替换
   });
+
+  // 去除行内字符之间的多余空格，但保留每行前后的空格
+  text = text.replace(/ +/g, ''); // 将多个空格替换为一个空格
 
   let result = text;
   for (const [englishPunctuation, chinesePunctuation] of Object.entries(punctuationMap)) {
