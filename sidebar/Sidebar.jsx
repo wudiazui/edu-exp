@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 function Select(){
   return (<label className="form-control w-full max-w-xs">
             <div className="label">
               <span className="label-text">选择题型</span>
             </div>
-            <select className="select select-bordered" defaultValue="问答">
+            <select className="select select-sm select-bordered" defaultValue="问答">
               <option value="问答">问答</option>
               <option value="单选">单选</option>
               <option value="填空">填空</option>
@@ -48,6 +48,7 @@ export default function Main() {
   const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
   const [host, setHost] = React.useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [name, setName] = useState('');
 
   React.useEffect(() => {
     // 监听来自 background 的消息
@@ -77,7 +78,7 @@ export default function Main() {
     setIsFormatting(true);
     try {
       const response = await chrome.runtime.sendMessage(
-        { type: 'FORMAT_QUESTION', data: {'topic': question}, host: host }
+        { type: 'FORMAT_QUESTION', data: {'topic': question}, host: host, uname: name }
       );
       if (response && response.formatted) {
         setQuestion(response.formatted);
@@ -103,6 +104,7 @@ export default function Main() {
         {
           type: 'TOPIC_ANSWER',
           host: host,
+          uname: name,
           data: {'topic': question, 'image_url': imageUrl }
         }
       );
@@ -121,6 +123,7 @@ export default function Main() {
         {
           type: 'TOPIC_ANALYSIS',
           host: host,
+          uname: name,
           data: {'topic': question, 'answer': answer, 'image_url': imageUrl }
         }
       );
@@ -132,14 +135,55 @@ export default function Main() {
     }
   };
 
+  const handleNameChange = (e) => {
+    setName(e.target.value);
+    chrome.storage.sync.set({ name: e.target.value });
+  };
+
+  useEffect(() => {
+    chrome.storage.sync.get(['name'], (result) => {
+      if (result.name) {
+        setName(result.name);
+      }
+    });
+  }, []);
+
   return (<div className="container max-auto">
             <div className="card bg-base-100 shadow-xl w-full mt-2">
-              <div className="card-body">
-                <div className="label flex justify-between items-center">
-                  <span className="label-text">题干</span>
-                  <CopyButton text={question} />
+              <div className="card-body flex flex-col items-center">
+                <div className="form-control w-full max-w-xs mt-2">
+                  <label className="label">
+                    <span className="label-text">API 地址</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={host}
+                    onChange={handleHostChange}
+                    placeholder="输入 API 地址"
+                    className="input input-bordered input-sm"
+                  />
                 </div>
-                <textarea
+                <div className="form-control w-full max-w-xs mt-2">
+                  <label className="label">
+                    <span className="label-text">用户名</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={handleNameChange}
+                      placeholder="输入用户名"
+                      className="input input-bordered input-sm"
+                  />
+                </div>
+              </div>
+            </div>
+              <div className="card bg-base-100 shadow-xl w-full mt-2">
+                <div className="card-body">
+                  <div className="label flex justify-between items-center">
+                    <span className="label-text">题干</span>
+                    <CopyButton text={question} />
+                  </div>
+                  <textarea
                   value={question}
                   onChange={handleQuestionChange}
                   placeholder="题干"
@@ -161,36 +205,24 @@ export default function Main() {
             </div>
             <div className="card bg-base-100 shadow-xl w-full mt-2">
               <div className="card-body flex flex-col items-center">
-              <div className="form-control w-full max-w-xs mt-2">
-              <label className="label">
-                <span className="label-text">LLM API 地址</span>
-              </label>
-              <input
-                type="text"
-                value={host}
-                onChange={handleHostChange}
-                placeholder="输入 Host URL"
-                className="input input-bordered"
-              />
-            </div>
                 <Select />
                 <div className="join m-2">
                   <button
-                    className={`join-item ${isFormatting ? 'loading loading-spinner loading-sm' : 'btn'}`}
+                    className={`join-item ${isFormatting ? 'loading loading-spinner loading-sm' : 'btn btn-sm'}`}
                     onClick={handleFormat}
                     disabled={isFormatting}
                   >
                     {isFormatting ? '' : '整理题干'}
                   </button>
                   <button
-                    className={`btn join-item ${isGeneratingAnswer ? 'loading loading-spinner loading-sm' : ''}`}
+                    className={`join-item ${isGeneratingAnswer ? 'loading loading-spinner loading-sm' : 'btn btn-sm'}`}
                     onClick={handleGenerateAnswer}
                     disabled={isGeneratingAnswer}
                   >
                     {isGeneratingAnswer ? '' : '生成解答'}
                   </button>
                   <button
-                    className={`btn join-item ${isGeneratingAnalysis ? 'loading loading-spinner loading-sm' : ''}`}
+                    className={`join-item ${isGeneratingAnalysis ? 'loading loading-spinner loading-sm' : 'btn btn-sm'}`}
                     onClick={handleGenerateAnalysis}
                     disabled={isGeneratingAnalysis}
                   >
