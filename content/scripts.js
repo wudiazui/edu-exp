@@ -2,8 +2,6 @@ import { math2img, replaceLatexWithImages, replacePunctuation} from "../lib.js";
 
 
 console.log('hello from content_scripts');
-
-
 // 添加一个变量来存储复制的HTML
 let copiedHTML = '';
 
@@ -16,9 +14,8 @@ chrome.storage.sync.get(['host'], (result) => {
 
 
 async function cleanPTags(html) {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, 'text/html');
-  const container = doc.body.firstElementChild;
+  const temp = document.createElement('div');
+  temp.innerHTML = html;
 
   // 移除所有style属性
   function removeStyles(element) {
@@ -122,21 +119,41 @@ async function cleanPTags(html) {
   }
 
   // 移除所有样式
-  removeStyles(container);
-  convertToParagraphs(container);
+  removeStyles(temp);
+  convertToParagraphs(temp);
 
-  const pElements = container.getElementsByTagName('p');
+  const pElements = temp.getElementsByTagName('p');
   for (const p of pElements) { // 使用 for...of 循环
     await cleanParagraph(p);
   }
 
-  return container.outerHTML;
+  return temp.innerHTML;
 }
 
 
 function createEvent(eventName) {
   const event = new Event(eventName, { bubbles: true, cancelable: true });
   return event;
+}
+
+function sendFixEvent(element) {
+  // 发送输入事件
+  // element.dispatchEvent(new Event('input', { bubbles: true }));
+
+  // 发送变化事件
+  element.dispatchEvent(new Event('change', { bubbles: true, cancelable: true}));
+
+  /*
+  // 发送键盘输入事件（回车）
+  const enterEvent = new KeyboardEvent('keydown', {
+    key: 'Enter',
+    code: 'Enter',
+    keyCode: 13, // 兼容旧版浏览器
+    charCode: 13,
+    bubbles: true
+  });
+  element.dispatchEvent(enterEvent);
+   */
 }
 
 chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
@@ -155,16 +172,17 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
 
       // 创建一个临时容器来解析清理后的HTML
       const temp = document.createElement('div');
-      temp.innerHTML = await cleanPTags(selectedElement.outerHTML);
+      temp.innerHTML = await cleanPTags(selectedElement.innerHTML);
       const cleanedElement = temp.firstElementChild;
 
       // 复制原始元素的属性到清理后的元素
-      Array.from(selectedElement.attributes).forEach(attr => {
-        cleanedElement.setAttribute(attr.name, attr.value);
-      });
+      //Array.from(selectedElement.attributes).forEach(attr => {
+      //cleanedElement.setAttribute(attr.name, attr.value);
+      //});
 
       // 使用 replaceWith 替换元素（保持引用）
-      selectedElement.replaceWith(cleanedElement);
+      selectedElement.innerHTML=temp.innerHTML;
+      sendFixEvent(selectedElement);
 
       // 恢复滚动位置
       cleanedElement.scrollTop = scrollTop;
@@ -172,25 +190,18 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
 
       // 重新聚焦到元素
       cleanedElement.focus();
-
-      // 触发change事件
-      cleanedElement.dispatchEvent(createEvent('change'));
     }
     return true;
-  };
+ };
 
   if (request.action === "copy_html") {
     const selection = window.getSelection();
     console.log(selection);
     if (selection.rangeCount > 0) {
       const range = selection.getRangeAt(0);
-      // 创建一个新的容器来存储选中的内容
       const container = document.createElement('div');
-      // 克隆选中内容，包括所有子元素和文本
       container.appendChild(range.cloneContents());
-      // 获取完整的HTML，包括所有标签和文本内容
       const fullHTML = container.innerHTML;
-      // 发送到background script存储
       chrome.runtime.sendMessage({
         action: "store_copied_html",
         html: fullHTML
@@ -217,6 +228,7 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
         }
 
         activeElement.appendChild(fragment);
+        sendFixEvent(activeElement);
       }
     });
     return true;
@@ -278,7 +290,6 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   }
 
   if (request.action === "format_math") {
-    // 把异步操作包装在立即执行的异步函数中
     (async () => {
       try {
         const activeElement = document.activeElement;
@@ -286,16 +297,11 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
           sendResponse({ success: false, error: 'No active element found' });
           return;
         }
-
         const temp = document.createElement('div');
         temp.innerHTML = activeElement.innerHTML;
-        console.log("no-replace:   ", temp.innerHTML);
-
         const result = await replaceLatexWithImages(temp.innerHTML);
-        console.log("replace:   ", result);
         activeElement.innerHTML = result;
-
-        console.log({ success: true });
+        sendFixEvent(activeElement);
       } catch (error) {
         console.error({ success: false, error: error.message });
       }

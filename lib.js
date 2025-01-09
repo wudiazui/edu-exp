@@ -65,6 +65,14 @@ export function replacePunctuation(text) {
     result = result.replace(new RegExp(englishPunctuation, 'g'), chinesePunctuation);
   }
 
+
+  result = result.replace(/\(\)/g, '（ ）');
+  result = result.replace(/（）/g, '（ ）');
+  result = result.replace(/\(([0-9])\)/g, '（ $1 ）');
+  result = result.replace(/(?<=[\u4e00-\u9fa5])\:(?=[\u4e00-\u9fa5])/g, '：');
+  result = result.replace(/(?<=[)）])\:/g, '：');
+
+
   // 将占位符替换回原来的数学表达式
   mathExpressions.forEach((expr, index) => {
     result = result.replace(`{{math${index}}}`, expr);

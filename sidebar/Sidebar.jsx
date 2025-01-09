@@ -198,7 +198,7 @@ export default function Main() {
                     value={imageUrl}
                     onChange={(e) => setImageUrl(e.target.value)}
                     placeholder="输入 Image URL"
-                    className="input input-bordered"
+                    className="input input-bordered input-sm"
                   />
                 </div>
               </div>
