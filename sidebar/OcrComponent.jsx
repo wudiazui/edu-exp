@@ -3,11 +3,11 @@ import { useDropzone } from 'react-dropzone';
 import CopyButton from './CopyButton.jsx';
 
 
-const OcrComponent = () => {
-    const [selectedImage, setSelectedImage] = React.useState(null);
-    const [recognizedText, setRecognizedText] = React.useState("");
+const OcrComponent = ({ host, uname }) => {
+  const [selectedImage, setSelectedImage] = React.useState(null);
+  const [recognizedText, setRecognizedText] = React.useState("");
 
-    const onDrop = (acceptedFiles) => {
+  const onDrop = (acceptedFiles) => {
         const file = acceptedFiles[0];
         if (file) {
             const reader = new FileReader();
@@ -33,12 +33,23 @@ const OcrComponent = () => {
     };
 
     const handleRecognition = () => {
-        setRecognizedText("识别后的文字内容");
+      if (selectedImage) {
+        chrome.runtime.sendMessage(
+          { type: 'OCR',
+            data: { 'image_data': selectedImage },
+            host,
+            uname
+          }, (response) => {
+            if (response && response.formatted) {
+              setRecognizedText(response.formatted);
+            }
+          });
+        }
     };
 
     const { getRootProps, getInputProps } = useDropzone({ onDrop });
 
-    return (
+  return (
       <div className="container max-auto w-full">
         <div className="mt-4 w-full">
           <input type="text" onPaste={onPaste} placeholder="粘贴图片" className="input input-bordered w-full" />

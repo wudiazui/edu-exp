@@ -151,7 +151,7 @@ export default function Main() {
             )}
             {activeTab === 'ocr' && (
                 <div className="w-full mt-2">
-                    <OcrComponent />
+                  <OcrComponent host={host} uname={name} />
                 </div>
             )}
           </div>)

@@ -107,16 +107,16 @@ export async function run_llm(host, uname, item, data) {
   }
 }
 
-export async function text_format(text, host, uname) {
+export async function ocr_text(image_data, host, uname) {
   try {
-    const response = await fetch(`${host}/text/format`, {
+    const response = await fetch(`${host}/llm/ocr`, {
       method: 'POST',
       headers: {
         'accept': 'application/json',
-        'Content-Type': 'appLication/Json',
+        'Content-Type': 'application/json',
         'X-Pfy-Key': uname
       },
-      body: JSON.stringify({ text })
+      body: JSON.stringify(image_data)
     });
 
     if (!response.ok) {
@@ -124,9 +124,9 @@ export async function text_format(text, host, uname) {
     }
 
     const data = await response.json();
-    return data.topic;
+    return data.text;
   } catch (error) {
-    console.error('Error formatting topic:', error);
+    console.error('Error ocr:', error);
     return null;
   }
 }

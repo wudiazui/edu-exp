@@ -1,4 +1,4 @@
-import {text_format, run_llm} from "./lib.js";
+import {ocr_text, run_llm} from "./lib.js";
 
 console.log('Hello from the background script!')
 
@@ -105,8 +105,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         formatted = await run_llm(host, uname, 'topic_answer', data);
       } else if (type === 'TOPIC_ANALYSIS') {
         formatted = await run_llm(host, uname, 'topic_analysis', data)
-      } else if (type === 'TEXT_FORMAT') {
-        formatted = await topic_formt(data, host, uname);
+      } else if (type === 'OCR') {
+        formatted = await ocr_text(data, host, uname);
       }
       sendResponse({ formatted });
     } catch (error) {
@@ -114,7 +114,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
   };
 
-  if (['FORMAT_QUESTION', 'TOPIC_ANSWER', 'TOPIC_ANALYSIS', 'TEXT_FORMAT'].includes(message.type)) {
+  if (['FORMAT_QUESTION', 'TOPIC_ANSWER', 'TOPIC_ANALYSIS', 'OCR'].includes(message.type)) {
     formatMessage(message.type, message.data, message.host, message.uname);
     return true; // 保持消息通道开放以等待异步响应
   }
