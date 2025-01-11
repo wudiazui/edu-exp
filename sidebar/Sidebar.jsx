@@ -14,6 +14,7 @@ export default function Main() {
   const [host, setHost] = React.useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [name, setName] = useState('');
+  const [activeTab, setActiveTab] = useState('settings');
 
   React.useEffect(() => {
     // 监听来自 background 的消息
@@ -113,32 +114,39 @@ export default function Main() {
     });
   }, []);
 
-  return (<div className="container max-auto">
-            <div className="card bg-base-100 shadow-xl w-full mt-2">
-              <div className="card-body">
-                <ApiSettingsForm
-                    host={host}
-                    handleHostChange={handleHostChange}
-                    name={name}
-                    handleNameChange={handleNameChange}
-                />
-              </div>
+  return (<div className="container max-auto px-1">
+            <div className="tabs tabs-boxed">
+                <a className={`tab ${activeTab === 'settings' ? 'tab-active' : ''}`} onClick={() => setActiveTab('settings')}>设置</a>
+                <a className={`tab ${activeTab === 'solving' ? 'tab-active' : ''}`} onClick={() => setActiveTab('solving')}>解题</a>
+                <a className={`tab ${activeTab === 'ocr' ? 'tab-active' : ''}`} onClick={() => setActiveTab('ocr')}>文字识别</a>
             </div>
-            <QuestionAnswerForm
-                question={question}
-                handleQuestionChange={handleQuestionChange}
-                imageUrl={imageUrl}
-                setImageUrl={setImageUrl}
-                answer={answer}
-                setAnswer={setAnswer}
-                analysis={analysis}
-                setAnalysis={setAnalysis}
-                isFormatting={isFormatting}
-                handleFormat={handleFormat}
-                isGeneratingAnswer={isGeneratingAnswer}
-                handleGenerateAnswer={handleGenerateAnswer}
-                isGeneratingAnalysis={isGeneratingAnalysis}
-                handleGenerateAnalysis={handleGenerateAnalysis}
-            />
+            {activeTab === 'settings' && (
+                <div className="w-full mt-2">
+                        <ApiSettingsForm
+                            host={host}
+                            handleHostChange={handleHostChange}
+                            name={name}
+                            handleNameChange={handleNameChange}
+                        />
+                    </div>
+            )}
+            {activeTab === 'solving' && (
+                <QuestionAnswerForm
+                    question={question}
+                    handleQuestionChange={handleQuestionChange}
+                    imageUrl={imageUrl}
+                    setImageUrl={setImageUrl}
+                    answer={answer}
+                    setAnswer={setAnswer}
+                    analysis={analysis}
+                    setAnalysis={setAnalysis}
+                    isFormatting={isFormatting}
+                    handleFormat={handleFormat}
+                    isGeneratingAnswer={isGeneratingAnswer}
+                    handleGenerateAnswer={handleGenerateAnswer}
+                    isGeneratingAnalysis={isGeneratingAnalysis}
+                    handleGenerateAnalysis={handleGenerateAnalysis}
+                />
+            )}
           </div>)
 }

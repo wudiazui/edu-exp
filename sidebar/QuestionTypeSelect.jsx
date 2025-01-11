@@ -4,7 +4,7 @@ const QuestionTypeSelect = () => {
     return (
         <label className="form-control w-full max-w-xs">
             <div className="label">
-                <span className="label-text">选择题型</span>
+                <span className="label-text">题型</span>
             </div>
             <select className="select select-sm select-bordered" defaultValue="问答">
                 <option value="问答">问答</option>
@@ -15,4 +15,4 @@ const QuestionTypeSelect = () => {
     );
 };
 
-export default QuestionTypeSelect; 
+export default QuestionTypeSelect;
