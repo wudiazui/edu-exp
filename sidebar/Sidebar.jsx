@@ -3,6 +3,7 @@ import ApiSettingsForm from './ApiSettingsForm'; // 引入新组件
 import QuestionAnswerForm from './QuestionAnswerForm'; // 引入新组件
 import QuestionTypeSelect from './QuestionTypeSelect'; // 引入新组件
 import CopyButton from './CopyButton'; // 引入新组件
+import OcrComponent from './OcrComponent'; // 引入新组件
 
 export default function Main() {
   const [question, setQuestion] = React.useState('');
@@ -147,6 +148,11 @@ export default function Main() {
                     isGeneratingAnalysis={isGeneratingAnalysis}
                     handleGenerateAnalysis={handleGenerateAnalysis}
                 />
+            )}
+            {activeTab === 'ocr' && (
+                <div className="w-full mt-2">
+                    <OcrComponent />
+                </div>
             )}
           </div>)
 }
