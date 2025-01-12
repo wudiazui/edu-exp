@@ -6,6 +6,7 @@ import CopyButton from './CopyButton.jsx';
 const OcrComponent = ({ host, uname }) => {
   const [selectedImage, setSelectedImage] = React.useState(null);
   const [recognizedText, setRecognizedText] = React.useState("");
+  const [isLoading, setIsLoading] = React.useState(false);
 
   const onDrop = (acceptedFiles) => {
         const file = acceptedFiles[0];
@@ -34,12 +35,14 @@ const OcrComponent = ({ host, uname }) => {
 
     const handleRecognition = () => {
       if (selectedImage) {
+        setIsLoading(true);
         chrome.runtime.sendMessage(
           { type: 'OCR',
             data: { 'image_data': selectedImage },
             host,
             uname
           }, (response) => {
+            setIsLoading(false);
             if (response && response.formatted) {
               setRecognizedText(response.formatted);
             }
@@ -62,7 +65,13 @@ const OcrComponent = ({ host, uname }) => {
           )}
         </div>
         <div className="mt-2">
-          <button className="btn btn-wide w-full" onClick={handleRecognition}>识别文字</button>
+          <button className="btn btn-wide w-full" onClick={handleRecognition} disabled={isLoading}>
+            {isLoading ? (
+              <span className="loading loading-spinner"></span>
+            ) : (
+              "识别文字"
+            )}
+          </button>
         </div>
         <div className="mt-2">
           <div className="label flex justify-between items-center">

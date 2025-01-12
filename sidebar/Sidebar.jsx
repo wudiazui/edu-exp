@@ -15,7 +15,7 @@ export default function Main() {
   const [host, setHost] = React.useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [name, setName] = useState('');
-  const [activeTab, setActiveTab] = useState('settings');
+  const [activeTab, setActiveTab] = useState('solving');
 
   React.useEffect(() => {
     // 监听来自 background 的消息
@@ -115,11 +115,26 @@ export default function Main() {
     });
   }, []);
 
+  useEffect(() => {
+    // 从 Chrome 存储中加载上次选择的 tab
+    chrome.storage.sync.get(['activeTab'], (result) => {
+      if (result.activeTab) {
+        setActiveTab(result.activeTab);
+      }
+    });
+  }, []);
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    // 更新 Chrome 存储
+    chrome.storage.sync.set({ activeTab: tab });
+  };
+
   return (<div className="container max-auto px-1">
             <div className="tabs tabs-boxed">
-                <a className={`tab ${activeTab === 'settings' ? 'tab-active' : ''}`} onClick={() => setActiveTab('settings')}>设置</a>
-                <a className={`tab ${activeTab === 'solving' ? 'tab-active' : ''}`} onClick={() => setActiveTab('solving')}>解题</a>
-                <a className={`tab ${activeTab === 'ocr' ? 'tab-active' : ''}`} onClick={() => setActiveTab('ocr')}>文字识别</a>
+                <a className={`tab ${activeTab === 'settings' ? 'tab-active' : ''}`} onClick={() => handleTabChange('settings')}>设置</a>
+                <a className={`tab ${activeTab === 'solving' ? 'tab-active' : ''}`} onClick={() => handleTabChange('solving')}>解题</a>
+                <a className={`tab ${activeTab === 'ocr' ? 'tab-active' : ''}`} onClick={() => handleTabChange('ocr')}>文字识别</a>
             </div>
             {activeTab === 'settings' && (
                 <div className="w-full mt-2">
