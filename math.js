@@ -1,0 +1,375 @@
+function parseExpression(expr) {
+  // 清理输入字符串，处理不同的运算符和等号
+  const cleaned = expr.replace(/\s+/g, '')
+    .replace(/=$/, '')
+    .replace(/×/g, '*')
+    .replace(/÷/g, '/');
+
+  const match = cleaned.match(/^(\d+)([\+\-\*\/])(\d+)$/);
+  if (!match) throw new Error('Invalid expression format');
+  return {
+    num1: parseInt(match[1]),
+    operator: match[2],
+    num2: parseInt(match[3])
+  };
+}
+
+function getAdditionSteps(num1, num2) {
+  const num1Str = num1.toString();
+  const num2Str = num2.toString();
+  const result = (num1 + num2).toString();
+
+  // 计算每一位的进位情况
+  const carries = [];
+  let carry = 0;
+  let i = num1Str.length - 1;
+  let j = num2Str.length - 1;
+  const steps = [];
+
+  while (i >= 0 || j >= 0) {
+    const digit1 = i >= 0 ? parseInt(num1Str[i]) : 0;
+    const digit2 = j >= 0 ? parseInt(num2Str[j]) : 0;
+    const sum = digit1 + digit2 + carry;
+    const currentDigit = sum % 10;
+
+    // 记录这一位的计算步骤
+    steps.unshift({
+      digit1,
+      digit2,
+      carry,
+      sum: currentDigit
+    });
+
+    carry = Math.floor(sum / 10);
+    carries.unshift(carry);
+    i--;
+    j--;
+  }
+
+  // 如果最后还有进位，需要额外处理
+  if (carry > 0) {
+    carries.unshift(carry);
+  }
+
+  return {
+    carries,
+    steps,
+    result
+  };
+}
+
+function getSubtractionSteps(num1, num2) {
+  const num1Str = num1.toString();
+  const num2Str = num2.toString();
+  const result = (num1 - num2).toString();
+
+  // 计算借位情况
+  const borrows = [];
+  let i = num1Str.length - 1;
+  let j = num2Str.length - 1;
+  let num1Array = num1Str.split('').map(Number);
+  const steps = [];
+
+  while (i >= 0) {
+    let digit1 = num1Array[i];
+    const digit2 = j >= 0 ? parseInt(num2Str[j]) : 0;
+    let borrowed = false;
+
+    if (j >= 0 && digit1 < digit2) {
+      // 需要借位
+      let k = i - 1;
+      while (k >= 0 && num1Array[k] === 0) {
+        num1Array[k] = 9;
+        k--;
+      }
+      if (k >= 0) {
+        num1Array[k]--;
+        digit1 += 10;
+        borrowed = true;
+      }
+    }
+
+    steps.unshift({
+      digit1: digit1,
+      digit2,
+      borrowed,
+      difference: digit1 - digit2
+    });
+
+    if (borrowed) {
+      borrows.push(i);
+    }
+
+    i--;
+    j--;
+  }
+
+  return {
+    borrows,
+    steps,
+    result
+  };
+}
+
+function getMultiplicationSteps(num1, num2) {
+  const num1Str = num1.toString();
+  const num2Str = num2.toString();
+  const result = (num1 * num2).toString();
+
+  // 计算每一步的部分积
+  const partialProducts = [];
+  const carries = [];
+
+  for (let i = num2Str.length - 1; i >= 0; i--) {
+    const digit = parseInt(num2Str[i]);
+    let carry = 0;
+    let partialResult = '';
+
+    // 计算当前数字的部分积
+    for (let j = num1Str.length - 1; j >= 0; j--) {
+      const product = digit * parseInt(num1Str[j]) + carry;
+      partialResult = (product % 10) + partialResult;
+      carry = Math.floor(product / 10);
+    }
+
+    if (carry > 0) {
+      partialResult = carry + partialResult;
+    }
+
+    // 添加相应数量的0
+    partialResult = partialResult + '0'.repeat(num2Str.length - 1 - i);
+    partialProducts.push(partialResult);
+    carries.push(carry > 0 ? carry : null);
+  }
+
+  return {
+    partialProducts,
+    carries,
+    result
+  };
+}
+
+function getDivisionSteps(num1, num2) {
+  const quotient = Math.floor(num1 / num2);
+  const remainder = num1 % num2;
+
+  // 生成计算步骤
+  const steps = [];
+  let currentNum = num1;
+  let position = 0;
+
+  while (currentNum >= num2) {
+    const currentDigit = Math.floor(currentNum / num2);
+    const product = currentDigit * num2;
+    const difference = currentNum - product;
+
+    steps.push({
+      dividend: currentNum,
+      product: product,
+      difference: difference
+    });
+
+    currentNum = difference;
+    position++;
+  }
+
+  return {
+    quotient: quotient.toString(),
+    remainder: remainder.toString(),
+    steps
+  };
+}
+
+export async function generateVerticalArithmeticImage(expression) {
+  const { num1, operator, num2 } = parseExpression(expression);
+
+  // 设置画布参数
+  const charWidth = 20;
+  const lineHeight = 30;
+  const padding = 40;
+
+  // 根据运算类型计算画布大小和获取步骤
+  let width, height, steps;
+  const displayOperator = operator === '*' ? '×' : operator === '/' ? '÷' : operator;
+
+  if (operator === '*') {
+    steps = getMultiplicationSteps(num1, num2);
+    const maxWidth = Math.max(
+      num1.toString().length,
+      num2.toString().length,
+      steps.result.length,
+      ...steps.partialProducts.map(p => p.length)
+    );
+    width = (maxWidth + 2) * charWidth + padding * 2;
+    height = (4 + steps.partialProducts.length) * lineHeight + padding * 2;
+  } else if (operator === '/') {
+    steps = getDivisionSteps(num1, num2);
+    const maxWidth = Math.max(
+      num1.toString().length,
+      num2.toString().length,
+      steps.quotient.length * 2
+    );
+    width = (maxWidth + 4) * charWidth + padding * 2;
+    height = (3 + steps.steps.length * 2) * lineHeight + padding * 2;
+  } else {
+    steps = operator === '+' ? getAdditionSteps(num1, num2) : getSubtractionSteps(num1, num2);
+    const maxLength = Math.max(
+      num1.toString().length,
+      num2.toString().length,
+      steps.result.length
+    );
+    width = (maxLength + 2) * charWidth + padding * 2;
+    height = 5 * lineHeight + padding * 2;
+  }
+
+  // 创建画布
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+
+  // 设置白色背景
+  ctx.fillStyle = 'white';
+  ctx.fillRect(0, 0, width, height);
+
+  // 设置文本样式
+  ctx.fillStyle = 'black';
+  ctx.font = '24px monospace';
+  ctx.textBaseline = 'middle';
+
+  if (operator === '*') {
+    // 绘制乘法过程
+    ctx.textAlign = 'right';
+    ctx.fillText(num1.toString(), width - padding, padding + lineHeight);
+    ctx.textAlign = 'left';
+    ctx.fillText(displayOperator, padding, padding + 2 * lineHeight);
+    ctx.textAlign = 'right';
+    ctx.fillText(num2.toString(), width - padding, padding + 2 * lineHeight);
+
+    // 绘制分隔线
+    ctx.beginPath();
+    ctx.moveTo(padding, padding + 2.5 * lineHeight);
+    ctx.lineTo(width - padding, padding + 2.5 * lineHeight);
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // 绘制部分积
+    let currentY = padding + 3.5 * lineHeight;
+    steps.partialProducts.forEach((product, index) => {
+      if (steps.carries[index]) {
+        ctx.font = '16px monospace';
+        ctx.fillStyle = 'red';
+        ctx.fillText(steps.carries[index].toString(),
+          width - padding - (product.length + 1) * charWidth,
+          currentY - 0.5 * lineHeight);
+        ctx.font = '24px monospace';
+        ctx.fillStyle = 'black';
+      }
+      ctx.fillText(product, width - padding, currentY);
+      currentY += lineHeight;
+    });
+
+    // 绘制最终结果分隔线
+    ctx.beginPath();
+    ctx.moveTo(padding, currentY - 0.5 * lineHeight);
+    ctx.lineTo(width - padding, currentY - 0.5 * lineHeight);
+    ctx.stroke();
+
+    // 绘制最终结果
+    ctx.fillText(steps.result, width - padding, currentY + 0.5 * lineHeight);
+
+  } else if (operator === '/') {
+    // 绘制除法过程
+    ctx.font = '24px monospace';
+
+    // 绘制除号和被除数、除数
+    ctx.textAlign = 'left';
+    ctx.fillText(displayOperator, padding, padding + lineHeight);
+    ctx.fillText(num2.toString(), padding + charWidth, padding + lineHeight);
+
+    // 绘制长除号
+    ctx.beginPath();
+    ctx.moveTo(padding + charWidth * 3, padding + 0.5 * lineHeight);
+    ctx.lineTo(width - padding, padding + 0.5 * lineHeight);
+    ctx.moveTo(padding + charWidth * 3, padding + 1.5 * lineHeight);
+    ctx.lineTo(width - padding, padding + 1.5 * lineHeight);
+    ctx.stroke();
+
+    // 绘制被除数
+    ctx.textAlign = 'right';
+    ctx.fillText(num1.toString(), width - padding, padding + lineHeight);
+
+    // 绘制计算步骤
+    let currentY = padding + 2 * lineHeight;
+    steps.steps.forEach(step => {
+      ctx.fillText(step.product.toString(), width - padding, currentY);
+      currentY += lineHeight;
+
+      ctx.beginPath();
+      ctx.moveTo(width - padding - charWidth * step.product.toString().length, currentY - 0.5 * lineHeight);
+      ctx.lineTo(width - padding, currentY - 0.5 * lineHeight);
+      ctx.stroke();
+
+      if (step.difference > 0) {
+        ctx.fillText(step.difference.toString(), width - padding, currentY);
+        currentY += lineHeight;
+      }
+    });
+
+    // 绘制商
+    ctx.fillText(steps.quotient, width - padding, padding + lineHeight);
+
+    // 如果有余数，显示余数
+    if (parseInt(steps.remainder) > 0) {
+      ctx.fillStyle = 'red';
+      ctx.font = '16px monospace';
+      ctx.fillText(`余${steps.remainder}`, width - padding, currentY + lineHeight);
+    }
+
+  } else {
+    // 绘制加减法过程（保持原有代码）
+    if (operator === '+' && steps.carries.some(c => c > 0)) {
+      ctx.font = '16px monospace';
+      ctx.fillStyle = 'red';
+      let carryX = width - padding - charWidth;
+      for (let i = steps.carries.length - 1; i >= 0; i--) {
+        if (steps.carries[i] > 0) {
+          ctx.fillText(steps.carries[i].toString(), carryX, padding + 0.5 * lineHeight);
+        }
+        carryX -= charWidth;
+      }
+    } else if (operator === '-' && steps.borrows && steps.borrows.length > 0) {
+      ctx.font = '16px monospace';
+      ctx.fillStyle = 'red';
+      steps.borrows.forEach(pos => {
+        const x = width - padding - (num1.toString().length - pos) * charWidth;
+        ctx.fillText('1', x, padding + 0.5 * lineHeight);
+      });
+    }
+
+    ctx.font = '24px monospace';
+    ctx.fillStyle = 'black';
+
+    ctx.textAlign = 'right';
+    ctx.fillText(num1.toString(), width - padding, padding + lineHeight);
+    ctx.textAlign = 'left';
+    ctx.fillText(displayOperator, padding, padding + 2 * lineHeight);
+    ctx.textAlign = 'right';
+    ctx.fillText(num2.toString(), width - padding, padding + 2 * lineHeight);
+
+    ctx.beginPath();
+    ctx.moveTo(padding, padding + 2.5 * lineHeight);
+    ctx.lineTo(width - padding, padding + 2.5 * lineHeight);
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillText(steps.result, width - padding, padding + 3.5 * lineHeight);
+  }
+
+  // 转换为图片数据
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => {
+      resolve(blob);
+    }, 'image/png');
+  });
+}

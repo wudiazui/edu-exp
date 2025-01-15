@@ -1,5 +1,7 @@
 import { math2img, replaceLatexWithImages, replacePunctuation} from "../lib.js";
 
+import {generateVerticalArithmeticImage} from "../math.js";
+
 
 console.log('hello from content_scripts');
 // 添加一个变量来存储复制的HTML
@@ -308,5 +310,44 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     })();
 
     return true; // 保持消息通道开启
+  }
+
+  if (request.action === "math_img") {
+    (async () => {
+      const selection = window.getSelection();
+      if (selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const selectedText = range.toString().trim();
+
+        // Wait for the image generation
+
+        const imageBlob = await generateVerticalArithmeticImage(selectedText);
+        const imgSrc = URL.createObjectURL(imageBlob);
+
+        // Create img element
+        const img = document.createElement('img');
+        img.src = imgSrc;
+
+        // Find the end of the line and insert a new line with the image
+        const endContainer = range.endContainer;
+        const parentElement = endContainer.parentElement;
+
+        // Create a new paragraph for the image
+        const newP = document.createElement('p');
+        newP.appendChild(img);
+
+        // Insert after the current paragraph
+        if (parentElement.closest('p')) {
+          parentElement.closest('p').after(newP);
+        } else {
+          // If not in a paragraph, insert after the parent element
+          parentElement.after(newP);
+        }
+
+        // Trigger events to update the editor
+        sendFixEvent(document.activeElement);
+      }
+    })();
+    return true; // Keep message channel open for async operation
   }
 });

@@ -55,6 +55,12 @@ chrome.runtime.onInstalled.addListener(() => {
       parentId: "baidu-edu-tools",
       contexts: ["all"]
     });
+    chrome.contextMenus.create({
+      id: "math-img",
+      title: "渲染竖式计算",
+      parentId: "baidu-edu-tools",
+      contexts: ["selection"]
+    });
   });
 });
 
@@ -73,7 +79,10 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   }
   if (info.menuItemId === "format-math") {
     chrome.tabs.sendMessage(tab.id, { action: "format_math" });
-   }
+  }
+  if (info.menuItemId === "math-img") {
+    chrome.tabs.sendMessage(tab.id, { action: "math_img" });
+  }
 });
 
 // 添加消息监听器来处理HTML的存储和获取
