@@ -279,51 +279,71 @@ export async function generateVerticalArithmeticImage(expression) {
     ctx.fillText(steps.result, width - padding, currentY + 0.5 * lineHeight);
 
   } else if (operator === '/') {
-    // 绘制除法过程
-    ctx.font = '24px monospace';
+    // 处理除法的特殊情况
+    const steps = getDivisionSteps(num1, num2);
 
-    // 绘制除号和被除数、除数
+    // 计算弧线的参数
+    const radius = charWidth * 2;
+    const startAngle = -Math.PI * 0.1;
+    const endAngle = Math.PI * 0.2;
+    
+    // 计算弧线最高点的x坐标
+    const arcTopX = padding + charWidth * 0.5 + (radius * Math.sin(-startAngle));
+    
+    // 绘制除数（先绘制除数）
     ctx.textAlign = 'left';
-    ctx.fillText(displayOperator, padding, padding + lineHeight);
-    ctx.fillText(num2.toString(), padding + charWidth, padding + lineHeight);
-
-    // 绘制长除号
+    ctx.fillText(num2.toString(), padding, padding + lineHeight);
+    
+    // 绘制弧线
     ctx.beginPath();
-    ctx.moveTo(padding + charWidth * 3, padding + 0.5 * lineHeight);
-    ctx.lineTo(width - padding, padding + 0.5 * lineHeight);
-    ctx.moveTo(padding + charWidth * 3, padding + 1.5 * lineHeight);
-    ctx.lineTo(width - padding, padding + 1.5 * lineHeight);
+    ctx.arc(
+        padding + charWidth * 0.01,    // 圆心x坐标
+        padding + lineHeight * 0.8,   // 圆心y坐标
+        radius,                       // 半径
+        startAngle,                  // 新的起始角度
+        endAngle,                    // 新的结束角度
+        false                        // 顺时针方向
+    );
+    ctx.stroke();
+    
+    // 在弧线上方绘制横线
+    ctx.beginPath();
+    ctx.moveTo(arcTopX + charWidth * 0.7, padding + lineHeight * 0.4);   // 起点
+    ctx.lineTo(arcTopX + charWidth * 3.5, padding + lineHeight * 0.4);   // 终点
     ctx.stroke();
 
     // 绘制被除数
-    ctx.textAlign = 'right';
-    ctx.fillText(num1.toString(), width - padding, padding + lineHeight);
+    ctx.fillText(num1.toString(), padding + charWidth * 2, padding + lineHeight);
+
+    // 绘制商（在顶部）
+    ctx.textAlign = 'left';
+    ctx.fillText(steps.quotient, padding + charWidth * 3, padding);
 
     // 绘制计算步骤
-    let currentY = padding + 2 * lineHeight;
+    let currentY = padding + 3 * lineHeight;
     steps.steps.forEach(step => {
-      ctx.fillText(step.product.toString(), width - padding, currentY);
-      currentY += lineHeight;
+        // 绘制乘积
+        ctx.textAlign = 'left';
+        ctx.fillText(step.product.toString(), padding + charWidth * 3, currentY);
+        
+        // 绘制下划线
+        ctx.beginPath();
+        ctx.moveTo(padding + charWidth * 3, currentY + 0.5 * lineHeight);
+        ctx.lineTo(padding + charWidth * 3 + step.product.toString().length * charWidth, 
+                  currentY + 0.5 * lineHeight);
+        ctx.stroke();
 
-      ctx.beginPath();
-      ctx.moveTo(width - padding - charWidth * step.product.toString().length, currentY - 0.5 * lineHeight);
-      ctx.lineTo(width - padding, currentY - 0.5 * lineHeight);
-      ctx.stroke();
-
-      if (step.difference > 0) {
-        ctx.fillText(step.difference.toString(), width - padding, currentY);
+        // 绘制差
+        if (step.difference > 0) {
+            currentY += lineHeight;
+            ctx.fillText(step.difference.toString(), padding + charWidth * 3, currentY);
+        }
         currentY += lineHeight;
-      }
     });
 
-    // 绘制商
-    ctx.fillText(steps.quotient, width - padding, padding + lineHeight);
-
-    // 如果有余数，显示余数
+    // 如果有余数，显示在最后一行
     if (parseInt(steps.remainder) > 0) {
-      ctx.fillStyle = 'red';
-      ctx.font = '16px monospace';
-      ctx.fillText(`余${steps.remainder}`, width - padding, currentY + lineHeight);
+        ctx.fillText(steps.remainder.toString(), padding + charWidth * 3, currentY);
     }
 
   } else {
