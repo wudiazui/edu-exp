@@ -283,7 +283,7 @@ export async function generateVerticalArithmeticImage(expression) {
     const steps = getDivisionSteps(num1, num2);
 
     // 计算弧线的参数
-    const radius = charWidth * 2;
+    const radius = charWidth * 1.5;
     const startAngle = -Math.PI * 0.1;
     const endAngle = Math.PI * 0.2;
     
@@ -292,58 +292,62 @@ export async function generateVerticalArithmeticImage(expression) {
     
     // 绘制除数（先绘制除数）
     ctx.textAlign = 'left';
-    ctx.fillText(num2.toString(), padding, padding + lineHeight);
+    ctx.fillText(num2.toString(), padding + 2, padding + lineHeight);
     
     // 绘制弧线
     ctx.beginPath();
     ctx.arc(
-        padding + charWidth * 0.01,    // 圆心x坐标
-        padding + lineHeight * 0.8,   // 圆心y坐标
-        radius,                       // 半径
-        startAngle,                  // 新的起始角度
-        endAngle,                    // 新的结束角度
-        false                        // 顺时针方向
+        padding + charWidth * 0.01,
+        padding + lineHeight * 0.8,
+        radius,
+        startAngle,
+        endAngle,
+        false
     );
     ctx.stroke();
     
-    // 在弧线上方绘制横线
+    // 在弧线上方绘制横线（缩短长度）
+    const dividendLength = num1.toString().length;
     ctx.beginPath();
-    ctx.moveTo(arcTopX + charWidth * 0.7, padding + lineHeight * 0.4);   // 起点
-    ctx.lineTo(arcTopX + charWidth * 3.5, padding + lineHeight * 0.4);   // 终点
+    ctx.moveTo(arcTopX + charWidth * 0.5, padding + lineHeight * 0.5);
+    ctx.lineTo(arcTopX + charWidth * (dividendLength + 1), padding + lineHeight * 0.5);
     ctx.stroke();
 
-    // 绘制被除数
-    ctx.fillText(num1.toString(), padding + charWidth * 2, padding + lineHeight);
+    // 绘制被除数（减少间距）
+    ctx.fillText(num1.toString(), padding + charWidth * 1.8, padding + lineHeight);
 
-    // 绘制商（在顶部）
+    // 绘制商（调整位置）
     ctx.textAlign = 'left';
-    ctx.fillText(steps.quotient, padding + charWidth * 3, padding);
+    ctx.fillText(steps.quotient, padding + charWidth * 2, padding);
 
     // 绘制计算步骤
-    let currentY = padding + 3 * lineHeight;
+    let currentY = padding + 2 * lineHeight;
     steps.steps.forEach(step => {
         // 绘制乘积
         ctx.textAlign = 'left';
-        ctx.fillText(step.product.toString(), padding + charWidth * 3, currentY);
+        ctx.fillText(step.product.toString(), padding + charWidth * 1.8, currentY);
         
-        // 绘制下划线
+        // 绘制步骤分隔线
         ctx.beginPath();
-        ctx.moveTo(padding + charWidth * 3, currentY + 0.5 * lineHeight);
-        ctx.lineTo(padding + charWidth * 3 + step.product.toString().length * charWidth, 
-                  currentY + 0.5 * lineHeight);
+        ctx.moveTo(arcTopX + charWidth * 0.5, currentY - 0.5 * lineHeight);
+        ctx.lineTo(arcTopX + charWidth * (dividendLength + 1), currentY - 0.5 * lineHeight);
         ctx.stroke();
 
         // 绘制差
         if (step.difference > 0) {
             currentY += lineHeight;
-            ctx.fillText(step.difference.toString(), padding + charWidth * 3, currentY);
+            ctx.fillText(step.difference.toString(), padding + charWidth * 1.8, currentY);
         }
         currentY += lineHeight;
     });
 
-    // 如果有余数，显示在最后一行
+    // 如果有余数，显示在最后一行并添加最后的分隔线
     if (parseInt(steps.remainder) > 0) {
-        ctx.fillText(steps.remainder.toString(), padding + charWidth * 3, currentY);
+        ctx.moveTo(arcTopX + charWidth * 0.5, currentY - 0.5 * lineHeight);
+        ctx.lineTo(arcTopX + charWidth * (dividendLength + 1), currentY - 0.5 * lineHeight);
+        ctx.stroke();
+        
+        ctx.fillText(steps.remainder.toString(), padding + charWidth * 1.8, currentY);
     }
 
   } else {
