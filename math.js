@@ -152,25 +152,36 @@ function getMultiplicationSteps(num1, num2) {
 function getDivisionSteps(num1, num2) {
   const quotient = Math.floor(num1 / num2);
   const remainder = num1 % num2;
-
+  
   // 生成计算步骤
   const steps = [];
-  let currentNum = num1;
+  const num1Str = num1.toString();
+  let currentNum = '';
   let position = 0;
-
-  while (currentNum >= num2) {
-    const currentDigit = Math.floor(currentNum / num2);
+  
+  // 逐位处理被除数
+  for (let i = 0; i < num1Str.length; i++) {
+    currentNum += num1Str[i];
+    let currentNumInt = parseInt(currentNum);
+    
+    // 如果当前数字小于除数且不是最后一位，继续添加下一位
+    if (currentNumInt < num2 && i < num1Str.length - 1) {
+      continue;
+    }
+    
+    const currentDigit = Math.floor(currentNumInt / num2);
     const product = currentDigit * num2;
-    const difference = currentNum - product;
-
+    const difference = currentNumInt - product;
+    
     steps.push({
-      dividend: currentNum,
+      dividend: currentNumInt,
       product: product,
-      difference: difference
+      difference: difference,
+      quotientDigit: currentDigit
     });
-
-    currentNum = difference;
-    position++;
+    
+    // 更新当前数字为余数
+    currentNum = difference.toString();
   }
 
   return {
@@ -292,7 +303,7 @@ export async function generateVerticalArithmeticImage(expression) {
     
     // 绘制除数（先绘制除数）
     ctx.textAlign = 'left';
-    ctx.fillText(num2.toString(), padding + 2.5, padding + lineHeight);
+    ctx.fillText(num2.toString(), padding + 2.3, padding + lineHeight);
     
     // 绘制弧线
     ctx.beginPath();
