@@ -292,7 +292,7 @@ export async function generateVerticalArithmeticImage(expression) {
     
     // 绘制除数（先绘制除数）
     ctx.textAlign = 'left';
-    ctx.fillText(num2.toString(), padding + 2, padding + lineHeight);
+    ctx.fillText(num2.toString(), padding + 2.5, padding + lineHeight);
     
     // 绘制弧线
     ctx.beginPath();
@@ -310,44 +310,44 @@ export async function generateVerticalArithmeticImage(expression) {
     const dividendLength = num1.toString().length;
     ctx.beginPath();
     ctx.moveTo(arcTopX + charWidth * 0.5, padding + lineHeight * 0.5);
-    ctx.lineTo(arcTopX + charWidth * (dividendLength + 1), padding + lineHeight * 0.5);
+    ctx.lineTo(arcTopX + charWidth * (dividendLength + 0.1), padding + lineHeight * 0.5);
     ctx.stroke();
 
     // 绘制被除数（减少间距）
-    ctx.fillText(num1.toString(), padding + charWidth * 1.8, padding + lineHeight);
+    ctx.textAlign = 'right';
+    const numberEndX = arcTopX + charWidth * (dividendLength);
+    ctx.fillText(num1.toString(), numberEndX, padding + lineHeight);
 
     // 绘制商（调整位置）
-    ctx.textAlign = 'left';
-    ctx.fillText(steps.quotient, padding + charWidth * 2, padding);
+    ctx.fillText(steps.quotient, numberEndX, padding);
 
     // 绘制计算步骤
     let currentY = padding + 2 * lineHeight;
     steps.steps.forEach(step => {
         // 绘制乘积
-        ctx.textAlign = 'left';
-        ctx.fillText(step.product.toString(), padding + charWidth * 1.8, currentY);
+        ctx.fillText(step.product.toString(), numberEndX, currentY);
         
         // 绘制步骤分隔线
         ctx.beginPath();
         ctx.moveTo(arcTopX + charWidth * 0.5, currentY - 0.5 * lineHeight);
-        ctx.lineTo(arcTopX + charWidth * (dividendLength + 1), currentY - 0.5 * lineHeight);
+        ctx.lineTo(arcTopX + charWidth * (dividendLength), currentY - 0.5 * lineHeight);
         ctx.stroke();
 
         // 绘制差
         if (step.difference > 0) {
             currentY += lineHeight;
-            ctx.fillText(step.difference.toString(), padding + charWidth * 1.8, currentY);
+            ctx.fillText(step.difference.toString(), numberEndX, currentY);
         }
         currentY += lineHeight;
     });
 
-    // 如果有余数，显示在最后一行并添加最后的分隔线
+    // 如果有余数，显示在最后一行
     if (parseInt(steps.remainder) > 0) {
         ctx.moveTo(arcTopX + charWidth * 0.5, currentY - 0.5 * lineHeight);
-        ctx.lineTo(arcTopX + charWidth * (dividendLength + 1), currentY - 0.5 * lineHeight);
+        ctx.lineTo(arcTopX + charWidth * (dividendLength), currentY - 0.5 * lineHeight);
         ctx.stroke();
         
-        ctx.fillText(steps.remainder.toString(), padding + charWidth * 1.8, currentY);
+        ctx.fillText(steps.remainder.toString(), numberEndX, currentY);
     }
 
   } else {
