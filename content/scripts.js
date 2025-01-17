@@ -1,4 +1,4 @@
-import { math2img, replaceLatexWithImages, replacePunctuation} from "../lib.js";
+import { math2img, replaceLatexWithImages, replacePunctuation, img_upload} from "../lib.js";
 
 import {generateVerticalArithmeticImage} from "../math.js";
 
@@ -314,24 +314,41 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
 
   if (request.action === "math_img") {
     (async () => {
-      const selection = window.getSelection();
-      if (selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        const selectedText = range.toString().trim();
+      try {
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          const selectedText = range.toString().trim();
 
-        const imageBlob = await generateVerticalArithmeticImage(selectedText);
-        const imgSrc = URL.createObjectURL(imageBlob);
+          const imageBlob = await generateVerticalArithmeticImage(selectedText);
 
-        // Create img element
-        const img = document.createElement('img');
-        img.src = imgSrc;
+          // Upload the image and get the response
+          const uploadResponse = await img_upload(imageBlob);
 
-        // Insert the image after the selection
-        range.collapse(false); // Move cursor to end of selection
-        range.insertNode(img);
+          // Create img element with the uploaded image URL
+          const img = document.createElement('img');
+          img.src = uploadResponse.data.cdnUrl; // Assuming the response contains the URL in a 'url' field
 
-        // Trigger events to update the editor
-        sendFixEvent(document.activeElement);
+          // Find the current line's parent element (likely a <p> tag)
+          let currentBlock = range.startContainer;
+          while (currentBlock && currentBlock.nodeType !== Node.ELEMENT_NODE) {
+            currentBlock = currentBlock.parentNode;
+          }
+
+          // Create a new paragraph for the image
+          const newP = document.createElement('p');
+          newP.appendChild(img);
+
+          // Insert the new paragraph after the current block
+          if (currentBlock && currentBlock.parentNode) {
+            currentBlock.parentNode.insertBefore(newP, currentBlock.nextSibling);
+          }
+
+          // Trigger events to update the editor
+          sendFixEvent(document.activeElement);
+        }
+      } catch (error) {
+        console.error('Error processing math image:', error);
       }
     })();
     return true; // Keep message channel open for async operation

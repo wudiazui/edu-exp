@@ -24,6 +24,29 @@ export function math2img(expr) {
     });
 }
 
+export async function img_upload(imageBlob) {
+  const url = "/edushop/tiku/submit/uploadpic";
+  
+  const formData = new FormData();
+  formData.append('file', imageBlob, 'math.png');
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      body: formData
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error uploading image:', error);
+    throw error;
+  }
+}
+
 
 export function replacePunctuation(text) {
   const punctuationMap = {
