@@ -152,34 +152,34 @@ function getMultiplicationSteps(num1, num2) {
 function getDivisionSteps(num1, num2) {
   const quotient = Math.floor(num1 / num2);
   const remainder = num1 % num2;
-  
+
   // 生成计算步骤
   const steps = [];
   const num1Str = num1.toString();
   let currentNum = '';
   let position = 0;
-  
+
   // 逐位处理被除数
   for (let i = 0; i < num1Str.length; i++) {
     currentNum += num1Str[i];
     let currentNumInt = parseInt(currentNum);
-    
+
     // 如果当前数字小于除数且不是最后一位，继续添加下一位
     if (currentNumInt < num2 && i < num1Str.length - 1) {
       continue;
     }
-    
+
     const currentDigit = Math.floor(currentNumInt / num2);
     const product = currentDigit * num2;
     const difference = currentNumInt - product;
-    
+
     steps.push({
       dividend: currentNumInt,
       product: product,
       difference: difference,
       quotientDigit: currentDigit
     });
-    
+
     // 更新当前数字为余数
     currentNum = difference.toString();
   }
@@ -297,14 +297,14 @@ export async function generateVerticalArithmeticImage(expression) {
     const radius = charWidth * 1.5;
     const startAngle = -Math.PI * 0.1;
     const endAngle = Math.PI * 0.2;
-    
+
     // 计算弧线最高点的x坐标
     const arcTopX = padding + charWidth * 0.5 + (radius * Math.sin(-startAngle));
-    
+
     // 绘制除数（先绘制除数）
     ctx.textAlign = 'left';
     ctx.fillText(num2.toString(), padding + 2.3, padding + lineHeight);
-    
+
     // 绘制弧线
     ctx.beginPath();
     ctx.arc(
@@ -316,49 +316,57 @@ export async function generateVerticalArithmeticImage(expression) {
         false
     );
     ctx.stroke();
-    
-    // 在弧线上方绘制横线（缩短长度）
+
+    // 在弧线上方绘制横线
     const dividendLength = num1.toString().length;
     ctx.beginPath();
     ctx.moveTo(arcTopX + charWidth * 0.5, padding + lineHeight * 0.5);
     ctx.lineTo(arcTopX + charWidth * (dividendLength + 0.1), padding + lineHeight * 0.5);
     ctx.stroke();
 
-    // 绘制被除数（减少间距）
+    // 绘制被除数
     ctx.textAlign = 'right';
     const numberEndX = arcTopX + charWidth * (dividendLength);
     ctx.fillText(num1.toString(), numberEndX, padding + lineHeight);
 
-    // 绘制商（调整位置）
+    // 绘制商
     ctx.fillText(steps.quotient, numberEndX, padding);
 
     // 绘制计算步骤
     let currentY = padding + 2 * lineHeight;
-    steps.steps.forEach(step => {
-        // 绘制乘积
-        ctx.fillText(step.product.toString(), numberEndX, currentY);
-        
-        // 绘制步骤分隔线
-        ctx.beginPath();
-        ctx.moveTo(arcTopX + charWidth * 0.5, currentY - 0.5 * lineHeight);
-        ctx.lineTo(arcTopX + charWidth * (dividendLength), currentY - 0.5 * lineHeight);
-        ctx.stroke();
+    let currentPosition = 0;
+    let currentX = numberEndX; // 初始X位置与被除数右对齐
+    const num1Digits = num1.toString().split('');
 
-        // 绘制差
-        if (step.difference > 0) {
-            currentY += lineHeight;
-            ctx.fillText(step.difference.toString(), numberEndX, currentY);
+    steps.steps.forEach((step, index) => {
+      // 绘制乘积
+      ctx.fillText(step.product.toString(), numberEndX, currentY);
+      currentY += lineHeight;
+
+      // 绘制步骤分隔线 (移动到乘积和差值之间)
+      ctx.beginPath();
+      ctx.moveTo(numberEndX - step.product.toString().length * charWidth, currentY - 0.5 * lineHeight);
+      ctx.lineTo(numberEndX, currentY - 0.5 * lineHeight);
+      ctx.stroke();
+
+      // 绘制差值和剩余的被除数数字
+      let remainingDigits = '';
+      if (index < steps.steps.length - 1) {
+        const nextStep = steps.steps[index + 1];
+        const digitsNeeded = nextStep.dividend.toString().length - step.difference.toString().length;
+        for (let i = 0; i < digitsNeeded; i++) {
+          currentPosition++;
+          remainingDigits += num1Digits[currentPosition];
         }
-        currentY += lineHeight;
+      }
+      const differenceWithRemaining = step.difference.toString() + remainingDigits;
+      ctx.fillText(differenceWithRemaining, numberEndX, currentY);
+      currentY += lineHeight;
     });
 
     // 如果有余数，显示在最后一行
     if (parseInt(steps.remainder) > 0) {
-        ctx.moveTo(arcTopX + charWidth * 0.5, currentY - 0.5 * lineHeight);
-        ctx.lineTo(arcTopX + charWidth * (dividendLength), currentY - 0.5 * lineHeight);
-        ctx.stroke();
-        
-        ctx.fillText(steps.remainder.toString(), numberEndX, currentY);
+        ctx.fillText(steps.remainder.toString(), numberEndX, currentY - lineHeight);
     }
 
   } else {
