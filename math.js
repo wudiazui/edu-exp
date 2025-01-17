@@ -1,7 +1,7 @@
 function parseExpression(expr) {
   // 清理输入字符串，处理不同的运算符和等号
   const cleaned = expr.replace(/\s+/g, '')
-    .replace(/=$/, '')
+    .split('=')[0]  // 只取等号左边的部分
     .replace(/×/g, '*')
     .replace(/÷/g, '/');
 
@@ -197,7 +197,7 @@ export async function generateVerticalArithmeticImage(expression) {
   // 设置画布参数
   const charWidth = 20;
   const lineHeight = 30;
-  const padding = 40;
+  const padding = 10;
 
   // 根据运算类型计算画布大小和获取步骤
   let width, height, steps;

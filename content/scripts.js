@@ -319,8 +319,6 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
         const range = selection.getRangeAt(0);
         const selectedText = range.toString().trim();
 
-        // Wait for the image generation
-
         const imageBlob = await generateVerticalArithmeticImage(selectedText);
         const imgSrc = URL.createObjectURL(imageBlob);
 
@@ -328,21 +326,9 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
         const img = document.createElement('img');
         img.src = imgSrc;
 
-        // Find the end of the line and insert a new line with the image
-        const endContainer = range.endContainer;
-        const parentElement = endContainer.parentElement;
-
-        // Create a new paragraph for the image
-        const newP = document.createElement('p');
-        newP.appendChild(img);
-
-        // Insert after the current paragraph
-        if (parentElement.closest('p')) {
-          parentElement.closest('p').after(newP);
-        } else {
-          // If not in a paragraph, insert after the parent element
-          parentElement.after(newP);
-        }
+        // Insert the image after the selection
+        range.collapse(false); // Move cursor to end of selection
+        range.insertNode(img);
 
         // Trigger events to update the editor
         sendFixEvent(document.activeElement);
