@@ -335,18 +335,19 @@ export async function generateVerticalArithmeticImage(expression) {
     // 绘制计算步骤
     let currentY = padding + 2 * lineHeight;
     let currentPosition = 0;
-    let currentX = numberEndX; // 初始X位置与被除数右对齐
+    let currentX = arcTopX + charWidth * (dividendLength); // 与被除数右对齐
     const num1Digits = num1.toString().split('');
 
     steps.steps.forEach((step, index) => {
+      ctx.textAlign = 'left';  // 设置左对齐
       // 绘制乘积
-      ctx.fillText(step.product.toString(), numberEndX, currentY);
+      ctx.fillText(step.product.toString(), currentX - step.product.toString().length * charWidth, currentY);
       currentY += lineHeight;
 
       // 绘制步骤分隔线 (移动到乘积和差值之间)
       ctx.beginPath();
-      ctx.moveTo(numberEndX - step.product.toString().length * charWidth, currentY - 0.5 * lineHeight);
-      ctx.lineTo(numberEndX, currentY - 0.5 * lineHeight);
+      ctx.moveTo(currentX - step.product.toString().length * charWidth, currentY - 0.5 * lineHeight);
+      ctx.lineTo(currentX, currentY - 0.5 * lineHeight);
       ctx.stroke();
 
       // 绘制差值和剩余的被除数数字
@@ -360,13 +361,13 @@ export async function generateVerticalArithmeticImage(expression) {
         }
       }
       const differenceWithRemaining = step.difference.toString() + remainingDigits;
-      ctx.fillText(differenceWithRemaining, numberEndX, currentY);
+      ctx.fillText(differenceWithRemaining, currentX - differenceWithRemaining.length * charWidth, currentY);
       currentY += lineHeight;
     });
 
     // 如果有余数，显示在最后一行
     if (parseInt(steps.remainder) > 0) {
-        ctx.fillText(steps.remainder.toString(), numberEndX, currentY - lineHeight);
+        ctx.fillText(steps.remainder.toString(), currentX, currentY - lineHeight);
     }
 
   } else {
