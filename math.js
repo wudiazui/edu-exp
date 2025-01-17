@@ -335,19 +335,21 @@ export async function generateVerticalArithmeticImage(expression) {
     // 绘制计算步骤
     let currentY = padding + 2 * lineHeight;
     let currentPosition = 0;
-    let currentX = arcTopX + charWidth * (dividendLength); // 与被除数右对齐
+    //let currentX = arcTopX + charWidth * (dividendLength - 0.1);
+    let currentX = numberEndX - (dividendLength * 0.7) * charWidth
     const num1Digits = num1.toString().split('');
 
     steps.steps.forEach((step, index) => {
       ctx.textAlign = 'left';  // 设置左对齐
+      const productEndX = currentX + step.product.toString().length * charWidth;
       // 绘制乘积
-      ctx.fillText(step.product.toString(), currentX - step.product.toString().length * charWidth, currentY);
+      ctx.fillText(step.product.toString(), currentX, currentY);
+       // 更新 currentX 为乘积数字的结束位置
       currentY += lineHeight;
-
       // 绘制步骤分隔线 (移动到乘积和差值之间)
       ctx.beginPath();
-      ctx.moveTo(currentX - step.product.toString().length * charWidth, currentY - 0.5 * lineHeight);
-      ctx.lineTo(currentX, currentY - 0.5 * lineHeight);
+      ctx.moveTo(currentX, currentY - 0.5 * lineHeight);
+      ctx.lineTo(productEndX, currentY - 0.5 * lineHeight);
       ctx.stroke();
 
       // 绘制差值和剩余的被除数数字
@@ -360,14 +362,17 @@ export async function generateVerticalArithmeticImage(expression) {
           remainingDigits += num1Digits[currentPosition];
         }
       }
+      currentX = productEndX - step.difference.toString() * charWidth
       const differenceWithRemaining = step.difference.toString() + remainingDigits;
-      ctx.fillText(differenceWithRemaining, currentX - differenceWithRemaining.length * charWidth, currentY);
+      ctx.fillText(differenceWithRemaining, currentX, currentY);
       currentY += lineHeight;
+      //currentX = productEndX + (differenceWithRemaining.length + step.difference.length) * charWidth
+      currentX += differenceWithRemaining.length * charWidth;
     });
 
     // 如果有余数，显示在最后一行
     if (parseInt(steps.remainder) > 0) {
-        ctx.fillText(steps.remainder.toString(), currentX, currentY - lineHeight);
+      ctx.fillText(steps.remainder.toString(), currentX, currentY - lineHeight);
     }
 
   } else {
