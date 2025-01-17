@@ -341,17 +341,17 @@ export async function generateVerticalArithmeticImage(expression) {
 
     steps.steps.forEach((step, index) => {
       ctx.textAlign = 'left';  // 设置左对齐
-      const productEndX = currentX + step.product.toString().length * charWidth;
-      // 绘制乘积
+      const productEndX = currentX + step.product.toString().length * 0.7 * charWidth;
+      console.log("xy: ", currentX, productEndX, step.product)
+       // 绘制乘积
       ctx.fillText(step.product.toString(), currentX, currentY);
-       // 更新 currentX 为乘积数字的结束位置
+      // 更新 currentX 为乘积数字的结束位置
       currentY += lineHeight;
       // 绘制步骤分隔线 (移动到乘积和差值之间)
       ctx.beginPath();
       ctx.moveTo(currentX, currentY - 0.5 * lineHeight);
-      ctx.lineTo(productEndX, currentY - 0.5 * lineHeight);
-      ctx.stroke();
-
+      ctx.lineTo(productEndX + (dividendLength - step.product.toString().length) * 0.7 * charWidth, currentY - 0.5 * lineHeight);
+       ctx.stroke();
       // 绘制差值和剩余的被除数数字
       let remainingDigits = '';
       if (index < steps.steps.length - 1) {
@@ -362,12 +362,12 @@ export async function generateVerticalArithmeticImage(expression) {
           remainingDigits += num1Digits[currentPosition];
         }
       }
-      currentX = productEndX - step.difference.toString() * charWidth
+      currentX = productEndX - (step.difference.toString() * 0.7  * charWidth)
       const differenceWithRemaining = step.difference.toString() + remainingDigits;
       ctx.fillText(differenceWithRemaining, currentX, currentY);
       currentY += lineHeight;
       //currentX = productEndX + (differenceWithRemaining.length + step.difference.length) * charWidth
-      currentX += differenceWithRemaining.length * charWidth;
+      //currentX += differenceWithRemaining.length * charWidth;
     });
 
     // 如果有余数，显示在最后一行
