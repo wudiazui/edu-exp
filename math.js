@@ -5,19 +5,19 @@ function parseExpression(expr) {
     .replace(/×/g, '*')
     .replace(/÷/g, '/');
 
-  const match = cleaned.match(/^(\d+)([\+\-\*\/])(\d+)$/);
+  const match = cleaned.match(/^(\d*\.?\d+)([\+\-\*\/])(\d*\.?\d+)$/);
   if (!match) throw new Error('Invalid expression format');
   return {
-    num1: parseInt(match[1]),
+    num1: parseFloat(match[1]),
     operator: match[2],
-    num2: parseInt(match[3])
+    num2: parseFloat(match[3])
   };
 }
 
 function getAdditionSteps(num1, num2) {
   const num1Str = num1.toString();
   const num2Str = num2.toString();
-  const result = (num1 + num2).toString();
+  const result = (num1 + num2).toFixed(1);
 
   // 计算每一位的进位情况
   const carries = [];
@@ -61,7 +61,7 @@ function getAdditionSteps(num1, num2) {
 function getSubtractionSteps(num1, num2) {
   const num1Str = num1.toString();
   const num2Str = num2.toString();
-  const result = (num1 - num2).toString();
+  const result = (num1 - num2).toFixed(1);
 
   // 计算借位情况
   const borrows = [];
@@ -114,7 +114,7 @@ function getSubtractionSteps(num1, num2) {
 function getMultiplicationSteps(num1, num2) {
   const num1Str = num1.toString();
   const num2Str = num2.toString();
-  const result = (num1 * num2).toString();
+  const result = (num1 * num2).toFixed(1);
 
   // 计算每一步的部分积
   const partialProducts = [];
@@ -150,8 +150,8 @@ function getMultiplicationSteps(num1, num2) {
 }
 
 function getDivisionSteps(num1, num2) {
-  const quotient = Math.floor(num1 / num2);
-  const remainder = num1 % num2;
+  const quotient = (num1 / num2).toFixed(1);
+  const remainder = (num1 % num2).toFixed(1);
 
   // 生成计算步骤
   const steps = [];
