@@ -10,6 +10,7 @@ export default function Main() {
   const [answer, setAnswer] = React.useState('');
   const [analysis, setAnalysis] = React.useState('');
   const [isFormatting, setIsFormatting] = useState(false);
+  const [isCompleteeing, setIsCompleteeing] = useState(false);
   const [isGeneratingAnswer, setIsGeneratingAnswer] = useState(false);
   const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
   const [host, setHost] = React.useState('');
@@ -53,6 +54,21 @@ export default function Main() {
       // 处理其他响应...
     } finally {
       setIsFormatting(false);
+    }
+  };
+
+  const handleComplete = async () => {
+    setIsCompleteeing(true);
+    try {
+      const response = await chrome.runtime.sendMessage(
+        { type: 'TOPIC_COMPLETE', data: {'topic': question}, host: host, uname: name }
+      );
+      if (response && response.formatted) {
+        setQuestion(response.formatted);
+      }
+      // 处理其他响应...
+    } finally {
+      setIsCompleteeing(false);
     }
   };
 
@@ -157,11 +173,13 @@ export default function Main() {
                     analysis={analysis}
                     setAnalysis={setAnalysis}
                     isFormatting={isFormatting}
-                    handleFormat={handleFormat}
-                    isGeneratingAnswer={isGeneratingAnswer}
-                    handleGenerateAnswer={handleGenerateAnswer}
-                    isGeneratingAnalysis={isGeneratingAnalysis}
-                    handleGenerateAnalysis={handleGenerateAnalysis}
+                  handleFormat={handleFormat}
+                  isCompleteeing={isCompleteeing}
+                  handleComplete={handleComplete}
+                  isGeneratingAnswer={isGeneratingAnswer}
+                  handleGenerateAnswer={handleGenerateAnswer}
+                  isGeneratingAnalysis={isGeneratingAnalysis}
+                  handleGenerateAnalysis={handleGenerateAnalysis}
                 />
             )}
             {activeTab === 'ocr' && (

@@ -11,10 +11,12 @@ const QuestionAnswerForm = ({
     setAnswer,
     analysis,
     setAnalysis,
-    isFormatting,
-    handleFormat,
-    isGeneratingAnswer,
-    handleGenerateAnswer,
+  isFormatting,
+  handleFormat,
+  isCompleteeing,
+  handleComplete,
+  isGeneratingAnswer,
+  handleGenerateAnswer,
     isGeneratingAnalysis,
     handleGenerateAnalysis,
 }) => {
@@ -56,7 +58,14 @@ const QuestionAnswerForm = ({
                     >
                         {isFormatting ? '' : '整理题干'}
                     </button>
-                    <button
+                  <button
+                    className={`join-item ${isCompleteeing ? 'loading loading-spinner loading-sm' : 'btn btn-sm'}`}
+                    onClick={handleComplete}
+                    disabled={isCompleteeing}
+                  >
+                    {isCompleteeing ? '' : '残题补全'}
+                        </button>
+                        <button
                         className={`join-item ${isGeneratingAnswer ? 'loading loading-spinner loading-sm' : 'btn btn-sm'}`}
                         onClick={handleGenerateAnswer}
                         disabled={isGeneratingAnswer}
