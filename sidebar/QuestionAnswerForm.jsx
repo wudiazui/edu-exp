@@ -31,7 +31,7 @@ const QuestionAnswerForm = ({
                     value={question}
                     onChange={handleQuestionChange}
                     placeholder="题干"
-                    className="textarea textarea-bordered textarea-lg w-full h-full"
+                    className="textarea textarea-bordered textarea-lg w-full h-full min-h-40"
                 ></textarea>
                 {/*
                 <div className="form-control w-full max-w-xs mt-2">
@@ -90,7 +90,7 @@ const QuestionAnswerForm = ({
                     value={answer}
                     onChange={(e) => setAnswer(e.target.value)}
                     placeholder="解答"
-                    className="textarea textarea-bordered textarea-lg w-full h-full"
+                    className="textarea textarea-bordered textarea-lg w-full h-full min-h-40"
                 ></textarea>
             </div>
             <div className="w-full mt-2">
@@ -102,7 +102,7 @@ const QuestionAnswerForm = ({
                     value={analysis}
                     onChange={(e) => setAnalysis(e.target.value)}
                     placeholder="解析"
-                    className="textarea textarea-bordered textarea-lg w-full h-full"
+                    className="textarea textarea-bordered textarea-lg w-full h-full min-h-40"
                 ></textarea>
             </div>
         </>

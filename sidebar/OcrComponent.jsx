@@ -82,7 +82,7 @@ const OcrComponent = ({ host, uname }) => {
             value={recognizedText}
             onChange={(e) => setRecognizedText(e.target.value)}
             placeholder="识别后的文字内容"
-            className="textarea textarea-bordered textarea-lg w-full h-full"
+            className="textarea textarea-bordered textarea-lg w-full h-full min-h-40"
           >
           </textarea>
         </div>
