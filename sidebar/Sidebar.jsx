@@ -18,12 +18,15 @@ export default function Main() {
   const [name, setName] = useState('');
   const [activeTab, setActiveTab] = useState('solving');
   const [isImageQuestion, setIsImageQuestion] = useState(false);
+  const [selectedImage, setSelectedImage] = React.useState(null);
+  const [selectedValue, setSelectedValue] = useState('问答');
 
   React.useEffect(() => {
     // 监听来自 background 的消息
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (message.type === 'SET_QUESTION') {
         setQuestion(message.data);
+        setIsImageQuestion(false);
       }
     });
   }, []);
@@ -89,7 +92,7 @@ export default function Main() {
           type: 'TOPIC_ANSWER',
           host: host,
           uname: name,
-          data: {'topic': question, 'image_url': imageUrl }
+          data: {'topic': question, 'image_url': imageUrl, 'image_data': selectedImage, 'topic_type': selectedValue }
         }
       );
       if (response && response.formatted) {
@@ -108,7 +111,7 @@ export default function Main() {
           type: 'TOPIC_ANALYSIS',
           host: host,
           uname: name,
-          data: {'topic': question, 'answer': answer, 'image_url': imageUrl }
+          data: {'topic': question, 'answer': answer, 'image_url': imageUrl, 'image_data': selectedImage, 'topic_type': selectedValue}
         }
       );
       if (response && response.formatted) {
@@ -147,21 +150,22 @@ export default function Main() {
     chrome.storage.sync.set({ activeTab: tab });
   };
 
+
   return (<div className="container max-auto px-1">
             <div className="tabs tabs-boxed">
-                <a className={`tab ${activeTab === 'settings' ? 'tab-active' : ''}`} onClick={() => handleTabChange('settings')}>设置</a>
-                <a className={`tab ${activeTab === 'solving' ? 'tab-active' : ''}`} onClick={() => handleTabChange('solving')}>解题</a>
-                <a className={`tab ${activeTab === 'ocr' ? 'tab-active' : ''}`} onClick={() => handleTabChange('ocr')}>文字识别</a>
+              <a className={`tab ${activeTab === 'settings' ? 'tab-active' : ''}`} onClick={() => handleTabChange('settings')}>设置</a>
+              <a className={`tab ${activeTab === 'solving' ? 'tab-active' : ''}`} onClick={() => handleTabChange('solving')}>解题</a>
+              <a className={`tab ${activeTab === 'ocr' ? 'tab-active' : ''}`} onClick={() => handleTabChange('ocr')}>文字识别</a>
             </div>
             {activeTab === 'settings' && (
-                <div className="w-full mt-2">
-                        <ApiSettingsForm
-                            host={host}
-                            handleHostChange={handleHostChange}
-                            name={name}
-                            handleNameChange={handleNameChange}
-                        />
-                    </div>
+              <div className="w-full mt-2">
+                <ApiSettingsForm
+                  host={host}
+                  handleHostChange={handleHostChange}
+                  name={name}
+                  handleNameChange={handleNameChange}
+                />
+              </div>
             )}
             {activeTab === 'solving' && (
                 <QuestionAnswerForm
@@ -183,6 +187,10 @@ export default function Main() {
                     handleGenerateAnalysis={handleGenerateAnalysis}
                     isImageQuestion={isImageQuestion}
                     setIsImageQuestion={setIsImageQuestion}
+                    selectedImage={selectedImage}
+                    setSelectedImage={setSelectedImage}
+                    selectedValue={selectedValue}
+                    setSelectedValue={setSelectedValue}
                 />
             )}
             {activeTab === 'ocr' && (

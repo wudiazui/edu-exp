@@ -3,12 +3,14 @@ import React from 'react';
 const QuestionTypeSelect = ({
   isImageQuestion,
   setIsImageQuestion,
+  selectedValue,
+  setSelectedValue,
 }) => {
   return (
     <div className="flex w-full">
       <div className="flex items-center w-full">
         <span className="label-text flex-shrink-0 mx-1">题型</span>
-        <select className="select select-sm select-bordered flex-grow" defaultValue="问答">
+        <select className="select select-sm select-bordered flex-grow" value={selectedValue} onChange={(e) => setSelectedValue(e.target.value)}>
           <option value="问答">问答</option>
           <option value="单选">单选</option>
           <option value="填空">填空</option>

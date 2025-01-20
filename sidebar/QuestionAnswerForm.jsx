@@ -20,9 +20,28 @@ const QuestionAnswerForm = ({
     isGeneratingAnalysis,
     handleGenerateAnalysis,
     isImageQuestion,
-    setIsImageQuestion,
+  setIsImageQuestion,
+  selectedImage,
+  setSelectedImage,
+  selectedValue,
+  setSelectedValue,
 }) => {
-    return (
+
+  const onPaste = (event) => {
+    const items = event.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith('image/')) {
+        const file = items[i].getAsFile();
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setSelectedImage(reader.result);
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+  };
+
+  return (
         <>
             <div className="w-full mt-2">
                 <div className="label flex justify-between items-center">
@@ -35,25 +54,27 @@ const QuestionAnswerForm = ({
                     placeholder="题干"
                     className="textarea textarea-bordered textarea-lg w-full h-full min-h-40"
                 ></textarea>
-                {isImageQuestion && (
-                    <div className="form-control w-full max-w-xs mt-2">
-                        <label className="label">
-                            <span className="label-text">Image URL</span>
-                        </label>
-                        <input
-                            type="text"
-                            value={imageUrl}
-                            onChange={(e) => setImageUrl(e.target.value)}
-                            placeholder="输入 Image URL"
-                            className="input input-bordered input-sm"
-                        />
+                {!isImageQuestion && (
+                  <div className="form-control w-full">
+                    <div className="w-full">
+                      <input type="text" onPaste={onPaste} placeholder="粘贴图片" className="input input-sm input-bordered w-full" />
                     </div>
+                    <div className="w-full mt-2 p-2 rounded-lg border">
+                      {selectedImage ? (
+                        <img src={selectedImage} alt="Selected" className="img object-cover" />
+                      ) : (
+                        <div className="skeleton w-full h-24"></div>
+                      )}
+                    </div>
+                  </div>
                 )}
             </div>
-            <div className="w-full mt-2 flex flex-col items-center border border-gray-300 rounded-lg">
-              <Select
+              <div className="w-full mt-2 flex flex-col items-center border border-gray-300 rounded-lg">
+                <Select
                 isImageQuestion={isImageQuestion}
-                setIsImageQuestion={setIsImageQuestion} />
+                setIsImageQuestion={setIsImageQuestion}
+                selectedValue={selectedValue}
+                setSelectedValue={setSelectedValue} />
                 <div className="join m-2">
                     <button
                         className={`join-item ${isFormatting ? 'loading loading-spinner loading-sm' : 'btn btn-sm'}`}

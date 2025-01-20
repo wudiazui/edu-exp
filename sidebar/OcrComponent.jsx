@@ -48,9 +48,9 @@ const OcrComponent = ({ host, uname }) => {
             }
           });
         }
-    };
+    };``
 
-    const { getRootProps, getInputProps } = useDropzone({ onDrop });
+  const { getRootProps, getInputProps } = useDropzone({ onDrop });
 
   return (
       <div className="container max-auto w-full">
