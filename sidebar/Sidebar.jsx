@@ -17,6 +17,7 @@ export default function Main() {
   const [imageUrl, setImageUrl] = useState('');
   const [name, setName] = useState('');
   const [activeTab, setActiveTab] = useState('solving');
+  const [isImageQuestion, setIsImageQuestion] = useState(false);
 
   React.useEffect(() => {
     // 监听来自 background 的消息
@@ -173,13 +174,15 @@ export default function Main() {
                     analysis={analysis}
                     setAnalysis={setAnalysis}
                     isFormatting={isFormatting}
-                  handleFormat={handleFormat}
-                  isCompleteeing={isCompleteeing}
-                  handleComplete={handleComplete}
-                  isGeneratingAnswer={isGeneratingAnswer}
-                  handleGenerateAnswer={handleGenerateAnswer}
-                  isGeneratingAnalysis={isGeneratingAnalysis}
-                  handleGenerateAnalysis={handleGenerateAnalysis}
+                    handleFormat={handleFormat}
+                    isCompleteeing={isCompleteeing}
+                    handleComplete={handleComplete}
+                    isGeneratingAnswer={isGeneratingAnswer}
+                    handleGenerateAnswer={handleGenerateAnswer}
+                    isGeneratingAnalysis={isGeneratingAnalysis}
+                    handleGenerateAnalysis={handleGenerateAnalysis}
+                    isImageQuestion={isImageQuestion}
+                    setIsImageQuestion={setIsImageQuestion}
                 />
             )}
             {activeTab === 'ocr' && (

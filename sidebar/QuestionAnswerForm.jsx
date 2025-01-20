@@ -19,6 +19,8 @@ const QuestionAnswerForm = ({
   handleGenerateAnswer,
     isGeneratingAnalysis,
     handleGenerateAnalysis,
+    isImageQuestion,
+    setIsImageQuestion,
 }) => {
     return (
         <>
@@ -33,23 +35,25 @@ const QuestionAnswerForm = ({
                     placeholder="题干"
                     className="textarea textarea-bordered textarea-lg w-full h-full min-h-40"
                 ></textarea>
-                {/*
-                <div className="form-control w-full max-w-xs mt-2">
-                    <label className="label">
-                        <span className="label-text">Image URL</span>
-                    </label>
-                    <input
-                        type="text"
-                        value={imageUrl}
-                        onChange={(e) => setImageUrl(e.target.value)}
-                        placeholder="输入 Image URL"
-                        className="input input-bordered input-sm"
-                    />
-                </div>
-                */}
+                {isImageQuestion && (
+                    <div className="form-control w-full max-w-xs mt-2">
+                        <label className="label">
+                            <span className="label-text">Image URL</span>
+                        </label>
+                        <input
+                            type="text"
+                            value={imageUrl}
+                            onChange={(e) => setImageUrl(e.target.value)}
+                            placeholder="输入 Image URL"
+                            className="input input-bordered input-sm"
+                        />
+                    </div>
+                )}
             </div>
             <div className="w-full mt-2 flex flex-col items-center border border-gray-300 rounded-lg">
-                <Select />
+              <Select
+                isImageQuestion={isImageQuestion}
+                setIsImageQuestion={setIsImageQuestion} />
                 <div className="join m-2">
                     <button
                         className={`join-item ${isFormatting ? 'loading loading-spinner loading-sm' : 'btn btn-sm'}`}
