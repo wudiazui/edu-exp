@@ -27,6 +27,7 @@ export default function Main() {
       if (message.type === 'SET_QUESTION') {
         setQuestion(message.data);
         setIsImageQuestion(false);
+        setSelectedImage(null);
       }
     });
   }, []);
