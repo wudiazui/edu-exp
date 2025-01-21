@@ -54,7 +54,7 @@ const QuestionAnswerForm = ({
                     placeholder="题干"
                     className="textarea textarea-bordered textarea-lg w-full h-full min-h-40"
                 ></textarea>
-                {!isImageQuestion && (
+                {isImageQuestion && (
                   <div className="form-control w-full">
                     <div className="w-full">
                       <input type="text" onPaste={onPaste} placeholder="粘贴图片" className="input input-sm input-bordered w-full" />
