@@ -192,6 +192,8 @@ export default function Main() {
                     setSelectedImage={setSelectedImage}
                     selectedValue={selectedValue}
                     setSelectedValue={setSelectedValue}
+                    host={host}
+                    uname={name}
                 />
             )}
             {activeTab === 'ocr' && (

@@ -26,7 +26,7 @@ export function math2img(expr) {
 
 export async function img_upload(imageBlob) {
   const url = "/edushop/tiku/submit/uploadpic";
-  
+
   const formData = new FormData();
   formData.append('file', imageBlob, 'math.png');
 
@@ -35,11 +35,11 @@ export async function img_upload(imageBlob) {
       method: 'POST',
       body: formData
     });
-    
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-    
+
     return await response.json();
   } catch (error) {
     console.error('Error uploading image:', error);
@@ -124,6 +124,29 @@ export async function run_llm(host, uname, item, data) {
 
     const responseData = await response.json();
     return responseData.topic;
+  } catch (error) {
+    console.error('Error formatting topic:', error);
+    return null;
+  }
+}
+
+export async function topic_type_list(host, uname) {
+  try {
+    const response = await fetch(`${host}/llm/topic_type_list`, {
+      method: 'GET',
+      headers: {
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
+        'X-Pfy-Key': uname
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const responseData = await response.json();
+    return responseData;
   } catch (error) {
     console.error('Error formatting topic:', error);
     return null;

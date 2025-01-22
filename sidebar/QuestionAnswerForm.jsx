@@ -25,6 +25,8 @@ const QuestionAnswerForm = ({
   setSelectedImage,
   selectedValue,
   setSelectedValue,
+  host,
+  uname,
 }) => {
 
   const onPaste = (event) => {
@@ -74,7 +76,10 @@ const QuestionAnswerForm = ({
                 isImageQuestion={isImageQuestion}
                 setIsImageQuestion={setIsImageQuestion}
                 selectedValue={selectedValue}
-                setSelectedValue={setSelectedValue} />
+                  setSelectedValue={setSelectedValue}
+                  host={host}
+                  uname={uname}
+                />
                 <div className="join m-2">
                     <button
                         className={`join-item ${isFormatting ? 'loading loading-spinner loading-sm' : 'btn btn-sm'}`}
