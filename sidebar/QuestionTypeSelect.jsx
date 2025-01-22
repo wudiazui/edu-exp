@@ -14,15 +14,17 @@ const QuestionTypeSelect = ({
 
   useEffect(() => {
     const fetchOptions = async () => {
+      // 检查 host 和 uname 是否为空
+      if (!host || !uname) return; // 如果任意一个为空，直接返回
       const data = await topic_type_list(host, uname);
-      console.log(data)
+      console.log(data);
       setSelectOptions(data || []); // 确保 setSelectOptions 传入一个数组
     };
     fetchOptions();
   }, [host, uname]); // 依赖项更新
 
   return (
-    <div className="flex w-full">
+    <div className="flex w-full p-2">
       <div className="flex items-center w-full">
         <span className="label-text flex-shrink-0 mx-1">题型</span>
         <select className="select select-sm select-bordered flex-grow" value={selectedValue} onChange={(e) => setSelectedValue(e.target.value)}>

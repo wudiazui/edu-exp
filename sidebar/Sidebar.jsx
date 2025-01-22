@@ -14,7 +14,6 @@ export default function Main() {
   const [isGeneratingAnswer, setIsGeneratingAnswer] = useState(false);
   const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
   const [host, setHost] = React.useState('');
-  const [imageUrl, setImageUrl] = useState('');
   const [name, setName] = useState('');
   const [activeTab, setActiveTab] = useState('solving');
   const [isImageQuestion, setIsImageQuestion] = useState(false);
@@ -172,8 +171,6 @@ export default function Main() {
                 <QuestionAnswerForm
                     question={question}
                     handleQuestionChange={handleQuestionChange}
-                    imageUrl={imageUrl}
-                    setImageUrl={setImageUrl}
                     answer={answer}
                     setAnswer={setAnswer}
                     analysis={analysis}

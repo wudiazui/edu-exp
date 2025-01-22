@@ -106,7 +106,6 @@ export function replacePunctuation(text) {
 
 
 export async function run_llm(host, uname, item, data) {
-  console.log("run_llm", host, uname, item, data)
   try {
     const response = await fetch(`${host}/llm/run/${item}`, {
       method: 'POST',
@@ -133,6 +132,29 @@ export async function run_llm(host, uname, item, data) {
 export async function topic_type_list(host, uname) {
   try {
     const response = await fetch(`${host}/llm/topic_type_list`, {
+      method: 'GET',
+      headers: {
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
+        'X-Pfy-Key': uname
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const responseData = await response.json();
+    return responseData;
+  } catch (error) {
+    console.error('Error formatting topic:', error);
+    return null;
+  }
+}
+
+export async function user_info(host, uname) {
+  try {
+    const response = await fetch(`${host}/user/info`, {
       method: 'GET',
       headers: {
         'accept': 'application/json',

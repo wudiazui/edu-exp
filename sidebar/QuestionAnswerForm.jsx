@@ -3,23 +3,21 @@ import CopyButton from './CopyButton.jsx'; // 确保引入 CopyButton 组件
 import Select from './QuestionTypeSelect.jsx'; // 确保引入 Select 组件
 
 const QuestionAnswerForm = ({
-    question,
-    handleQuestionChange,
-    imageUrl,
-    setImageUrl,
-    answer,
-    setAnswer,
-    analysis,
-    setAnalysis,
+  question,
+  handleQuestionChange,
+  answer,
+  setAnswer,
+  analysis,
+  setAnalysis,
   isFormatting,
   handleFormat,
   isCompleteeing,
   handleComplete,
   isGeneratingAnswer,
   handleGenerateAnswer,
-    isGeneratingAnalysis,
-    handleGenerateAnalysis,
-    isImageQuestion,
+  isGeneratingAnalysis,
+  handleGenerateAnalysis,
+  isImageQuestion,
   setIsImageQuestion,
   selectedImage,
   setSelectedImage,
@@ -81,7 +79,7 @@ const QuestionAnswerForm = ({
                   uname={uname}
                 />
                 <div className="join m-2">
-                    <button
+                  <button
                         className={`join-item ${isFormatting ? 'loading loading-spinner loading-sm' : 'btn btn-sm'}`}
                         onClick={handleFormat}
                         disabled={isFormatting}
