@@ -92,7 +92,7 @@ export default function Main() {
           type: 'TOPIC_ANSWER',
           host: host,
           uname: name,
-          data: {'topic': question, 'image_url': imageUrl, 'image_data': selectedImage, 'topic_type': selectedValue }
+          data: {'topic': question, 'image_data': selectedImage, 'topic_type': selectedValue }
         }
       );
       if (response && response.formatted) {
@@ -111,7 +111,7 @@ export default function Main() {
           type: 'TOPIC_ANALYSIS',
           host: host,
           uname: name,
-          data: {'topic': question, 'answer': answer, 'image_url': imageUrl, 'image_data': selectedImage, 'topic_type': selectedValue}
+          data: {'topic': question, 'answer': answer, 'image_data': selectedImage, 'topic_type': selectedValue}
         }
       );
       if (response && response.formatted) {
@@ -172,25 +172,25 @@ export default function Main() {
                     question={question}
                     handleQuestionChange={handleQuestionChange}
                     answer={answer}
-                    setAnswer={setAnswer}
-                    analysis={analysis}
-                    setAnalysis={setAnalysis}
-                    isFormatting={isFormatting}
-                    handleFormat={handleFormat}
-                    isCompleteeing={isCompleteeing}
-                    handleComplete={handleComplete}
-                    isGeneratingAnswer={isGeneratingAnswer}
-                    handleGenerateAnswer={handleGenerateAnswer}
-                    isGeneratingAnalysis={isGeneratingAnalysis}
-                    handleGenerateAnalysis={handleGenerateAnalysis}
-                    isImageQuestion={isImageQuestion}
-                    setIsImageQuestion={setIsImageQuestion}
-                    selectedImage={selectedImage}
-                    setSelectedImage={setSelectedImage}
-                    selectedValue={selectedValue}
-                    setSelectedValue={setSelectedValue}
-                    host={host}
-                    uname={name}
+                  setAnswer={setAnswer}
+                  analysis={analysis}
+                  setAnalysis={setAnalysis}
+                  isFormatting={isFormatting}
+                  handleFormat={handleFormat}
+                  isCompleteeing={isCompleteeing}
+                  handleComplete={handleComplete}
+                  isGeneratingAnswer={isGeneratingAnswer}
+                  handleGenerateAnswer={handleGenerateAnswer}
+                  isGeneratingAnalysis={isGeneratingAnalysis}
+                  handleGenerateAnalysis={handleGenerateAnalysis}
+                  isImageQuestion={isImageQuestion}
+                  setIsImageQuestion={setIsImageQuestion}
+                  selectedImage={selectedImage}
+                  setSelectedImage={setSelectedImage}
+                  selectedValue={selectedValue}
+                  setSelectedValue={setSelectedValue}
+                  host={host}
+                  uname={name}
                 />
             )}
             {activeTab === 'ocr' && (

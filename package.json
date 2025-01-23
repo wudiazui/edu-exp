@@ -3,7 +3,7 @@
   "name": "edu-exp",
   "description": "A baidu edu tools",
   "type": "module",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "keywords": [
     "extension",
     "browser-extension",
