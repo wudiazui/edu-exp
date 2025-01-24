@@ -303,8 +303,8 @@ export async function generateVerticalArithmeticImage(expression) {
     const arcTopX = padding + charWidth * 0.5 + (radius * Math.sin(-startAngle));
 
     // 绘制除数（先绘制除数）
-    ctx.textAlign = 'left';
-    ctx.fillText(num2.toString(), padding + 2.3, padding + lineHeight);
+    ctx.textAlign = 'right';
+    ctx.fillText(num2.toString(), arcTopX, padding + lineHeight);
 
     // 绘制弧线
     ctx.beginPath();
@@ -327,7 +327,7 @@ export async function generateVerticalArithmeticImage(expression) {
 
     // 绘制被除数
     ctx.textAlign = 'right';
-    const numberEndX = arcTopX + charWidth * (dividendLength);
+    const numberEndX = arcTopX + charWidth * (dividendLength) +0.2;
     ctx.fillText(num1.toString(), numberEndX, padding + lineHeight);
 
     // 绘制商
@@ -342,9 +342,10 @@ export async function generateVerticalArithmeticImage(expression) {
 
     steps.steps.forEach((step, index) => {
       ctx.textAlign = 'left';  // 设置左对齐
-      const productEndX = currentX + step.product.toString().length * 0.7 * charWidth;
+      currentX += ((step.dividend.toString().length - step.product.toString().length) * charWidth * 0.7)
+       const productEndX = currentX + step.product.toString().length * 0.7 * charWidth;
       console.log("xy: ", currentX, productEndX, step.product)
-       // 绘制乘积
+      // 绘制乘积
       ctx.fillText(step.product.toString(), currentX, currentY);
       // 更新 currentX 为乘积数字的结束位置
       currentY += lineHeight;
