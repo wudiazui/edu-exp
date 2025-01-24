@@ -150,8 +150,8 @@ function getMultiplicationSteps(num1, num2) {
 }
 
 function getDivisionSteps(num1, num2) {
-  const quotient = (num1 / num2).toFixed(1);
-  const remainder = (num1 % num2).toFixed(1);
+  const quotient = Math.floor(num1 / num2);  // 修改为整数
+  const remainder = num1 % num2;  // 修改为整数
 
   // 生成计算步骤
   const steps = [];
@@ -185,8 +185,8 @@ function getDivisionSteps(num1, num2) {
   }
 
   return {
-    quotient: quotient.toString(),
-    remainder: remainder.toString(),
+    quotient: quotient.toString(),  // 仍然返回字符串形式
+    remainder: remainder.toString(),  // 仍然返回字符串形式
     steps
   };
 }
@@ -197,7 +197,7 @@ export async function generateVerticalArithmeticImage(expression) {
   // 设置画布参数
   const charWidth = 20;
   const lineHeight = 30;
-  const padding = 10;
+  const padding = 20;
 
   // 根据运算类型计算画布大小和获取步骤
   let width, height, steps;
@@ -292,6 +292,7 @@ export async function generateVerticalArithmeticImage(expression) {
   } else if (operator === '/') {
     // 处理除法的特殊情况
     const steps = getDivisionSteps(num1, num2);
+    console.log(steps)
 
     // 计算弧线的参数
     const radius = charWidth * 1.5;
@@ -351,7 +352,7 @@ export async function generateVerticalArithmeticImage(expression) {
       ctx.beginPath();
       ctx.moveTo(currentX, currentY - 0.5 * lineHeight);
       ctx.lineTo(productEndX + (dividendLength - step.product.toString().length) * 0.7 * charWidth, currentY - 0.5 * lineHeight);
-       ctx.stroke();
+      ctx.stroke();
       // 绘制差值和剩余的被除数数字
       let remainingDigits = '';
       if (index < steps.steps.length - 1) {
@@ -362,18 +363,18 @@ export async function generateVerticalArithmeticImage(expression) {
           remainingDigits += num1Digits[currentPosition];
         }
       }
-      currentX = productEndX - (step.difference.toString() * 0.7  * charWidth)
+      currentX = productEndX - (step.difference.toString().length * 0.7 * charWidth);  // 修正为使用差值的长度
       const differenceWithRemaining = step.difference.toString() + remainingDigits;
+      console.log(differenceWithRemaining)
       ctx.fillText(differenceWithRemaining, currentX, currentY);
       currentY += lineHeight;
-      //currentX = productEndX + (differenceWithRemaining.length + step.difference.length) * charWidth
-      //currentX += differenceWithRemaining.length * charWidth;
     });
 
     // 如果有余数，显示在最后一行
-    if (parseInt(steps.remainder) > 0) {
-      ctx.fillText(steps.remainder.toString(), currentX, currentY - lineHeight);
-    }
+    //if (parseInt(steps.remainder) > 0) {
+    //  currentY += lineHeight;  // 确保余数在新的一行显示
+    //  ctx.fillText(steps.remainder.toString(), currentX, currentY);
+    //}
 
   } else {
     // 绘制加减法过程（保持原有代码）
