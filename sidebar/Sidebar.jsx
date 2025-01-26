@@ -19,6 +19,8 @@ export default function Main() {
   const [isImageQuestion, setIsImageQuestion] = useState(false);
   const [selectedImage, setSelectedImage] = React.useState(null);
   const [selectedValue, setSelectedValue] = useState('问答');
+  const [isSwapActive, setIsSwapActive] = useState(false);
+  const [subject, setSubject] = useState('shuxue'); // 初始化 subject
 
   React.useEffect(() => {
     // 监听来自 background 的消息
@@ -50,7 +52,7 @@ export default function Main() {
     setIsFormatting(true);
     try {
       const response = await chrome.runtime.sendMessage(
-        { type: 'FORMAT_QUESTION', data: {'topic': question}, host: host, uname: name }
+        { type: 'FORMAT_QUESTION', data: {'topic': question, 'discipline': subject}, host: host, uname: name }
       );
       if (response && response.formatted) {
         setQuestion(response.formatted);
@@ -65,7 +67,7 @@ export default function Main() {
     setIsCompleteeing(true);
     try {
       const response = await chrome.runtime.sendMessage(
-        { type: 'TOPIC_COMPLETE', data: {'topic': question}, host: host, uname: name }
+        { type: 'TOPIC_COMPLETE', data: {'topic': question, 'discipline': subject}, host: host, uname: name }
       );
       if (response && response.formatted) {
         setQuestion(response.formatted);
@@ -92,7 +94,7 @@ export default function Main() {
           type: 'TOPIC_ANSWER',
           host: host,
           uname: name,
-          data: {'topic': question, 'image_data': selectedImage, 'topic_type': selectedValue }
+          data: {'topic': question, 'discipline': subject, 'image_data': selectedImage, 'topic_type': selectedValue }
         }
       );
       if (response && response.formatted) {
@@ -111,7 +113,7 @@ export default function Main() {
           type: 'TOPIC_ANALYSIS',
           host: host,
           uname: name,
-          data: {'topic': question, 'answer': answer, 'image_data': selectedImage, 'topic_type': selectedValue}
+          data: {'topic': question, 'answer': answer, 'discipline': subject, 'image_data': selectedImage, 'topic_type': selectedValue}
         }
       );
       if (response && response.formatted) {
@@ -150,6 +152,24 @@ export default function Main() {
     chrome.storage.sync.set({ activeTab: tab });
   };
 
+  const handleSwapToggle = (newValue) => {
+    setIsSwapActive(newValue);
+    // 更新 Chrome 存储
+    chrome.storage.sync.set({ isSwapActive: newValue });
+  };
+
+  useEffect(() => {
+    // 从 Chrome 存储中加载 isSwapActive
+    chrome.storage.sync.get(['isSwapActive'], (result) => {
+      if (result.isSwapActive !== undefined) {
+        setIsSwapActive(result.isSwapActive);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    setSubject(isSwapActive ? 'yuwen' : 'shuxue'); // 根据 isSwapActive 的值更新 subject
+  }, [isSwapActive]); // 监听 isSwapActive 的变化
 
   return (<div className="container max-auto px-1">
             <div className="tabs tabs-boxed">
@@ -191,6 +211,8 @@ export default function Main() {
                   setSelectedValue={setSelectedValue}
                   host={host}
                   uname={name}
+                  isSwapActive={isSwapActive}
+                  setIsSwapActive={handleSwapToggle}
                 />
             )}
             {activeTab === 'ocr' && (

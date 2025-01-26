@@ -25,6 +25,8 @@ const QuestionAnswerForm = ({
   setSelectedValue,
   host,
   uname,
+  isSwapActive,
+  setIsSwapActive,
 }) => {
 
   const onPaste = (event) => {
@@ -77,6 +79,8 @@ const QuestionAnswerForm = ({
                   setSelectedValue={setSelectedValue}
                   host={host}
                   uname={uname}
+                  isSwapActive={isSwapActive}
+                  setIsSwapActive={setIsSwapActive}
                 />
                 <div className="join m-2">
                   <button

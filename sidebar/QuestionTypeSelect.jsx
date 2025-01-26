@@ -6,10 +6,11 @@ const QuestionTypeSelect = ({
   setIsImageQuestion,
   selectedValue,
   setSelectedValue,
-  host, // 从父组件接收 host
-  uname, // 从父组件接收 uname
+  host,
+  uname,
+  isSwapActive,
+  setIsSwapActive,
 }) => {
-  // 新增状态来存储选项，初始值为一个空数组
   const [selectOptions, setSelectOptions] = useState([]);
 
   useEffect(() => {
@@ -33,15 +34,25 @@ const QuestionTypeSelect = ({
           ))}
         </select>
       </div>
-      <div className="form-control w-1/3">
+      <div className="form-control w-3/6 flex items-center">
         <label className="label cursor-pointer">
-        <span className="label-text">图片题</span>
-        <input type="checkbox"
-          className="checkbox"
-          checked={isImageQuestion}
-          onChange={(e) => setIsImageQuestion(e.target.checked)}
-        />
-      </label>
+          <span className="label-text mr-1">图片题</span>
+          <input type="checkbox"
+            className="checkbox"
+            checked={isImageQuestion}
+            onChange={(e) => setIsImageQuestion(e.target.checked)}
+          />
+        </label>
+      </div>
+      <div className="w-1/6 flex items-center">
+        <label className="swap">
+          <input type="checkbox"
+            checked={isSwapActive}
+            onChange={(e) => setIsSwapActive(e.target.checked)}
+          />
+          <div className="swap-on">语文</div>
+          <div className="swap-off">数学</div>
+        </label>
       </div>
     </div>
   );
