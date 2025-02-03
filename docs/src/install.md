@@ -2,6 +2,22 @@
 
 ## Chrome(谷歌浏览器)
 
+- 下载插件离线安装包 [http://47.109.61.89:5801/edu-exp-0.0.4.zip](http://47.109.61.89:5801/edu-exp-0.0.4.zip)
+- 将下载的压缩包解压到一个干净的目(目录名称不要带中文)
+- 按照这个图描述的操作
+![](./img/WechatIMG1.jpg)
+- 将插件固定到侧边栏
+  1. 步骤1
+  ![](./img/WechatIMG4.jpg)
+  2. 步骤二
+  ![](./img/WechatIMG5.jpg)
+
+- 点击工具栏图标打开侧边栏
+  ![](./img/WechatIMG6.jpg)
+  ![](./img/WechatIMG7.jpg)
+
+- 安装完成
+
 
 ## Microsoft Edge(微软系统浏览器)
 
