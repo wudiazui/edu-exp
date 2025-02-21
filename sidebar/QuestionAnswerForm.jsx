@@ -116,7 +116,15 @@ const QuestionAnswerForm = ({
             <div className="w-full mt-2">
                 <div className="label flex justify-between items-center">
                     <span className="label-text">解答</span>
-                    <CopyButton text={answer} />
+                    <div className="flex gap-1 items-center">
+                        <button 
+                            onClick={() => setAnswer('')} 
+                            className="btn btn-ghost btn-xs flex items-center"
+                        >
+                            清除
+                        </button>
+                        <CopyButton text={answer} />
+                    </div>
                 </div>
                 <textarea
                     value={answer}
@@ -128,7 +136,15 @@ const QuestionAnswerForm = ({
             <div className="w-full mt-2">
                 <div className="label flex justify-between items-center">
                     <span className="label-text">解析</span>
-                    <CopyButton text={analysis} />
+                    <div className="flex gap-1 items-center">
+                        <button 
+                            onClick={() => setAnalysis('')} 
+                            className="btn btn-ghost btn-xs flex items-center"
+                        >
+                            清除
+                        </button>
+                        <CopyButton text={analysis} />
+                    </div>
                 </div>
                 <textarea
                     value={analysis}
