@@ -17,7 +17,7 @@ function parseExpression(expr) {
 function getAdditionSteps(num1, num2) {
   const num1Str = num1.toString();
   const num2Str = num2.toString();
-  const result = (num1 + num2).toFixed(1);
+  const result = (num1 + num2).toString();
 
   // 计算每一位的进位情况
   const carries = [];
@@ -61,7 +61,7 @@ function getAdditionSteps(num1, num2) {
 function getSubtractionSteps(num1, num2) {
   const num1Str = num1.toString();
   const num2Str = num2.toString();
-  const result = (num1 - num2).toFixed(1);
+  const result = (num1 - num2).toString();
 
   // 计算借位情况
   const borrows = [];
@@ -114,7 +114,7 @@ function getSubtractionSteps(num1, num2) {
 function getMultiplicationSteps(num1, num2) {
   const num1Str = num1.toString();
   const num2Str = num2.toString();
-  const result = (num1 * num2).toFixed(1);
+  const result = (num1 * num2).toString();
 
   // 计算每一步的部分积
   const partialProducts = [];
@@ -150,7 +150,7 @@ function getMultiplicationSteps(num1, num2) {
 }
 
 function getDivisionSteps(num1, num2) {
-  const quotient = Math.floor(num1 / num2);  // 修改为整数
+  const quotient = Math.floor(num1 / num2).toString();  // 修改为整数
   const remainder = num1 % num2;  // 修改为整数
 
   // 生成计算步骤
