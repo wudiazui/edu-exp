@@ -200,6 +200,10 @@ export async function ocr_text(image_data, host, uname) {
 }
 
 export async function replaceLatexWithImages(text) {
+  // Convert \( and \) to $
+  text = text.replace(/\\\(/g, '$').replace(/\\\)/g, '$')
+    .replace(/\\\[/g, '$').replace(/\\\]/g, '$');
+
   const regex = /\$([^$]+)\$/g;
   let result = text;
   const matches = [...text.matchAll(regex)];
