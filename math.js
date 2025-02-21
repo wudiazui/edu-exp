@@ -5,6 +5,7 @@ function parseExpression(expr) {
     .replace(/×/g, '*')
     .replace(/÷/g, '/');
 
+  // 修改正则表达式，只匹配正数，但支持减法运算符
   const match = cleaned.match(/^(\d*\.?\d+)([\+\-\*\/])(\d*\.?\d+)$/);
   if (!match) throw new Error('Invalid expression format');
   return {
@@ -73,9 +74,21 @@ function getAdditionSteps(num1, num2) {
 }
 
 function getSubtractionSteps(num1, num2) {
-  const num1Str = num1.toString();
-  const num2Str = num2.toString();
-  const result = (num1 - num2).toString();
+  // 将数字转换为字符串并处理小数点
+  const [num1Int, num1Dec = ''] = num1.toString().split('.');
+  const [num2Int, num2Dec = ''] = num2.toString().split('.');
+  
+  // 对齐小数位
+  const maxDecLength = Math.max(num1Dec.length, num2Dec.length);
+  const paddedNum1Dec = num1Dec.padEnd(maxDecLength, '0');
+  const paddedNum2Dec = num2Dec.padEnd(maxDecLength, '0');
+  
+  // 合并整数和小数部分
+  const num1Str = num1Int + paddedNum1Dec;
+  const num2Str = num2Int + paddedNum2Dec;
+  
+  // 计算结果，保留正确的小数位数
+  const result = (parseFloat(num1) - parseFloat(num2)).toFixed(maxDecLength);
 
   // 计算借位情况
   const borrows = [];
@@ -103,17 +116,16 @@ function getSubtractionSteps(num1, num2) {
       }
     }
 
+    const diff = digit1 - (j >= 0 ? digit2 : 0);
     steps.unshift({
-      digit1: digit1,
-      digit2,
+      digit1,
+      digit2: j >= 0 ? digit2 : 0,
       borrowed,
-      difference: digit1 - digit2
+      diff,
+      isDecimal: i >= 0 && i === num1Int.length - 1 // 标记小数点位置
     });
 
-    if (borrowed) {
-      borrows.push(i);
-    }
-
+    borrows.unshift(borrowed);
     i--;
     j--;
   }
@@ -121,7 +133,8 @@ function getSubtractionSteps(num1, num2) {
   return {
     borrows,
     steps,
-    result
+    result,
+    decimalPosition: maxDecLength // 记录小数位数
   };
 }
 
@@ -406,7 +419,7 @@ export async function generateVerticalArithmeticImage(expression) {
 
   } else {
     // 绘制加减法过程（保持原有代码）
-    if (operator === '+' && steps.carries.some(c => c > 0)) {
+    if (operator === '+' && steps.carries && steps.carries.some(carry => carry > 0)) {
       ctx.font = '16px monospace';
       ctx.fillStyle = 'red';
       let carryX = width - padding - charWidth;
@@ -475,8 +488,8 @@ export async function generateVerticalArithmeticImage(expression) {
     }
 
     // 绘制进位数字（如果有）
-    if (steps.carries.some(carry => carry > 0)) {
-      for (let i = 0; i < steps.carries.length; i++) {
+    if (steps.carries && steps.carries.some((carry) => carry > 0)) {
+      for(let i = 0; i < steps.carries.length; i++){
         if (steps.carries[i] > 0) {
           ctx.font = '16px monospace';  // 进位数字使用小一号字体
           ctx.fillText(
