@@ -188,28 +188,51 @@ function getMultiplicationSteps(num1, num2) {
   };
 }
 
-function getDivisionSteps(num1, num2) {
-  const quotient = Math.floor(num1 / num2).toString();  // 修改为整数
-  const remainder = num1 % num2;  // 修改为整数
-
-  // 生成计算步骤
-  const steps = [];
+function getDivisionSteps(num1, num2, precision = 2) {
+  // Convert inputs to numbers and handle decimals
+  num1 = parseFloat(num1);
+  num2 = parseFloat(num2);
+  
+  // Move decimal point to make num1 and num2 integers
   const num1Str = num1.toString();
+  const num2Str = num2.toString();
+  const num1DecimalPlaces = (num1Str.split('.')[1] || '').length;
+  const num2DecimalPlaces = (num2Str.split('.')[1] || '').length;
+  
+  // Adjust numbers to remove decimals
+  const multiplier = Math.pow(10, Math.max(num1DecimalPlaces, num2DecimalPlaces));
+  const adjustedNum1 = num1 * multiplier;
+  const adjustedNum2 = num2 * multiplier;
+  
+  // Calculate quotient with desired precision
+  const precisionMultiplier = Math.pow(10, precision);
+  const quotient = Math.floor((adjustedNum1 * precisionMultiplier) / adjustedNum2) / precisionMultiplier;
+  const remainder = adjustedNum1 % adjustedNum2;
+
+  // Generate calculation steps
+  const steps = [];
+  const adjustedNum1Str = adjustedNum1.toString();
   let currentNum = '';
   let position = 0;
 
-  // 逐位处理被除数
-  for (let i = 0; i < num1Str.length; i++) {
-    currentNum += num1Str[i];
+  // Process each digit of the adjusted number
+  for (let i = 0; i < adjustedNum1Str.length + precision; i++) {
+    if (i < adjustedNum1Str.length) {
+      currentNum += adjustedNum1Str[i];
+    } else {
+      // Add zeros for decimal calculation
+      currentNum += '0';
+    }
+    
     let currentNumInt = parseInt(currentNum);
 
-    // 如果当前数字小于除数且不是最后一位，继续添加下一位
-    if (currentNumInt < num2 && i < num1Str.length - 1) {
+    // If current number is smaller than divisor and not at the end, continue
+    if (currentNumInt < adjustedNum2 && i < adjustedNum1Str.length + precision - 1) {
       continue;
     }
 
-    const currentDigit = Math.floor(currentNumInt / num2);
-    const product = currentDigit * num2;
+    const currentDigit = Math.floor(currentNumInt / adjustedNum2);
+    const product = currentDigit * adjustedNum2;
     const difference = currentNumInt - product;
 
     steps.push({
@@ -219,13 +242,13 @@ function getDivisionSteps(num1, num2) {
       quotientDigit: currentDigit
     });
 
-    // 更新当前数字为余数
+    // Update current number to remainder
     currentNum = difference.toString();
   }
 
   return {
-    quotient: quotient.toString(),  // 仍然返回字符串形式
-    remainder: remainder.toString(),  // 仍然返回字符串形式
+    quotient: quotient.toFixed(precision),
+    remainder: (remainder / multiplier).toFixed(precision),
     steps
   };
 }
@@ -254,6 +277,17 @@ export async function generateVerticalArithmeticImage(expression) {
     height = (4 + steps.partialProducts.length) * lineHeight + padding * 2;
   } else if (operator === '/') {
     steps = getDivisionSteps(num1, num2);
+    console.log(steps)
+
+    // 计算弧线的参数
+    const radius = charWidth * 1.5;
+    const startAngle = -Math.PI * 0.1;
+    const endAngle = Math.PI * 0.2;
+
+    // 计算弧线最高点的x坐标
+    const arcTopX = padding + charWidth * 0.5 + (radius * Math.sin(-startAngle));
+
+    // 绘制除数（先绘制除数）
     const maxWidth = Math.max(
       num1.toString().length,
       num2.toString().length,
