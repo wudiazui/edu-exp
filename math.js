@@ -15,46 +15,60 @@ function parseExpression(expr) {
 }
 
 function getAdditionSteps(num1, num2) {
-  const num1Str = num1.toString();
-  const num2Str = num2.toString();
-  const result = (num1 + num2).toString();
-
+  // 将数字转换为字符串并处理小数点
+  const [num1Int, num1Dec = ''] = num1.toString().split('.');
+  const [num2Int, num2Dec = ''] = num2.toString().split('.');
+  
+  // 对齐小数位
+  const maxDecLength = Math.max(num1Dec.length, num2Dec.length);
+  const paddedNum1Dec = num1Dec.padEnd(maxDecLength, '0');
+  const paddedNum2Dec = num2Dec.padEnd(maxDecLength, '0');
+  
+  // 合并整数和小数部分
+  const num1Str = num1Int + paddedNum1Dec;
+  const num2Str = num2Int + paddedNum2Dec;
+  
+  // 计算结果
+  const result = (parseFloat(num1) + parseFloat(num2)).toFixed(maxDecLength);
+  
   // 计算每一位的进位情况
   const carries = [];
   let carry = 0;
   let i = num1Str.length - 1;
   let j = num2Str.length - 1;
   const steps = [];
-
+  
   while (i >= 0 || j >= 0) {
     const digit1 = i >= 0 ? parseInt(num1Str[i]) : 0;
     const digit2 = j >= 0 ? parseInt(num2Str[j]) : 0;
     const sum = digit1 + digit2 + carry;
     const currentDigit = sum % 10;
-
+    
     // 记录这一位的计算步骤
     steps.unshift({
       digit1,
       digit2,
       carry,
-      sum: currentDigit
+      sum: currentDigit,
+      isDecimal: i >= 0 && i === num1Int.length - 1 // 标记小数点位置
     });
-
+    
     carry = Math.floor(sum / 10);
     carries.unshift(carry);
     i--;
     j--;
   }
-
+  
   // 如果最后还有进位，需要额外处理
   if (carry > 0) {
     carries.unshift(carry);
   }
-
+  
   return {
     carries,
     steps,
-    result
+    result,
+    decimalPosition: maxDecLength // 记录小数位数
   };
 }
 
@@ -112,40 +126,52 @@ function getSubtractionSteps(num1, num2) {
 }
 
 function getMultiplicationSteps(num1, num2) {
-  const num1Str = num1.toString();
-  const num2Str = num2.toString();
-  const result = (num1 * num2).toString();
-
+  // 处理小数点
+  const [num1Int, num1Dec = ''] = num1.toString().split('.');
+  const [num2Int, num2Dec = ''] = num2.toString().split('.');
+  
+  // 计算小数位数
+  const decimalPlaces = num1Dec.length + num2Dec.length;
+  
+  // 将数字转换为整数进行计算
+  const num1WithoutDot = num1Int + num1Dec;
+  const num2WithoutDot = num2Int + num2Dec;
+  
+  // 计算结果
+  const result = (num1 * num2).toFixed(decimalPlaces);
+  
   // 计算每一步的部分积
   const partialProducts = [];
   const carries = [];
-
-  for (let i = num2Str.length - 1; i >= 0; i--) {
-    const digit = parseInt(num2Str[i]);
+  
+  for (let i = num2WithoutDot.length - 1; i >= 0; i--) {
+    const digit = parseInt(num2WithoutDot[i]);
     let carry = 0;
     let partialResult = '';
-
+    
     // 计算当前数字的部分积
-    for (let j = num1Str.length - 1; j >= 0; j--) {
-      const product = digit * parseInt(num1Str[j]) + carry;
+    for (let j = num1WithoutDot.length - 1; j >= 0; j--) {
+      const product = digit * parseInt(num1WithoutDot[j]) + carry;
       partialResult = (product % 10) + partialResult;
       carry = Math.floor(product / 10);
     }
-
+    
     if (carry > 0) {
       partialResult = carry + partialResult;
     }
-
-    // 添加相应数量的0
-    partialResult = partialResult + '0'.repeat(num2Str.length - 1 - i);
+    
+    // 添加适当数量的0
+    partialResult = partialResult.padEnd(partialResult.length + (num2WithoutDot.length - 1 - i), '0');
+    
     partialProducts.push(partialResult);
-    carries.push(carry > 0 ? carry : null);
+    carries.push(carry);
   }
-
+  
   return {
-    partialProducts,
     carries,
-    result
+    partialProducts,
+    result,
+    decimalPlaces  // 添加小数位数信息
   };
 }
 
@@ -224,6 +250,7 @@ export async function generateVerticalArithmeticImage(expression) {
     height = (3 + steps.steps.length * 2) * lineHeight + padding * 2;
   } else {
     steps = operator === '+' ? getAdditionSteps(num1, num2) : getSubtractionSteps(num1, num2);
+    // 考虑小数点的宽度计算
     const maxLength = Math.max(
       num1.toString().length,
       num2.toString().length,
@@ -401,20 +428,66 @@ export async function generateVerticalArithmeticImage(expression) {
     ctx.font = '24px monospace';
     ctx.fillStyle = 'black';
 
-    ctx.textAlign = 'right';
-    ctx.fillText(num1.toString(), width - padding, padding + lineHeight);
-    ctx.textAlign = 'left';
-    ctx.fillText(displayOperator, padding, padding + 2 * lineHeight);
-    ctx.textAlign = 'right';
-    ctx.fillText(num2.toString(), width - padding, padding + 2 * lineHeight);
+    // 绘制算式
+    const startX = width - padding - charWidth;
+    const startY = padding + lineHeight;
 
+    // 绘制第一个数
+    let num1Str = num1.toString();
+    for (let i = num1Str.length - 1; i >= 0; i--) {
+      const char = num1Str[i];
+      if (char === '.') {
+        ctx.fillText('.', startX - (num1Str.length - 1 - i) * charWidth, startY);
+      } else {
+        ctx.fillText(char, startX - (num1Str.length - 1 - i) * charWidth, startY);
+      }
+    }
+
+    // 绘制运算符
+    ctx.fillText(displayOperator, startX - (Math.max(num1Str.length, num2.toString().length) + 1) * charWidth, startY + lineHeight);
+
+    // 绘制第二个数
+    let num2Str = num2.toString();
+    for (let i = num2Str.length - 1; i >= 0; i--) {
+      const char = num2Str[i];
+      if (char === '.') {
+        ctx.fillText('.', startX - (num2Str.length - 1 - i) * charWidth, startY + lineHeight);
+      } else {
+        ctx.fillText(char, startX - (num2Str.length - 1 - i) * charWidth, startY + lineHeight);
+      }
+    }
+
+    // 绘制横线
     ctx.beginPath();
-    ctx.moveTo(padding, padding + 2.5 * lineHeight);
-    ctx.lineTo(width - padding, padding + 2.5 * lineHeight);
-    ctx.lineWidth = 2;
+    ctx.moveTo(startX - Math.max(num1Str.length, num2Str.length) * charWidth, startY + lineHeight * 1.5);
+    ctx.lineTo(startX + charWidth, startY + lineHeight * 1.5);
     ctx.stroke();
 
-    ctx.fillText(steps.result, width - padding, padding + 3.5 * lineHeight);
+    // 绘制结果
+    let resultStr = steps.result;
+    for (let i = resultStr.length - 1; i >= 0; i--) {
+      const char = resultStr[i];
+      if (char === '.') {
+        ctx.fillText('.', startX - (resultStr.length - 1 - i) * charWidth, startY + lineHeight * 2);
+      } else {
+        ctx.fillText(char, startX - (resultStr.length - 1 - i) * charWidth, startY + lineHeight * 2);
+      }
+    }
+
+    // 绘制进位数字（如果有）
+    if (steps.carries.some(carry => carry > 0)) {
+      for (let i = 0; i < steps.carries.length; i++) {
+        if (steps.carries[i] > 0) {
+          ctx.font = '16px monospace';  // 进位数字使用小一号字体
+          ctx.fillText(
+            steps.carries[i].toString(),
+            startX - (steps.carries.length - 1 - i) * charWidth,
+            startY - lineHeight * 0.4
+          );
+          ctx.font = '24px monospace';  // 恢复原来的字体大小
+        }
+      }
+    }
   }
 
   // 转换为图片数据
