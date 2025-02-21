@@ -171,7 +171,7 @@ export default function Main() {
     setSubject(isSwapActive ? 'yuwen' : 'shuxue'); // 根据 isSwapActive 的值更新 subject
   }, [isSwapActive]); // 监听 isSwapActive 的变化
 
-  return (<div className="container max-auto px-1">
+  return (<div className="container max-auto px-1 mt-2">
             <div className="tabs tabs-boxed">
               <a className={`tab ${activeTab === 'settings' ? 'tab-active' : ''}`} onClick={() => handleTabChange('settings')}>设置</a>
               <a className={`tab ${activeTab === 'solving' ? 'tab-active' : ''}`} onClick={() => handleTabChange('solving')}>解题</a>

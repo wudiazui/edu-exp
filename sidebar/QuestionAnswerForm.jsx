@@ -86,28 +86,28 @@ const QuestionAnswerForm = ({
                   <button
                         className={`join-item ${isFormatting ? 'loading loading-spinner loading-sm' : 'btn btn-sm'}`}
                         onClick={handleFormat}
-                        disabled={isFormatting}
+                        disabled={isFormatting || isCompleteeing || isGeneratingAnswer || isGeneratingAnalysis}
                     >
                         {isFormatting ? '' : '整理题干'}
                     </button>
                   <button
                     className={`join-item ${isCompleteeing ? 'loading loading-spinner loading-sm' : 'btn btn-sm'}`}
                     onClick={handleComplete}
-                    disabled={isCompleteeing}
+                    disabled={isFormatting || isCompleteeing || isGeneratingAnswer || isGeneratingAnalysis}
                   >
                     {isCompleteeing ? '' : '残题补全'}
                         </button>
                         <button
                         className={`join-item ${isGeneratingAnswer ? 'loading loading-spinner loading-sm' : 'btn btn-sm'}`}
                         onClick={handleGenerateAnswer}
-                        disabled={isGeneratingAnswer}
+                        disabled={isFormatting || isCompleteeing || isGeneratingAnswer || isGeneratingAnalysis}
                     >
                         {isGeneratingAnswer ? '' : '生成解答'}
                     </button>
                     <button
                         className={`join-item ${isGeneratingAnalysis ? 'loading loading-spinner loading-sm' : 'btn btn-sm'}`}
                         onClick={handleGenerateAnalysis}
-                        disabled={isGeneratingAnalysis}
+                        disabled={isFormatting || isCompleteeing || isGeneratingAnswer || isGeneratingAnalysis}
                     >
                         {isGeneratingAnalysis ? '' : '生成解析'}
                     </button>
