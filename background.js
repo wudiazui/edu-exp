@@ -86,6 +86,27 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 });
 
 // 添加消息监听器来处理HTML的存储和获取
+// 添加快捷键命令监听器
+chrome.commands.onCommand.addListener((command) => {
+  // 获取当前活动标签页
+  chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+    if (tabs[0]) {
+      const tab = tabs[0];
+      switch (command) {
+        case 'send-topic':
+          chrome.tabs.sendMessage(tab.id, { action: "send_topic" });
+          break;
+        case 'format-math':
+          chrome.tabs.sendMessage(tab.id, { action: "format_math" });
+          break;
+        case 'math-img':
+          chrome.tabs.sendMessage(tab.id, { action: "math_img" });
+          break;
+      }
+    }
+  });
+});
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "store_copied_html") {
     storedHTML = request.html;
