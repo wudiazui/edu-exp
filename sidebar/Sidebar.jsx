@@ -39,7 +39,7 @@ export default function Main() {
       if (result.host) {
         setHost(result.host);
       } else {
-        setHost('http://127.0.0.1:8000');
+        setHost('https://bedu.pingfury.top');
       }
     });
   }, []);
