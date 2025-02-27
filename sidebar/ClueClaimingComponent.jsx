@@ -11,11 +11,14 @@ export default function ClueClaimingComponent() {
   const [autoClaimingActive, setAutoClaimingActive] = useState(false);
   const [refreshInterval, setRefreshInterval] = useState(1); // Default to 1 second initially
 
-  // 在组件加载时从storage加载保存的间隔值
+  // 在组件加载时从storage加载保存的间隔值和自动认领状态
   useEffect(() => {
-    chrome.storage.local.get(['autoClaimingInterval'], (result) => {
+    chrome.storage.local.get(['autoClaimingInterval', 'autoClaimingActive'], (result) => {
       if (result.autoClaimingInterval) {
         setRefreshInterval(parseFloat(result.autoClaimingInterval));
+      }
+      if (result.autoClaimingActive !== undefined) {
+        setAutoClaimingActive(result.autoClaimingActive);
       }
     });
   }, []);
