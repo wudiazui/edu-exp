@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
 export default function ClueClaimingComponent() {
-  const [clues, setClues] = useState([]);
   const [loading, setLoading] = useState(false);
   const [filterData, setFilterData] = useState([]);
   const [selectedGrade, setSelectedGrade] = useState('');
@@ -10,6 +9,7 @@ export default function ClueClaimingComponent() {
   const [isLoading, setIsLoading] = useState(false);
   const [autoClaimingActive, setAutoClaimingActive] = useState(false);
   const [refreshInterval, setRefreshInterval] = useState(1); // Default to 1 second initially
+  const [claimResponse, setClaimResponse] = useState(null); // Add new state for claim response
 
   // 在组件加载时从storage加载保存的间隔值和自动认领状态
   useEffect(() => {
@@ -82,32 +82,23 @@ export default function ClueClaimingComponent() {
     };
   }, []);
 
-  const fetchClues = async () => {
-    setLoading(true);
-    try {
-      // TODO: Implement actual API call to fetch clues
-      const response = await fetch('/api/clues');
-      const data = await response.json();
-      setClues(data);
-    } catch (error) {
-      console.error('Error fetching clues:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Add message listener for claim response
+  useEffect(() => {
+    const messageListener = (request, sender, sendResponse) => {
+      if (request.type === 'CLAIM_AUDIT_TASK_RESPONSE') {
+        setClaimResponse(request.data);
+        // Reset the response after 3 seconds
+        setTimeout(() => {
+          setClaimResponse(null);
+        }, 3000);
+      }
+    };
 
-  const handleClaimClue = async (clueId) => {
-    try {
-      // TODO: Implement actual API call to claim a clue
-      await fetch(`/api/clues/${clueId}/claim`, {
-        method: 'POST',
-      });
-      // Refresh clues list after claiming
-      fetchClues();
-    } catch (error) {
-      console.error('Error claiming clue:', error);
-    }
-  };
+    chrome.runtime.onMessage.addListener(messageListener);
+    return () => {
+      chrome.runtime.onMessage.removeListener(messageListener);
+    };
+  }, []);
 
   const startAutoClaiming = async (interval = refreshInterval) => {
     const stepData = selectedGrade;
@@ -227,28 +218,6 @@ export default function ClueClaimingComponent() {
       </div>
       
       <div className="space-y-2">
-        {clues.map((clue) => (
-          <div key={clue.id} className="card bg-base-100 shadow-sm">
-            <div className="card-body p-4">
-              <h3 className="card-title text-sm">{clue.title}</h3>
-              <p className="text-sm text-gray-600">{clue.description}</p>
-              <div className="card-actions justify-end mt-2">
-                <button 
-                  className="btn btn-sm btn-outline"
-                  onClick={() => handleClaimClue(clue.id)}
-                >
-                  认领
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
-        
-        {clues.length === 0 && !loading && (
-          <div className="text-center py-4 text-gray-500">
-            暂无可用线索
-          </div>
-        )}
       </div>
     </div>
   );

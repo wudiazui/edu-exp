@@ -1,4 +1,4 @@
-import { getAuditTaskLabel, replaceLatexWithImages, replacePunctuation, img_upload} from "../lib.js";
+import { claimAuditTask, getAuditTaskList, getAuditTaskLabel, replaceLatexWithImages, replacePunctuation, img_upload} from "../lib.js";
 
 import {generateVerticalArithmeticImage} from "../math.js";
 
@@ -375,5 +375,23 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     console.log("收到定时消息:", request.message);
     console.log("参数:", request.params);
     console.log("消息发送时间:", request.timestamp);
+
+    getAuditTaskList(request.params).then((res) => {
+      if (res.errno === 0 && res.data) {
+        console.log('Total tasks:', res.data.total);
+        console.log('Task list:', res.data.list);
+        // Optional: log each task in the list separately for better readability
+        const taskIds = res.data.list.map(task => task.taskID);
+        console.log('Task IDs:', taskIds);
+        if (taskIds && taskIds.length > 0) {
+          claimAuditTask(taskIds).then((res) => {
+            console.log('Claim audit task response:', res);
+            chrome.runtime.sendMessage({ action: 'claimAuditTaskResponse', data: res.data });
+          }).catch((error) => {
+            console.error('Error claiming audit task:', error);
+          });
+        }
+      } 
+    });
   }
 });

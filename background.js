@@ -128,6 +128,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
   }
   
+  // 处理认领任务响应的转发
+  if (request.action === "claimAuditTaskResponse") {
+    chrome.runtime.sendMessage({
+      type: 'CLAIM_AUDIT_TASK_RESPONSE',
+      data: request.data
+    });
+    return true;
+  }
+
   // 处理自动认领的开始和停止
   if (request.action === "start_auto_claiming") {
     chrome.storage.local.get(['autoClaimingInterval'], (result) => {

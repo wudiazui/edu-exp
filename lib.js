@@ -84,7 +84,7 @@ export async function getAuditTaskList({
       subject
     });
 
-    const response = await fetch(`edushop/question/audittask/list?${queryParams}`);
+    const response = await fetch(`/edushop/question/audittask/list?${queryParams}`);
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -93,6 +93,27 @@ export async function getAuditTaskList({
     return await response.json();
   } catch (error) {
     console.error('Error fetching audit task list:', error);
+    throw error;
+  }
+}
+
+export async function claimAuditTask(taskIDs) {
+  try {
+    const response = await fetch('/edushop/question/audittaskcommit/claim', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ taskIDs }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error claiming audit task:', error);
     throw error;
   }
 }
@@ -281,3 +302,5 @@ export async function replaceLatexWithImages(text) {
 
   return result;
 }
+
+
