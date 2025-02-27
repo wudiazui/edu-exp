@@ -19,6 +19,10 @@ if (isFirefoxLike) {
 // 添加一个变量来存储复制的HTML
 let storedHTML = '';
 
+// 添加全局变量声明
+let autoClaimingTimer = null;
+let autoClaimingActive = false;
+
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: "baidu-edu-tools",
@@ -123,57 +127,55 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       data: request.html
     });
   }
-});
-
-// 存储定时器ID
-let autoClaimingTimer = null;
-
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === "store_copied_html") {
-    storedHTML = message.html;
-    return true;
-  }
-  if (message.action === "get_copied_html") {
-    sendResponse({ html: storedHTML });
-    return true;
-  }
-  if (message.action === "store_topic_html") {
-    // 转发给 sidebar
-    chrome.runtime.sendMessage({
-      type: 'SET_QUESTION',
-      data: message.html
-    });
-  }
   
   // 处理自动认领的开始和停止
-  if (message.action === "start_auto_claiming") {
-    if (autoClaimingTimer) {
-      clearInterval(autoClaimingTimer);
-    }
-    const interval = message.interval || 5000; // 默认5秒
-    autoClaimingTimer = setInterval(() => {
-      // 获取所有标签页
-      chrome.tabs.query({}, (tabs) => {
-        tabs.forEach(tab => {
-          // 向每个标签页发送消息
-          chrome.tabs.sendMessage(tab.id, {
-            action: "periodic_message",
-            message: "自动认领中",
-            timestamp: new Date().toISOString()
+  if (request.action === "start_auto_claiming") {
+    chrome.storage.local.get(['autoClaimingInterval'], (result) => {
+      const interval = request.interval || (result.autoClaimingInterval * 1000) || 1000;
+      autoClaimingActive = true;
+      chrome.storage.local.set({ 
+        autoClaimingActive: true,
+        autoClaimingInterval: interval / 1000  // 保存为秒
+      });
+      
+      if (autoClaimingTimer) {
+        clearInterval(autoClaimingTimer);
+        autoClaimingTimer = null;
+      }
+      
+      console.log('[Background] Polling interval:', interval, 'ms');
+      autoClaimingTimer = setInterval(() => {
+        // 获取所有标签页
+        chrome.tabs.query({}, (tabs) => {
+          tabs.forEach(tab => {
+            // 向每个标签页发送消息
+            chrome.tabs.sendMessage(tab.id, {
+              action: "periodic_message",
+              message: "自动认领中",
+              timestamp: new Date().toISOString()
+            });
           });
         });
-      });
-    }, interval);
-    sendResponse({ status: "started" });
-    return true;
+      }, interval);
+      
+      sendResponse({ status: "started" });
+    });
+    return true;  // 保持消息通道开放
   }
   
-  if (message.action === "stop_auto_claiming") {
+  if (request.action === "stop_auto_claiming") {
+    autoClaimingActive = false;
+    chrome.storage.local.set({ autoClaimingActive: false });
     if (autoClaimingTimer) {
       clearInterval(autoClaimingTimer);
       autoClaimingTimer = null;
     }
     sendResponse({ status: "stopped" });
+    return true;
+  }
+
+  if (request.action === "get_auto_claiming_status") {
+    sendResponse({ autoClaimingActive });
     return true;
   }
   
@@ -197,8 +199,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
   };
 
-  if (['FORMAT_QUESTION', 'TOPIC_ANSWER', 'TOPIC_ANALYSIS', 'TOPIC_COMPLETE', 'OCR'].includes(message.type)) {
-    formatMessage(message.type, message.data, message.host, message.uname);
+  if (['FORMAT_QUESTION', 'TOPIC_ANSWER', 'TOPIC_ANALYSIS', 'TOPIC_COMPLETE', 'OCR'].includes(request.type)) {
+    formatMessage(request.type, request.data, request.host, request.uname);
     return true; // 保持消息通道开放以等待异步响应
   }
 });

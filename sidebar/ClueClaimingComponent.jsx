@@ -9,11 +9,32 @@ export default function ClueClaimingComponent() {
   const [selectedType, setSelectedType] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [autoClaimingActive, setAutoClaimingActive] = useState(false);
-  const [refreshInterval, setRefreshInterval] = useState(() => {
-    // 从storage中获取保存的间隔时间（秒），如果没有则默认1秒
-    const savedInterval = localStorage.getItem('autoClaimingInterval');
-    return savedInterval ? parseFloat(savedInterval) : 1;
-  });
+  const [refreshInterval, setRefreshInterval] = useState(1); // Default to 1 second initially
+
+  // 在组件加载时从storage加载保存的间隔值
+  useEffect(() => {
+    chrome.storage.local.get(['autoClaimingInterval'], (result) => {
+      if (result.autoClaimingInterval) {
+        setRefreshInterval(parseFloat(result.autoClaimingInterval));
+      }
+    });
+  }, []);
+
+  // 监听storage变化，保持与background.js同步
+  useEffect(() => {
+    const handleStorageChange = (changes) => {
+      if (changes.autoClaimingInterval) {
+        setRefreshInterval(parseFloat(changes.autoClaimingInterval.newValue));
+      }
+      if (changes.autoClaimingActive) {
+        setAutoClaimingActive(changes.autoClaimingActive.newValue);
+      }
+    };
+    chrome.storage.onChanged.addListener(handleStorageChange);
+    return () => {
+      chrome.storage.onChanged.removeListener(handleStorageChange);
+    };
+  }, []);
 
   useEffect(() => {
     setIsLoading(true);
@@ -86,21 +107,23 @@ export default function ClueClaimingComponent() {
   };
 
   const startAutoClaiming = async (interval = refreshInterval) => {
-    setAutoClaimingActive(true);
     chrome.runtime.sendMessage({
       action: "start_auto_claiming",
       interval: interval * 1000  // 转换为毫秒
     }, (response) => {
-      if (response.status === "started") {
+      if (response && response.status === "started") {
+        setAutoClaimingActive(true);
         console.log("自动认领已开始");
       }
     });
   };
 
   const stopAutoClaiming = () => {
-    setAutoClaimingActive(false);
-    chrome.runtime.sendMessage({ action: "stop_auto_claiming" }, (response) => {
-      if (response.status === "stopped") {
+    chrome.runtime.sendMessage({
+      action: "stop_auto_claiming"
+    }, (response) => {
+      if (response && response.status === "stopped") {
+        setAutoClaimingActive(false);
         console.log("自动认领已停止");
       }
     });
@@ -159,11 +182,11 @@ export default function ClueClaimingComponent() {
               const value = parseFloat(e.target.value);
               if (value >= 0.5) { // 最小0.5秒
                 setRefreshInterval(value);
-                localStorage.setItem('autoClaimingInterval', value.toString());
+                chrome.storage.local.set({ autoClaimingInterval: value });
                 if (autoClaimingActive) {
                   // 如果正在运行，则重新启动以应用新间隔
                   stopAutoClaiming();
-                  startAutoClaiming(value);
+                  setTimeout(() => startAutoClaiming(value), 100); // 短暂延迟确保停止完成
                 }
               }
             }}

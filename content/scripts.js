@@ -372,6 +372,7 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   }
 
   if (request.action === "periodic_message") {
-    console.log("收到定时消息:", request.message, "时间戳:", request.timestamp);
+    console.log("收到定时消息:", request.message);
+    console.log("消息发送时间:", request.timestamp);
   }
 });
