@@ -379,8 +379,6 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     getAuditTaskList(request.params).then((res) => {
       if (res.errno === 0 && res.data) {
         console.log('Total tasks:', res.data.total);
-        console.log('Task list:', res.data.list);
-        // Optional: log each task in the list separately for better readability
         const taskIds = res.data.list.map(task => task.taskID);
         console.log('Task IDs:', taskIds);
         if (taskIds && taskIds.length > 0) {

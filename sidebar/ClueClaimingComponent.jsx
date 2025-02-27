@@ -50,19 +50,34 @@ export default function ClueClaimingComponent() {
     port.postMessage({ type: 'GET_AUDIT_TASK_LABEL' });
     
     port.onMessage.addListener((response) => {
-      if (!isComponentMounted) return;
-      
-      setIsLoading(false);
-      if (response.errno === 0 && response.data?.filter) {
+      if (isComponentMounted && response.errno === 0 && response.data?.filter) {
         setFilterData(response.data.filter);
-        // 设置每个列表的初始值
-        const stepData = response.data.filter.find(f => f.id === 'step');
-        const subjectData = response.data.filter.find(f => f.id === 'subject');
-        const clueTypeData = response.data.filter.find(f => f.id === 'clueType');
-        
-        setSelectedGrade(stepData?.list[0]?.name || '');
-        setSelectedSubject(subjectData?.list[0]?.name || '');
-        setSelectedType(clueTypeData?.list[0]?.name || '');
+        // 先从 storage 获取保存的值
+        chrome.storage.local.get(['selectedGrade', 'selectedSubject', 'selectedType'], (result) => {
+          // 如果有保存的值且在选项列表中存在，则使用保存的值
+          const stepData = response.data.filter.find(f => f.id === 'step')?.list || [];
+          const subjectData = response.data.filter.find(f => f.id === 'subject')?.list || [];
+          const clueTypeData = response.data.filter.find(f => f.id === 'clueType')?.list || [];
+
+          if (result.selectedGrade && stepData.some(item => item.name === result.selectedGrade)) {
+            setSelectedGrade(result.selectedGrade);
+          } else {
+            setSelectedGrade(stepData[0]?.name || '');
+          }
+
+          if (result.selectedSubject && subjectData.some(item => item.name === result.selectedSubject)) {
+            setSelectedSubject(result.selectedSubject);
+          } else {
+            setSelectedSubject(subjectData[0]?.name || '');
+          }
+
+          if (result.selectedType && clueTypeData.some(item => item.name === result.selectedType)) {
+            setSelectedType(result.selectedType);
+          } else {
+            setSelectedType(clueTypeData[0]?.name || '');
+          }
+        });
+        setIsLoading(false);
       }
     });
 
@@ -81,6 +96,15 @@ export default function ClueClaimingComponent() {
       port.disconnect();
     };
   }, []);
+
+  // 当选择值变化时保存到storage
+  useEffect(() => {
+    chrome.storage.local.set({
+      selectedGrade,
+      selectedSubject,
+      selectedType
+    });
+  }, [selectedGrade, selectedSubject, selectedType]);
 
   // Add message listener for claim response
   useEffect(() => {
@@ -218,6 +242,11 @@ export default function ClueClaimingComponent() {
       </div>
       
       <div className="space-y-2">
+        {claimResponse && (
+          <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 rounded shadow-sm">
+            <p className="text-sm">{typeof claimResponse === 'object' ? JSON.stringify(claimResponse, null, 2) : claimResponse}</p>
+          </div>
+        )}
       </div>
     </div>
   );
