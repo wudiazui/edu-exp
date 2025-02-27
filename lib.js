@@ -48,6 +48,27 @@ export async function img_upload(imageBlob) {
 }
 
 
+
+
+export async function getAuditTaskLabel() {
+  const url = "/edushop/question/audittask/getlabel";
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET'
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error getting audit task label:', error);
+    throw error;
+  }
+}
+
 export function replacePunctuation(text) {
   const punctuationMap = {
     '\\.$': '。',

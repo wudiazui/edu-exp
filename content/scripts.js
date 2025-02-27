@@ -1,4 +1,4 @@
-import { math2img, replaceLatexWithImages, replacePunctuation, img_upload} from "../lib.js";
+import { getAuditTaskLabel, replaceLatexWithImages, replacePunctuation, img_upload} from "../lib.js";
 
 import {generateVerticalArithmeticImage} from "../math.js";
 
@@ -157,6 +157,23 @@ function sendFixEvent(element) {
   element.dispatchEvent(enterEvent);
    */
 }
+
+// 监听来自 background script 的消息
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'GET_AUDIT_TASK_LABEL_RESPONSE') {
+    // 调用 getAuditTaskLabel 并返回结果
+    getAuditTaskLabel()
+      .then(response => {
+        sendResponse(response);
+      })
+      .catch(error => {
+        sendResponse({ errno: 1, errmsg: error.message });
+      });
+    return true; // 保持消息通道开放以支持异步响应
+  }
+  return true;
+});
+
 
 chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   if (request.action === "font_format") {

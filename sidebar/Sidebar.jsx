@@ -4,6 +4,7 @@ import QuestionAnswerForm from './QuestionAnswerForm'; // 引入新组件
 import QuestionTypeSelect from './QuestionTypeSelect'; // 引入新组件
 import CopyButton from './CopyButton'; // 引入新组件
 import OcrComponent from './OcrComponent'; // 引入新组件
+import ClueClaimingComponent from './ClueClaimingComponent'; // 引入线索认领组件
 
 export default function Main() {
   const [question, setQuestion] = React.useState('');
@@ -176,6 +177,7 @@ export default function Main() {
               <a className={`tab ${activeTab === 'settings' ? 'tab-active' : ''}`} onClick={() => handleTabChange('settings')}>设置</a>
               <a className={`tab ${activeTab === 'solving' ? 'tab-active' : ''}`} onClick={() => handleTabChange('solving')}>解题</a>
               <a className={`tab ${activeTab === 'ocr' ? 'tab-active' : ''}`} onClick={() => handleTabChange('ocr')}>文字识别</a>
+              <a className={`tab ${activeTab === 'clue-claiming' ? 'tab-active' : ''}`} onClick={() => handleTabChange('clue-claiming')}>线索认领</a>
             </div>
             {activeTab === 'settings' && (
               <div className="w-full mt-2">
@@ -216,9 +218,14 @@ export default function Main() {
                 />
             )}
             {activeTab === 'ocr' && (
-                <div className="w-full mt-2">
-                  <OcrComponent host={host} uname={name} />
-                </div>
+              <OcrComponent
+                setQuestion={setQuestion}
+                setIsImageQuestion={setIsImageQuestion}
+                setSelectedImage={setSelectedImage}
+              />
+            )}
+            {activeTab === 'clue-claiming' && (
+              <ClueClaimingComponent />
             )}
           </div>)
 }
