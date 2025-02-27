@@ -9,6 +9,11 @@ export default function ClueClaimingComponent() {
   const [selectedType, setSelectedType] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [autoClaimingActive, setAutoClaimingActive] = useState(false);
+  const [refreshInterval, setRefreshInterval] = useState(() => {
+    // 从storage中获取保存的间隔时间（秒），如果没有则默认1秒
+    const savedInterval = localStorage.getItem('autoClaimingInterval');
+    return savedInterval ? parseFloat(savedInterval) : 1;
+  });
 
   useEffect(() => {
     setIsLoading(true);
@@ -80,9 +85,12 @@ export default function ClueClaimingComponent() {
     }
   };
 
-  const startAutoClaiming = () => {
+  const startAutoClaiming = async (interval = refreshInterval) => {
     setAutoClaimingActive(true);
-    chrome.runtime.sendMessage({ action: "start_auto_claiming" }, (response) => {
+    chrome.runtime.sendMessage({
+      action: "start_auto_claiming",
+      interval: interval * 1000  // 转换为毫秒
+    }, (response) => {
       if (response.status === "started") {
         console.log("自动认领已开始");
       }
@@ -140,13 +148,29 @@ export default function ClueClaimingComponent() {
           </div>
         </div>
 
-        <button 
-          className="btn btn-primary w-full"
-          onClick={fetchClues}
-          disabled={loading}
-        >
-          {loading ? '加载中...' : '刷新'}
-        </button>
+
+        <div className="flex items-center gap-2 mt-2">
+          <label className="text-sm">刷新间隔(秒):</label>
+          <input
+            type="number"
+            className="input input-bordered input-sm w-32"
+            value={refreshInterval}
+            onChange={(e) => {
+              const value = parseFloat(e.target.value);
+              if (value >= 0.5) { // 最小0.5秒
+                setRefreshInterval(value);
+                localStorage.setItem('autoClaimingInterval', value.toString());
+                if (autoClaimingActive) {
+                  // 如果正在运行，则重新启动以应用新间隔
+                  stopAutoClaiming();
+                  startAutoClaiming(value);
+                }
+              }
+            }}
+            min="0.5"
+            step="0.1"
+          />
+        </div>
 
         <div className="flex gap-2">
           <button 

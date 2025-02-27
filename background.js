@@ -147,21 +147,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   
   // 处理自动认领的开始和停止
   if (message.action === "start_auto_claiming") {
-    if (!autoClaimingTimer) {
-      autoClaimingTimer = setInterval(() => {
-        // 获取所有标签页
-        chrome.tabs.query({}, (tabs) => {
-          tabs.forEach(tab => {
-            // 向每个标签页发送消息
-            chrome.tabs.sendMessage(tab.id, {
-              action: "periodic_message",
-              message: "自动认领中",
-              timestamp: new Date().toISOString()
-            });
+    if (autoClaimingTimer) {
+      clearInterval(autoClaimingTimer);
+    }
+    const interval = message.interval || 5000; // 默认5秒
+    autoClaimingTimer = setInterval(() => {
+      // 获取所有标签页
+      chrome.tabs.query({}, (tabs) => {
+        tabs.forEach(tab => {
+          // 向每个标签页发送消息
+          chrome.tabs.sendMessage(tab.id, {
+            action: "periodic_message",
+            message: "自动认领中",
+            timestamp: new Date().toISOString()
           });
         });
-      }, 5000); // 每5秒发送一次消息
-    }
+      });
+    }, interval);
     sendResponse({ status: "started" });
     return true;
   }
