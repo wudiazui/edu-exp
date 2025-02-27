@@ -110,9 +110,20 @@ export default function ClueClaimingComponent() {
   };
 
   const startAutoClaiming = async (interval = refreshInterval) => {
+    const stepData = selectedGrade;
+    const subjectData = selectedSubject;
+    const clueTypeData = selectedType;
     chrome.runtime.sendMessage({
       action: "start_auto_claiming",
-      interval: interval * 1000  // 转换为毫秒
+      interval: interval * 1000,  // 转换为毫秒
+      params: {
+        pn: 1,
+        rn: 20,
+        clueID: '', 
+        clueType: filterData.find(f => f.id === 'clueType')?.list.find(item => item.name === clueTypeData)?.id || 1,
+        step: filterData.find(f => f.id === 'step')?.list.find(item => item.name === stepData)?.id || 1,
+        subject: filterData.find(f => f.id === 'subject')?.list.find(item => item.name === subjectData)?.id || 2
+      }
     }, (response) => {
       if (response && response.status === "started") {
         setAutoClaimingActive(true);

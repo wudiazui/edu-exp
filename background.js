@@ -152,7 +152,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             chrome.tabs.sendMessage(tab.id, {
               action: "periodic_message",
               message: "自动认领中",
-              timestamp: new Date().toISOString()
+              timestamp: new Date().toISOString(),
+              params: request.params,
             });
           });
         });

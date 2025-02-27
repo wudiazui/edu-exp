@@ -47,9 +47,6 @@ export async function img_upload(imageBlob) {
   }
 }
 
-
-
-
 export async function getAuditTaskLabel() {
   const url = "/edushop/question/audittask/getlabel";
 
@@ -68,6 +65,38 @@ export async function getAuditTaskLabel() {
     throw error;
   }
 }
+
+export async function getAuditTaskList({
+  pn = 1,
+  rn = 20,
+  clueID = '',
+  clueType = 1,
+  step = 1,
+  subject = 2
+} = {}) {
+  try {
+    const queryParams = new URLSearchParams({
+      pn,
+      rn,
+      clueID,
+      clueType,
+      step,
+      subject
+    });
+
+    const response = await fetch(`edushop/question/audittask/list?${queryParams}`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching audit task list:', error);
+    throw error;
+  }
+}
+
 
 export function replacePunctuation(text) {
   const punctuationMap = {
