@@ -125,6 +125,30 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
+// 添加连接端口监听器
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name === 'audit-task-label') {
+    port.onMessage.addListener(async (message) => {
+      if (message.type === 'GET_AUDIT_TASK_LABEL') {
+        try {
+          // 获取当前活动的标签页
+          const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+          // 发送消息到 content script 并等待响应
+          const response = await chrome.tabs.sendMessage(activeTab.id, {
+            type: 'GET_AUDIT_TASK_LABEL_RESPONSE',
+            data: message.data
+          });
+          // 将内容脚本的响应发送回端口
+          port.postMessage(response);
+        } catch (error) {
+          console.error('Error in audit task label handler:', error);
+          port.postMessage({ errno: 1, errmsg: error.message });
+        }
+      }
+    });
+  }
+});
+
 chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
   const formatMessage = async (type, data, host, uname) => {
     try {
@@ -149,23 +173,5 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
   if (['FORMAT_QUESTION', 'TOPIC_ANSWER', 'TOPIC_ANALYSIS', 'TOPIC_COMPLETE', 'OCR'].includes(message.type)) {
     formatMessage(message.type, message.data, message.host, message.uname);
     return true; // 保持消息通道开放以等待异步响应
-  }
-
-  if (message.type === 'GET_AUDIT_TASK_LABEL') {
-    try {
-      // 获取当前活动的标签页
-      const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      // 发送消息到 content script 并等待响应
-      const response = await chrome.tabs.sendMessage(activeTab.id, {
-        type: 'GET_AUDIT_TASK_LABEL_RESPONSE',
-        data: message.data
-      });
-      // 将内容脚本的响应发送给 sidebar
-      sendResponse(response);
-    } catch (error) {
-      console.error('Error forwarding message:', error);
-      sendResponse({ errno: 1, errmsg: error.message });
-    }
-    return true; // 保持消息通道开放
   }
 });

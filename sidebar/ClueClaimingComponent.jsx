@@ -28,7 +28,7 @@ export default function ClueClaimingComponent() {
         // 设置每个列表的初始值
         const stepData = response.data.filter.find(f => f.id === 'step');
         const subjectData = response.data.filter.find(f => f.id === 'subject');
-        const clueTypeData = response.data.filter.find(f => f.id === 'clue_type');
+        const clueTypeData = response.data.filter.find(f => f.id === 'clueType');
         
         setSelectedGrade(stepData?.list[0]?.name || '');
         setSelectedSubject(subjectData?.list[0]?.name || '');
@@ -83,40 +83,42 @@ export default function ClueClaimingComponent() {
     <div className="w-full mt-2">
       {isLoading && <div>Loading...</div>}
       <div className="flex flex-col gap-4 mb-4">
-        <div className="form-control w-full">
-          <select 
-            className="select select-bordered w-full" 
-            value={selectedGrade}
-            onChange={(e) => setSelectedGrade(e.target.value)}
-          >
-            {filterData?.find(f => f.id === 'step')?.list.map(item => (
-              <option key={item.id} value={item.name}>{item.name}</option>
-            ))}
-          </select>
-        </div>
+        <div className="flex gap-2">
+          <div className="form-control w-1/3">
+            <select 
+              className="select select-bordered select-sm w-full" 
+              value={selectedGrade}
+              onChange={(e) => setSelectedGrade(e.target.value)}
+            >
+              {filterData?.find(f => f.id === 'step')?.list.map(item => (
+                <option key={item.id} value={item.name}>{item.name}</option>
+              ))}
+            </select>
+          </div>
 
-        <div className="form-control w-full">
-          <select 
-            className="select select-bordered w-full"
-            value={selectedSubject}
-            onChange={(e) => setSelectedSubject(e.target.value)}
-          >
-            {filterData?.find(f => f.id === 'subject')?.list.map(item => (
-              <option key={item.id} value={item.name}>{item.name}</option>
-            ))}
-          </select>
-        </div>
+          <div className="form-control w-1/3">
+            <select 
+              className="select select-bordered select-sm w-full"
+              value={selectedSubject}
+              onChange={(e) => setSelectedSubject(e.target.value)}
+            >
+              {filterData?.find(f => f.id === 'subject')?.list.map(item => (
+                <option key={item.id} value={item.name}>{item.name}</option>
+              ))}
+            </select>
+          </div>
 
-        <div className="form-control w-full">
-          <select 
-            className="select select-bordered w-full"
-            value={selectedType}
-            onChange={(e) => setSelectedType(e.target.value)}
-          >
-            {filterData?.find(f => f.id === 'clue_type')?.list.map(item => (
-              <option key={item.id} value={item.name}>{item.name}</option>
-            ))}
-          </select>
+          <div className="form-control w-1/3">
+            <select 
+              className="select select-bordered select-sm w-full"
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value)}
+            >
+              {filterData?.find(f => f.id === 'clueType')?.list.map(item => (
+                <option key={item.id} value={item.name}>{item.name}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <button 
