@@ -8,6 +8,7 @@ export default function ClueClaimingComponent() {
   const [selectedSubject, setSelectedSubject] = useState('');
   const [selectedType, setSelectedType] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [autoClaimingActive, setAutoClaimingActive] = useState(false);
 
   useEffect(() => {
     setIsLoading(true);
@@ -79,6 +80,24 @@ export default function ClueClaimingComponent() {
     }
   };
 
+  const startAutoClaiming = () => {
+    setAutoClaimingActive(true);
+    chrome.runtime.sendMessage({ action: "start_auto_claiming" }, (response) => {
+      if (response.status === "started") {
+        console.log("自动认领已开始");
+      }
+    });
+  };
+
+  const stopAutoClaiming = () => {
+    setAutoClaimingActive(false);
+    chrome.runtime.sendMessage({ action: "stop_auto_claiming" }, (response) => {
+      if (response.status === "stopped") {
+        console.log("自动认领已停止");
+      }
+    });
+  };
+
   return (
     <div className="w-full mt-2">
       {isLoading && <div>Loading...</div>}
@@ -128,6 +147,22 @@ export default function ClueClaimingComponent() {
         >
           {loading ? '加载中...' : '刷新'}
         </button>
+
+        <div className="flex gap-2">
+          <button 
+            className={`btn btn-primary flex-1 ${autoClaimingActive ? 'btn-error' : ''}`}
+            onClick={autoClaimingActive ? stopAutoClaiming : startAutoClaiming}
+            disabled={loading}
+          >
+            {autoClaimingActive ? '停止线索自动认领' : '开始线索自动认领'}
+          </button>
+        </div>
+
+        {autoClaimingActive && (
+          <div className="text-center text-sm text-primary">
+            线索自动认领进行中...
+          </div>
+        )}
       </div>
       
       <div className="space-y-2">

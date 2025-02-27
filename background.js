@@ -125,31 +125,56 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-// 添加连接端口监听器
-chrome.runtime.onConnect.addListener((port) => {
-  if (port.name === 'audit-task-label') {
-    port.onMessage.addListener(async (message) => {
-      if (message.type === 'GET_AUDIT_TASK_LABEL') {
-        try {
-          // 获取当前活动的标签页
-          const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-          // 发送消息到 content script 并等待响应
-          const response = await chrome.tabs.sendMessage(activeTab.id, {
-            type: 'GET_AUDIT_TASK_LABEL_RESPONSE',
-            data: message.data
-          });
-          // 将内容脚本的响应发送回端口
-          port.postMessage(response);
-        } catch (error) {
-          console.error('Error in audit task label handler:', error);
-          port.postMessage({ errno: 1, errmsg: error.message });
-        }
-      }
+// 存储定时器ID
+let autoClaimingTimer = null;
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === "store_copied_html") {
+    storedHTML = message.html;
+    return true;
+  }
+  if (message.action === "get_copied_html") {
+    sendResponse({ html: storedHTML });
+    return true;
+  }
+  if (message.action === "store_topic_html") {
+    // 转发给 sidebar
+    chrome.runtime.sendMessage({
+      type: 'SET_QUESTION',
+      data: message.html
     });
   }
-});
-
-chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
+  
+  // 处理自动认领的开始和停止
+  if (message.action === "start_auto_claiming") {
+    if (!autoClaimingTimer) {
+      autoClaimingTimer = setInterval(() => {
+        // 获取所有标签页
+        chrome.tabs.query({}, (tabs) => {
+          tabs.forEach(tab => {
+            // 向每个标签页发送消息
+            chrome.tabs.sendMessage(tab.id, {
+              action: "periodic_message",
+              message: "自动认领中",
+              timestamp: new Date().toISOString()
+            });
+          });
+        });
+      }, 5000); // 每5秒发送一次消息
+    }
+    sendResponse({ status: "started" });
+    return true;
+  }
+  
+  if (message.action === "stop_auto_claiming") {
+    if (autoClaimingTimer) {
+      clearInterval(autoClaimingTimer);
+      autoClaimingTimer = null;
+    }
+    sendResponse({ status: "stopped" });
+    return true;
+  }
+  
   const formatMessage = async (type, data, host, uname) => {
     try {
       let formatted;
@@ -173,5 +198,29 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
   if (['FORMAT_QUESTION', 'TOPIC_ANSWER', 'TOPIC_ANALYSIS', 'TOPIC_COMPLETE', 'OCR'].includes(message.type)) {
     formatMessage(message.type, message.data, message.host, message.uname);
     return true; // 保持消息通道开放以等待异步响应
+  }
+});
+
+// 添加连接端口监听器
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name === 'audit-task-label') {
+    port.onMessage.addListener(async (message) => {
+      if (message.type === 'GET_AUDIT_TASK_LABEL') {
+        try {
+          // 获取当前活动的标签页
+          const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+          // 发送消息到 content script 并等待响应
+          const response = await chrome.tabs.sendMessage(activeTab.id, {
+            type: 'GET_AUDIT_TASK_LABEL_RESPONSE',
+            data: message.data
+          });
+          // 将内容脚本的响应发送回端口
+          port.postMessage(response);
+        } catch (error) {
+          console.error('Error in audit task label handler:', error);
+          port.postMessage({ errno: 1, errmsg: error.message });
+        }
+      }
+    });
   }
 });

@@ -370,4 +370,8 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     })();
     return true; // Keep message channel open for async operation
   }
+
+  if (request.action === "periodic_message") {
+    console.log("收到定时消息:", request.message, "时间戳:", request.timestamp);
+  }
 });
