@@ -29,31 +29,15 @@ export default function ClueClaimingComponent() {
     port.onMessage.addListener((response) => {
       if (isComponentMounted && response.errno === 0 && response.data?.filter) {
         setFilterData(response.data.filter);
-        // 先从 storage 获取保存的值
-        chrome.storage.local.get(['selectedGrade', 'selectedSubject', 'selectedType'], (result) => {
-          // 如果有保存的值且在选项列表中存在，则使用保存的值
-          const stepData = response.data.filter.find(f => f.id === 'step')?.list || [];
-          const subjectData = response.data.filter.find(f => f.id === 'subject')?.list || [];
-          const clueTypeData = response.data.filter.find(f => f.id === 'clueType')?.list || [];
+        
+        const stepData = response.data.filter.find(f => f.id === 'step')?.list || [];
+        const subjectData = response.data.filter.find(f => f.id === 'subject')?.list || [];
+        const clueTypeData = response.data.filter.find(f => f.id === 'clueType')?.list || [];
 
-          if (result.selectedGrade && stepData.some(item => item.name === result.selectedGrade)) {
-            setSelectedGrade(result.selectedGrade);
-          } else {
-            setSelectedGrade(stepData[0]?.name || '');
-          }
-
-          if (result.selectedSubject && subjectData.some(item => item.name === result.selectedSubject)) {
-            setSelectedSubject(result.selectedSubject);
-          } else {
-            setSelectedSubject(subjectData[0]?.name || '');
-          }
-
-          if (result.selectedType && clueTypeData.some(item => item.name === result.selectedType)) {
-            setSelectedType(result.selectedType);
-          } else {
-            setSelectedType(clueTypeData[0]?.name || '');
-          }
-        });
+        setSelectedGrade(stepData[0]?.name || '');
+        setSelectedSubject(subjectData[0]?.name || '');
+        setSelectedType(clueTypeData[0]?.name || '');
+        
         setIsLoading(false);
       }
     });
