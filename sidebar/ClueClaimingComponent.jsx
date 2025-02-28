@@ -244,7 +244,9 @@ export default function ClueClaimingComponent() {
       <div className="space-y-2">
         {claimResponse && (
           <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 rounded shadow-sm">
-            <p className="text-sm">{typeof claimResponse === 'object' ? JSON.stringify(claimResponse, null, 2) : claimResponse}</p>
+            <p className="text-sm">
+                {claimResponse?.total} 个认领成功，{claimResponse?.errList?.length} 个认领失败`
+            </p>
           </div>
         )}
       </div>

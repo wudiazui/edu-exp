@@ -372,13 +372,8 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   }
 
   if (request.action === "periodic_message") {
-    console.log("收到定时消息:", request.message);
-    console.log("参数:", request.params);
-    console.log("消息发送时间:", request.timestamp);
-
     getAuditTaskList(request.params).then((res) => {
       if (res.errno === 0 && res.data) {
-        console.log('Total tasks:', res.data.total);
         const taskIds = res.data.list.map(task => task.taskID);
         console.log('Task IDs:', taskIds);
         if (taskIds && taskIds.length > 0) {
