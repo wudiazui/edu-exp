@@ -164,7 +164,7 @@ export default function ClueClaimingComponent() {
 
   return (
     <div className="w-full mt-2">
-      {isLoading && <div>Loading...</div>}
+      {isLoading && <div className="my-1">Loading...</div>}
       <div className="flex flex-col gap-4 mb-4">
         <div className="form-control">
             <select 
