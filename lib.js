@@ -72,7 +72,8 @@ export async function getAuditTaskList({
   clueID = '',
   clueType = 1,
   step = 1,
-  subject = 2
+  subject = 2,
+  taskType = 'audittask'
 } = {}) {
   try {
     const queryParams = new URLSearchParams({
@@ -84,7 +85,7 @@ export async function getAuditTaskList({
       subject
     });
 
-    const response = await fetch(`/edushop/question/audittask/list?${queryParams}`);
+    const response = await fetch(`/edushop/question/${taskType}/list?${queryParams}`);
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -97,9 +98,10 @@ export async function getAuditTaskList({
   }
 }
 
-export async function claimAuditTask(taskIDs) {
+export async function claimAuditTask(taskIDs, taskType = 'audittask') {
+  const commitType = taskType === 'producetask' ? 'producetaskcommit' : 'audittaskcommit';
   try {
-    const response = await fetch('/edushop/question/audittaskcommit/claim', {
+    const response = await fetch(`/edushop/question/${commitType}/claim`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

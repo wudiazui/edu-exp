@@ -377,7 +377,7 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
         const taskIds = res.data.list.map(task => task.taskID);
         console.log('Task IDs:', taskIds);
         if (taskIds && taskIds.length > 0) {
-          claimAuditTask(taskIds).then((res) => {
+          claimAuditTask(taskIds, request.params.taskType).then((res) => {
             console.log('Claim audit task response:', res);
             chrome.runtime.sendMessage({ action: 'claimAuditTaskResponse', data: res.data });
           }).catch((error) => {

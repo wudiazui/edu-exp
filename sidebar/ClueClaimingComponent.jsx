@@ -145,7 +145,8 @@ export default function ClueClaimingComponent() {
         clueID: '', 
         clueType: filterData.find(f => f.id === 'clueType')?.list.find(item => item.name === clueTypeData)?.id || 1,
         step: filterData.find(f => f.id === 'step')?.list.find(item => item.name === stepData)?.id || 1,
-        subject: filterData.find(f => f.id === 'subject')?.list.find(item => item.name === subjectData)?.id || 2
+        subject: filterData.find(f => f.id === 'subject')?.list.find(item => item.name === subjectData)?.id || 2,
+        taskType: selectedTaskType
       }
     }, (response) => {
       if (response && response.status === "started") {
