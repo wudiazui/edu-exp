@@ -6,6 +6,7 @@ export default function ClueClaimingComponent() {
   const [selectedGrade, setSelectedGrade] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
   const [selectedType, setSelectedType] = useState('');
+  const [selectedTaskType, setSelectedTaskType] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [autoClaimingActive, setAutoClaimingActive] = useState(false);
   const [refreshInterval, setRefreshInterval] = useState(1); // Default to 1 second initially
@@ -53,7 +54,7 @@ export default function ClueClaimingComponent() {
       if (isComponentMounted && response.errno === 0 && response.data?.filter) {
         setFilterData(response.data.filter);
         // 先从 storage 获取保存的值
-        chrome.storage.local.get(['selectedGrade', 'selectedSubject', 'selectedType'], (result) => {
+        chrome.storage.local.get(['selectedGrade', 'selectedSubject', 'selectedType', 'selectedTaskType'], (result) => {
           // 如果有保存的值且在选项列表中存在，则使用保存的值
           const stepData = response.data.filter.find(f => f.id === 'step')?.list || [];
           const subjectData = response.data.filter.find(f => f.id === 'subject')?.list || [];
@@ -75,6 +76,12 @@ export default function ClueClaimingComponent() {
             setSelectedType(result.selectedType);
           } else {
             setSelectedType(clueTypeData[0]?.name || '');
+          }
+
+          if (result.selectedTaskType) {
+            setSelectedTaskType(result.selectedTaskType);
+          } else {
+            setSelectedTaskType('audittask');
           }
         });
         setIsLoading(false);
@@ -102,9 +109,10 @@ export default function ClueClaimingComponent() {
     chrome.storage.local.set({
       selectedGrade,
       selectedSubject,
-      selectedType
+      selectedType,
+      selectedTaskType,
     });
-  }, [selectedGrade, selectedSubject, selectedType]);
+  }, [selectedGrade, selectedSubject, selectedType, selectedTaskType]);
 
   // Add message listener for claim response
   useEffect(() => {
@@ -162,6 +170,16 @@ export default function ClueClaimingComponent() {
     <div className="w-full mt-2">
       {isLoading && <div>Loading...</div>}
       <div className="flex flex-col gap-4 mb-4">
+        <div className="form-control">
+            <select 
+              className="select select-bordered select-sm w-full"
+              value={selectedTaskType}
+              onChange={(e) => setSelectedTaskType(e.target.value)}
+            >
+              <option value="audittask">审核</option>
+              <option value="producetask">生产</option>
+            </select>
+        </div>
         <div className="flex gap-2">
           <div className="form-control w-1/3">
             <select 

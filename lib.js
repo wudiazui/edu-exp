@@ -85,7 +85,7 @@ export async function getAuditTaskList({
     });
 
     const response = await fetch(`/edushop/question/audittask/list?${queryParams}`);
-    
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -302,5 +302,3 @@ export async function replaceLatexWithImages(text) {
 
   return result;
 }
-
-
