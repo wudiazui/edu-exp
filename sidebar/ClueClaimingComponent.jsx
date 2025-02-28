@@ -6,11 +6,73 @@ export default function ClueClaimingComponent() {
   const [selectedGrade, setSelectedGrade] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
   const [selectedType, setSelectedType] = useState('');
-  const [selectedTaskType, setSelectedTaskType] = useState('');
+  const [selectedTaskType, setSelectedTaskType] = useState(() => {
+    const savedTaskType = localStorage.getItem('selectedTaskType');
+    return savedTaskType || 'audittask';
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [autoClaimingActive, setAutoClaimingActive] = useState(false);
   const [refreshInterval, setRefreshInterval] = useState(1); // Default to 1 second initially
   const [claimResponse, setClaimResponse] = useState(null); // Add new state for claim response
+
+  // 加载审核任务数据
+  useEffect(() => {
+    setIsLoading(true);
+    // 创建一个标志来跟踪组件是否已卸载
+    let isComponentMounted = true;
+
+    // 发送消息到背景脚本
+    const port = chrome.runtime.connect({ name: 'audit-task-label' });
+    
+    port.postMessage({ type: 'GET_AUDIT_TASK_LABEL', selectedTaskType });
+    
+    port.onMessage.addListener((response) => {
+      if (isComponentMounted && response.errno === 0 && response.data?.filter) {
+        setFilterData(response.data.filter);
+        // 先从 storage 获取保存的值
+        chrome.storage.local.get(['selectedGrade', 'selectedSubject', 'selectedType'], (result) => {
+          // 如果有保存的值且在选项列表中存在，则使用保存的值
+          const stepData = response.data.filter.find(f => f.id === 'step')?.list || [];
+          const subjectData = response.data.filter.find(f => f.id === 'subject')?.list || [];
+          const clueTypeData = response.data.filter.find(f => f.id === 'clueType')?.list || [];
+
+          if (result.selectedGrade && stepData.some(item => item.name === result.selectedGrade)) {
+            setSelectedGrade(result.selectedGrade);
+          } else {
+            setSelectedGrade(stepData[0]?.name || '');
+          }
+
+          if (result.selectedSubject && subjectData.some(item => item.name === result.selectedSubject)) {
+            setSelectedSubject(result.selectedSubject);
+          } else {
+            setSelectedSubject(subjectData[0]?.name || '');
+          }
+
+          if (result.selectedType && clueTypeData.some(item => item.name === result.selectedType)) {
+            setSelectedType(result.selectedType);
+          } else {
+            setSelectedType(clueTypeData[0]?.name || '');
+          }
+        });
+        setIsLoading(false);
+      }
+    });
+
+    port.onDisconnect.addListener(() => {
+      if (chrome.runtime.lastError) {
+        console.error('连接错误:', chrome.runtime.lastError);
+        if (isComponentMounted) {
+          setIsLoading(false);
+        }
+      }
+    });
+
+    // 清理函数
+    return () => {
+      isComponentMounted = false;
+      port.disconnect();
+    };
+  }, [selectedTaskType]); // 添加 selectedTaskType 作为依赖项
 
   // 在组件加载时从storage加载保存的间隔值和自动认领状态
   useEffect(() => {
@@ -40,79 +102,28 @@ export default function ClueClaimingComponent() {
     };
   }, []);
 
-  useEffect(() => {
-    setIsLoading(true);
-    // 创建一个标志来跟踪组件是否已卸载
-    let isComponentMounted = true;
-
-    // 发送消息到背景脚本
-    const port = chrome.runtime.connect({ name: 'audit-task-label' });
-    
-    port.postMessage({ type: 'GET_AUDIT_TASK_LABEL' });
-    
-    port.onMessage.addListener((response) => {
-      if (isComponentMounted && response.errno === 0 && response.data?.filter) {
-        setFilterData(response.data.filter);
-        // 先从 storage 获取保存的值
-        chrome.storage.local.get(['selectedGrade', 'selectedSubject', 'selectedType', 'selectedTaskType'], (result) => {
-          // 如果有保存的值且在选项列表中存在，则使用保存的值
-          const stepData = response.data.filter.find(f => f.id === 'step')?.list || [];
-          const subjectData = response.data.filter.find(f => f.id === 'subject')?.list || [];
-          const clueTypeData = response.data.filter.find(f => f.id === 'clueType')?.list || [];
-
-          if (result.selectedGrade && stepData.some(item => item.name === result.selectedGrade)) {
-            setSelectedGrade(result.selectedGrade);
-          } else {
-            setSelectedGrade(stepData[0]?.name || '');
-          }
-
-          if (result.selectedSubject && subjectData.some(item => item.name === result.selectedSubject)) {
-            setSelectedSubject(result.selectedSubject);
-          } else {
-            setSelectedSubject(subjectData[0]?.name || '');
-          }
-
-          if (result.selectedType && clueTypeData.some(item => item.name === result.selectedType)) {
-            setSelectedType(result.selectedType);
-          } else {
-            setSelectedType(clueTypeData[0]?.name || '');
-          }
-
-          if (result.selectedTaskType) {
-            setSelectedTaskType(result.selectedTaskType);
-          } else {
-            setSelectedTaskType('audittask');
-          }
-        });
-        setIsLoading(false);
-      }
-    });
-
-    port.onDisconnect.addListener(() => {
-      if (chrome.runtime.lastError) {
-        console.error('连接错误:', chrome.runtime.lastError);
-        if (isComponentMounted) {
-          setIsLoading(false);
-        }
-      }
-    });
-
-    // 清理函数
-    return () => {
-      isComponentMounted = false;
-      port.disconnect();
-    };
-  }, []);
-
   // 当选择值变化时保存到storage
   useEffect(() => {
     chrome.storage.local.set({
       selectedGrade,
       selectedSubject,
       selectedType,
-      selectedTaskType,
     });
-  }, [selectedGrade, selectedSubject, selectedType, selectedTaskType]);
+  }, [selectedGrade, selectedSubject, selectedType]);
+
+  // Load selectedTaskType from localStorage on mount
+  useEffect(() => {
+    const savedTaskType = localStorage.getItem('selectedTaskType');
+    if (savedTaskType) {
+      setSelectedTaskType(savedTaskType);
+    }
+  }, []);
+
+  // Update selectedTaskType state and localStorage when changed
+  const handleTaskTypeChange = (value) => {
+    setSelectedTaskType(value);
+    localStorage.setItem('selectedTaskType', value);
+  };
 
   // Add message listener for claim response
   useEffect(() => {
@@ -175,7 +186,7 @@ export default function ClueClaimingComponent() {
             <select 
               className="select select-bordered select-sm w-full"
               value={selectedTaskType}
-              onChange={(e) => setSelectedTaskType(e.target.value)}
+              onChange={(e) => handleTaskTypeChange(e.target.value)}
             >
               <option value="audittask">审核</option>
               <option value="producetask">生产</option>

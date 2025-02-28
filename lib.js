@@ -47,8 +47,8 @@ export async function img_upload(imageBlob) {
   }
 }
 
-export async function getAuditTaskLabel() {
-  const url = "/edushop/question/audittask/getlabel";
+export async function getAuditTaskLabel(taskType = 'audittask') {
+  const url = `/edushop/question/${taskType}/getlabel`;
 
   try {
     const response = await fetch(url, {

@@ -226,7 +226,8 @@ chrome.runtime.onConnect.addListener((port) => {
           // 发送消息到 content script 并等待响应
           const response = await chrome.tabs.sendMessage(activeTab.id, {
             type: 'GET_AUDIT_TASK_LABEL_RESPONSE',
-            data: message.data
+            data: message.data,
+            selectedTaskType: message.selectedTaskType
           });
           // 将内容脚本的响应发送回端口
           port.postMessage(response);

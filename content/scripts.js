@@ -162,7 +162,7 @@ function sendFixEvent(element) {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'GET_AUDIT_TASK_LABEL_RESPONSE') {
     // 调用 getAuditTaskLabel 并返回结果
-    getAuditTaskLabel()
+    getAuditTaskLabel(message.selectedTaskType)
       .then(response => {
         sendResponse(response);
       })
