@@ -219,9 +219,8 @@ export default function Main() {
             )}
             {activeTab === 'ocr' && (
               <OcrComponent
-                setQuestion={setQuestion}
-                setIsImageQuestion={setIsImageQuestion}
-                setSelectedImage={setSelectedImage}
+                host={host}
+                uname={name}
               />
             )}
             {activeTab === 'clue-claiming' && (
