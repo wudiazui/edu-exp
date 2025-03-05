@@ -64,24 +64,38 @@ export default function Options() {
     };
 
     setSettings(newSettings);
+    
+    // Find feature name for better toast message
+    const featureName =
+      featureSettings.find((f) => f.id === setting)?.name || setting;
 
-    // Auto-save when toggling
+    // Auto-save when toggling - save individual setting for better compatibility
     if (typeof chrome !== "undefined" && chrome.storage) {
-      chrome.storage.sync.set(newSettings, () => {
-        showToast(`${setting}设置已更新`);
+      // Create an object with just the changed setting
+      const saveObject = { [setting]: newSettings[setting] };
+      
+      chrome.storage.sync.set(saveObject, () => {
+        showToast(`${featureName}设置已更新`);
       });
     } else {
       // Fallback for development environment
       console.log("Settings auto-saved (localStorage fallback):", newSettings);
       localStorage.setItem("eduExpSettings", JSON.stringify(newSettings));
-      showToast(`${setting}设置已更新`);
+      showToast(`${featureName}设置已更新`);
     }
   };
 
   const saveSettings = () => {
     // Auto-save settings
     if (typeof chrome !== "undefined" && chrome.storage) {
-      chrome.storage.sync.set(settings, () => {
+      // Save each setting individually to ensure they trigger proper change events
+      const savePromises = Object.entries(settings).map(([key, value]) => {
+        return new Promise((resolve) => {
+          chrome.storage.sync.set({ [key]: value }, resolve);
+        });
+      });
+      
+      Promise.all(savePromises).then(() => {
         showToast(`设置已全部更新`);
       });
     } else {
@@ -98,7 +112,14 @@ export default function Options() {
     
     // Save default settings to storage
     if (typeof chrome !== 'undefined' && chrome.storage) {
-      chrome.storage.sync.set(defaultSettings, () => {
+      // Save each setting individually to ensure they trigger proper change events
+      const savePromises = Object.entries(defaultSettings).map(([key, value]) => {
+        return new Promise((resolve) => {
+          chrome.storage.sync.set({ [key]: value }, resolve);
+        });
+      });
+      
+      Promise.all(savePromises).then(() => {
         showToast('已重置为默认设置');
       });
     } else {

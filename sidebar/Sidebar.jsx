@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import ApiSettingsForm from './ApiSettingsForm'; // 引入新组件
 import QuestionAnswerForm from './QuestionAnswerForm'; // 引入新组件
 import QuestionTypeSelect from './QuestionTypeSelect'; // 引入新组件
@@ -27,6 +27,9 @@ export default function Main() {
     ocr: true,
     "clue-claiming": false
   });
+  const [toastMessage, setToastMessage] = useState("");
+  const [showToast, setShowToast] = useState(false);
+  const toastTimeoutRef = useRef(null);
 
   React.useEffect(() => {
     // 监听来自 background 的消息
@@ -142,6 +145,23 @@ export default function Main() {
       }
     });
   }, []);
+  // Load feature settings from Chrome storage
+  useEffect(() => {
+    chrome.storage.sync.get(
+      { 
+        jieti: true, 
+        ocr: true, 
+        "clue-claiming": false 
+      }, 
+      (result) => {
+        setFeatures({
+          jieti: result.jieti,
+          ocr: result.ocr,
+          "clue-claiming": result["clue-claiming"]
+        });
+      }
+    );
+  }, []);
 
   useEffect(() => {
     // 从 Chrome 存储中加载上次选择的 tab
@@ -197,17 +217,110 @@ export default function Main() {
     setSubject(isSwapActive ? 'yuwen' : 'shuxue'); // 根据 isSwapActive 的值更新 subject
   }, [isSwapActive]); // 监听 isSwapActive 的变化
 
-  // Load feature settings from Chrome storage
+  // Function to display toast notification
+  const displayToast = (message) => {
+    // Clear any existing timeout
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+
+    setToastMessage(message);
+    setShowToast(true);
+
+    // Hide toast after 2 seconds
+    toastTimeoutRef.current = setTimeout(() => {
+      setShowToast(false);
+    }, 2000);
+  };
+
+  // Listen for changes in chrome.storage to update features in real-time
   useEffect(() => {
-    chrome.storage.sync.get(['jieti', 'ocr', 'clue-claiming'], (result) => {
-      const loadedFeatures = {
-        jieti: result.jieti !== undefined ? result.jieti : true,
-        ocr: result.ocr !== undefined ? result.ocr : true,
-        "clue-claiming": result["clue-claiming"] !== undefined ? result["clue-claiming"] : false
-      };
-      setFeatures(loadedFeatures);
-    });
+    const handleStorageChange = (changes, namespace) => {
+      if (namespace === 'sync') {
+        let hasChanges = false;
+        let changedFeatureName = '';
+        let status = false;
+        
+        // Create a copy of current features state
+        const updatedFeatures = {...features};
+        
+        // Check each feature flag
+        if ('jieti' in changes) {
+          updatedFeatures.jieti = changes.jieti.newValue;
+          hasChanges = true;
+          changedFeatureName = '解题功能';
+          status = changes.jieti.newValue;
+        }
+        
+        if ('ocr' in changes) {
+          updatedFeatures.ocr = changes.ocr.newValue;
+          hasChanges = true;
+          changedFeatureName = '文字识别';
+          status = changes.ocr.newValue;
+        }
+        
+        if ('clue-claiming' in changes) {
+          updatedFeatures["clue-claiming"] = changes["clue-claiming"].newValue;
+          hasChanges = true;
+          changedFeatureName = '线索认领';
+          status = changes["clue-claiming"].newValue;
+        }
+        
+        // Update state and show toast if any changes
+        if (hasChanges) {
+          setFeatures(updatedFeatures);
+          displayToast(`${changedFeatureName}已${status ? '启用' : '禁用'}`);
+        }
+      }
+    };
   }, []);
+
+    // Listen for changes in chrome.storage to update features in real-time
+    useEffect(() => {
+      const handleStorageChange = (changes, namespace) => {
+        if (namespace === 'sync') {
+          const updatedFeatures = {...features};
+          let hasChanges = false;
+
+          // Load feature settings from Chrome storage
+          useEffect(() => {
+            // Chrome storage doesn't support keys with hyphens directly, need to use object form
+            chrome.storage.sync.get(
+              { 
+                jieti: true, 
+                ocr: true, 
+                "clue-claiming": false 
+              }, 
+              (result) => {
+                console.log("Loaded feature settings:", result);
+                setFeatures({
+                  jieti: result.jieti,
+                  ocr: result.ocr,
+                  "clue-claiming": result["clue-claiming"]
+                });
+              }
+            );
+          }, []);
+
+          // Only update state if there were changes to our feature flags
+          if (hasChanges) {
+            setFeatures(updatedFeatures);
+          }
+        }
+      };
+
+      // Add listener
+      if (typeof chrome !== 'undefined' && chrome.storage) {
+        chrome.storage.onChanged.addListener(handleStorageChange);
+      }
+
+      // Cleanup
+      return () => {
+        if (typeof chrome !== 'undefined' && chrome.storage) {
+          chrome.storage.onChanged.removeListener(handleStorageChange);
+        }
+      };
+    }, [features]);
 
   return (<div className="container max-auto px-1 mt-2">
     <div className="tabs tabs-boxed">
@@ -269,6 +382,14 @@ export default function Main() {
             )}
             {activeTab === 'clue-claiming' && (
               <ClueClaimingComponent />
+            )}
+            {/* Toast notification */}
+            {showToast && (
+              <div className="toast toast-top toast-center">
+                <div className="alert alert-info">
+                  <span>{toastMessage}</span>
+                </div>
+              </div>
             )}
           </div>)
 }
