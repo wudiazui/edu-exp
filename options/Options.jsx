@@ -75,6 +75,7 @@ export default function Options() {
       const saveObject = { [setting]: newSettings[setting] };
       
       chrome.storage.sync.set(saveObject, () => {
+        console.log(`Feature setting updated: ${setting} = ${newSettings[setting]}`);
         showToast(`${featureName}设置已更新`);
       });
     } else {
