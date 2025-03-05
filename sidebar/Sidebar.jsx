@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import ApiSettingsForm from './ApiSettingsForm'; // 引入新组件
 import QuestionAnswerForm from './QuestionAnswerForm'; // 引入新组件
 import QuestionTypeSelect from './QuestionTypeSelect'; // 引入新组件
@@ -22,6 +22,11 @@ export default function Main() {
   const [selectedValue, setSelectedValue] = useState('问答');
   const [isSwapActive, setIsSwapActive] = useState(false);
   const [subject, setSubject] = useState('shuxue'); // 初始化 subject
+  const [features, setFeatures] = useState({
+    jieti: true,
+    ocr: true,
+    "clue-claiming": false
+  });
 
   React.useEffect(() => {
     // 监听来自 background 的消息
@@ -147,6 +152,26 @@ export default function Main() {
     });
   }, []);
 
+  // Switch to available tab if current active tab is disabled
+  useEffect(() => {
+    if (
+      (activeTab === 'solving' && !features.jieti) ||
+      (activeTab === 'ocr' && !features.ocr) ||
+      (activeTab === 'clue-claiming' && !features["clue-claiming"])
+    ) {
+      // Find the first enabled tab or default to settings
+      if (features.jieti) {
+        setActiveTab('solving');
+      } else if (features.ocr) {
+        setActiveTab('ocr');
+      } else if (features["clue-claiming"]) {
+        setActiveTab('clue-claiming');
+      } else {
+        setActiveTab('settings');
+      }
+    }
+  }, [features, activeTab]);
+
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     // 更新 Chrome 存储
@@ -172,13 +197,31 @@ export default function Main() {
     setSubject(isSwapActive ? 'yuwen' : 'shuxue'); // 根据 isSwapActive 的值更新 subject
   }, [isSwapActive]); // 监听 isSwapActive 的变化
 
+  // Load feature settings from Chrome storage
+  useEffect(() => {
+    chrome.storage.sync.get(['jieti', 'ocr', 'clue-claiming'], (result) => {
+      const loadedFeatures = {
+        jieti: result.jieti !== undefined ? result.jieti : true,
+        ocr: result.ocr !== undefined ? result.ocr : true,
+        "clue-claiming": result["clue-claiming"] !== undefined ? result["clue-claiming"] : false
+      };
+      setFeatures(loadedFeatures);
+    });
+  }, []);
+
   return (<div className="container max-auto px-1 mt-2">
-            <div className="tabs tabs-boxed">
-              <a className={`tab ${activeTab === 'settings' ? 'tab-active' : ''}`} onClick={() => handleTabChange('settings')}>设置</a>
-              <a className={`tab ${activeTab === 'solving' ? 'tab-active' : ''}`} onClick={() => handleTabChange('solving')}>解题</a>
-              <a className={`tab ${activeTab === 'ocr' ? 'tab-active' : ''}`} onClick={() => handleTabChange('ocr')}>文字识别</a>
-              <a className={`tab ${activeTab === 'clue-claiming' ? 'tab-active' : ''}`} onClick={() => handleTabChange('clue-claiming')}>线索认领</a>
-            </div>
+    <div className="tabs tabs-boxed">
+      <a className={`tab ${activeTab === 'settings' ? 'tab-active' : ''}`} onClick={() => handleTabChange('settings')}>设置</a>
+      {features.jieti && (
+        <a className={`tab ${activeTab === 'solving' ? 'tab-active' : ''}`} onClick={() => handleTabChange('solving')}>解题</a>
+      )}
+      {features.ocr && (
+        <a className={`tab ${activeTab === 'ocr' ? 'tab-active' : ''}`} onClick={() => handleTabChange('ocr')}>文字识别</a>
+      )}
+      {features["clue-claiming"] && (
+        <a className={`tab ${activeTab === 'clue-claiming' ? 'tab-active' : ''}`} onClick={() => handleTabChange('clue-claiming')}>线索认领</a>
+      )}
+    </div>
             {activeTab === 'settings' && (
               <div className="w-full mt-2">
                 <ApiSettingsForm

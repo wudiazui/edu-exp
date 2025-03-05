@@ -79,20 +79,16 @@ export default function Options() {
   };
 
   const saveSettings = () => {
-    // Find feature name for better toast message
-    const featureName =
-      featureSettings.find((f) => f.id === setting)?.name || setting;
-
-    // Auto-save when toggling
+    // Auto-save settings
     if (typeof chrome !== "undefined" && chrome.storage) {
-      chrome.storage.sync.set(newSettings, () => {
-        showToast(`${featureName}设置已更新`);
+      chrome.storage.sync.set(settings, () => {
+        showToast(`设置已全部更新`);
       });
     } else {
       // Fallback for development environment
-      console.log("Settings auto-saved (localStorage fallback):", newSettings);
-      localStorage.setItem("eduExpSettings", JSON.stringify(newSettings));
-      showToast(`${featureName}设置已更新`);
+      console.log("Settings auto-saved (localStorage fallback):", settings);
+      localStorage.setItem("eduExpSettings", JSON.stringify(settings));
+      showToast(`设置已全部更新`);
     }
   };
 
