@@ -42,6 +42,7 @@
     "default_path": "sidebar/index.html",
     "default_title": "侧边栏内容"
   },
+  "options_page": "options/index.html",
   "commands": {
     "send-topic": {
       "suggested_key": {
