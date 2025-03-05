@@ -4,6 +4,7 @@ import Select from './QuestionTypeSelect.jsx'; // 确保引入 Select 组件
 
 const QuestionAnswerForm = ({
   question,
+  setQuestion,
   handleQuestionChange,
   answer,
   setAnswer,
@@ -47,10 +48,19 @@ const QuestionAnswerForm = ({
         <>
             <div className="w-full mt-2">
                 <div className="label flex justify-between items-center">
-                    <span className="label-text">题干</span>
+                  <span className="label-text">题干</span>
+                  <div className="flex gap-1 items-center">
+
+                    <button
+                      onClick={() => setQuestion('')}
+                      className="btn btn-ghost btn-xs flex items-center"
+                        >
+                            清除
+                        </button>
                     <CopyButton text={question} />
-                </div>
-                <textarea
+                  </div>
+                  </div>
+                  <textarea
                     value={question}
                     onChange={handleQuestionChange}
                     placeholder="题干"
@@ -117,9 +127,9 @@ const QuestionAnswerForm = ({
                 <div className="label flex justify-between items-center">
                     <span className="label-text">解答</span>
                     <div className="flex gap-1 items-center">
-                        <button 
-                            onClick={() => setAnswer('')} 
-                            className="btn btn-ghost btn-xs flex items-center"
+                      <button
+                            onClick={() => setAnswer('')}
+                          className="btn btn-ghost btn-xs flex items-center"
                         >
                             清除
                         </button>
@@ -137,9 +147,9 @@ const QuestionAnswerForm = ({
                 <div className="label flex justify-between items-center">
                     <span className="label-text">解析</span>
                     <div className="flex gap-1 items-center">
-                        <button 
-                            onClick={() => setAnalysis('')} 
-                            className="btn btn-ghost btn-xs flex items-center"
+                      <button
+                            onClick={() => setAnalysis('')}
+                          className="btn btn-ghost btn-xs flex items-center"
                         >
                             清除
                         </button>

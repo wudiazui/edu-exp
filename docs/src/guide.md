@@ -22,13 +22,13 @@
 ### 1. 基础功能演示
 下面的视频展示了基本的操作流程：
 <video width="100%" height="auto" controls>
-  <source src="/img/406d137ca611516e5f10208dbfa173aa.mp4" type="video/mp4">
+  <source src="/img/406.mp4" type="video/mp4">
 </video>
 
 ### 2. 高级功能演示
 这个视频展示了一些进阶功能的使用方法：
 <video width="100%" height="auto" controls>
-  <source src="/img/aced84cfae4e3b42d3378eecd7786a55.mp4" type="video/mp4">
+  <source src="/img/ace.mp4" type="video/mp4">
 </video>
 
 ## 快速入门

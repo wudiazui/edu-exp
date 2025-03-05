@@ -191,9 +191,10 @@ export default function Main() {
             )}
             {activeTab === 'solving' && (
                 <QuestionAnswerForm
-                    question={question}
-                    handleQuestionChange={handleQuestionChange}
-                    answer={answer}
+                  question={question}
+                  setQuestion={setQuestion}
+                  handleQuestionChange={handleQuestionChange}
+                  answer={answer}
                   setAnswer={setAnswer}
                   analysis={analysis}
                   setAnalysis={setAnalysis}
