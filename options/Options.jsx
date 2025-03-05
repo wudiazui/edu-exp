@@ -97,8 +97,20 @@ export default function Options() {
   };
 
   const resetToDefaults = () => {
+    // Update state with default settings
     setSettings(defaultSettings);
-    showToast("已重置为默认设置");
+    
+    // Save default settings to storage
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      chrome.storage.sync.set(defaultSettings, () => {
+        showToast('已重置为默认设置');
+      });
+    } else {
+      // Fallback for development environment
+      console.log('Default settings saved (localStorage fallback):', defaultSettings);
+      localStorage.setItem('eduExpSettings', JSON.stringify(defaultSettings));
+      showToast('已重置为默认设置');
+    }
   };
 
   // Toast notification state and timeout reference
