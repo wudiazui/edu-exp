@@ -19,32 +19,32 @@ function getAdditionSteps(num1, num2) {
   // 将数字转换为字符串并处理小数点
   const [num1Int, num1Dec = ''] = num1.toString().split('.');
   const [num2Int, num2Dec = ''] = num2.toString().split('.');
-  
+
   // 对齐小数位
   const maxDecLength = Math.max(num1Dec.length, num2Dec.length);
   const paddedNum1Dec = num1Dec.padEnd(maxDecLength, '0');
   const paddedNum2Dec = num2Dec.padEnd(maxDecLength, '0');
-  
+
   // 合并整数和小数部分
   const num1Str = num1Int + paddedNum1Dec;
   const num2Str = num2Int + paddedNum2Dec;
-  
+
   // 计算结果
   const result = (parseFloat(num1) + parseFloat(num2)).toFixed(maxDecLength);
-  
+
   // 计算每一位的进位情况
   const carries = [];
   let carry = 0;
   let i = num1Str.length - 1;
   let j = num2Str.length - 1;
   const steps = [];
-  
+
   while (i >= 0 || j >= 0) {
     const digit1 = i >= 0 ? parseInt(num1Str[i]) : 0;
     const digit2 = j >= 0 ? parseInt(num2Str[j]) : 0;
     const sum = digit1 + digit2 + carry;
     const currentDigit = sum % 10;
-    
+
     // 记录这一位的计算步骤
     steps.unshift({
       digit1,
@@ -53,18 +53,18 @@ function getAdditionSteps(num1, num2) {
       sum: currentDigit,
       isDecimal: i >= 0 && i === num1Int.length - 1 // 标记小数点位置
     });
-    
+
     carry = Math.floor(sum / 10);
     carries.unshift(carry);
     i--;
     j--;
   }
-  
+
   // 如果最后还有进位，需要额外处理
   if (carry > 0) {
     carries.unshift(carry);
   }
-  
+
   return {
     carries,
     steps,
@@ -77,16 +77,16 @@ function getSubtractionSteps(num1, num2) {
   // 将数字转换为字符串并处理小数点
   const [num1Int, num1Dec = ''] = num1.toString().split('.');
   const [num2Int, num2Dec = ''] = num2.toString().split('.');
-  
+
   // 对齐小数位
   const maxDecLength = Math.max(num1Dec.length, num2Dec.length);
   const paddedNum1Dec = num1Dec.padEnd(maxDecLength, '0');
   const paddedNum2Dec = num2Dec.padEnd(maxDecLength, '0');
-  
+
   // 合并整数和小数部分
   const num1Str = num1Int + paddedNum1Dec;
   const num2Str = num2Int + paddedNum2Dec;
-  
+
   // 计算结果，保留正确的小数位数
   const result = (parseFloat(num1) - parseFloat(num2)).toFixed(maxDecLength);
 
@@ -142,44 +142,44 @@ function getMultiplicationSteps(num1, num2) {
   // 处理小数点
   const [num1Int, num1Dec = ''] = num1.toString().split('.');
   const [num2Int, num2Dec = ''] = num2.toString().split('.');
-  
+
   // 计算小数位数
   const decimalPlaces = num1Dec.length + num2Dec.length;
-  
+
   // 将数字转换为整数进行计算
   const num1WithoutDot = num1Int + num1Dec;
   const num2WithoutDot = num2Int + num2Dec;
-  
+
   // 计算结果
   const result = (num1 * num2).toFixed(decimalPlaces);
-  
+
   // 计算每一步的部分积
   const partialProducts = [];
   const carries = [];
-  
+
   for (let i = num2WithoutDot.length - 1; i >= 0; i--) {
     const digit = parseInt(num2WithoutDot[i]);
     let carry = 0;
     let partialResult = '';
-    
+
     // 计算当前数字的部分积
     for (let j = num1WithoutDot.length - 1; j >= 0; j--) {
       const product = digit * parseInt(num1WithoutDot[j]) + carry;
       partialResult = (product % 10) + partialResult;
       carry = Math.floor(product / 10);
     }
-    
+
     if (carry > 0) {
       partialResult = carry + partialResult;
     }
-    
+
     // 添加适当数量的0
     partialResult = partialResult.padEnd(partialResult.length + (num2WithoutDot.length - 1 - i), '0');
-    
+
     partialProducts.push(partialResult);
     carries.push(carry);
   }
-  
+
   return {
     carries,
     partialProducts,
@@ -192,22 +192,25 @@ function getDivisionSteps(num1, num2, precision = 2) {
   // Convert inputs to numbers and handle decimals
   num1 = parseFloat(num1);
   num2 = parseFloat(num2);
-  
+
   // Move decimal point to make num1 and num2 integers
   const num1Str = num1.toString();
   const num2Str = num2.toString();
   const num1DecimalPlaces = (num1Str.split('.')[1] || '').length;
   const num2DecimalPlaces = (num2Str.split('.')[1] || '').length;
-  
+
   // Adjust numbers to remove decimals
   const multiplier = Math.pow(10, Math.max(num1DecimalPlaces, num2DecimalPlaces));
   const adjustedNum1 = num1 * multiplier;
   const adjustedNum2 = num2 * multiplier;
-  
+
   // Calculate quotient with desired precision
   const precisionMultiplier = Math.pow(10, precision);
   const quotient = Math.floor((adjustedNum1 * precisionMultiplier) / adjustedNum2) / precisionMultiplier;
   const remainder = adjustedNum1 % adjustedNum2;
+
+  // Check if quotient is an integer to determine how to format it
+  const isInteger = Number.isInteger(quotient);
 
   // Generate calculation steps
   const steps = [];
@@ -220,14 +223,19 @@ function getDivisionSteps(num1, num2, precision = 2) {
     if (i < adjustedNum1Str.length) {
       currentNum += adjustedNum1Str[i];
     } else {
-      // Add zeros for decimal calculation
-      currentNum += '0';
+      // Add zeros for decimal calculation only if needed
+      if (!isInteger) {
+        currentNum += '0';
+      } else if (i === adjustedNum1Str.length) {
+        // Exit the loop early for integer results
+        break;
+      }
     }
-    
+
     let currentNumInt = parseInt(currentNum);
 
     // If current number is smaller than divisor and not at the end, continue
-    if (currentNumInt < adjustedNum2 && i < adjustedNum1Str.length + precision - 1) {
+    if (currentNumInt < adjustedNum2 && i < adjustedNum1Str.length + (isInteger ? 0 : precision) - 1) {
       continue;
     }
 
@@ -247,9 +255,10 @@ function getDivisionSteps(num1, num2, precision = 2) {
   }
 
   return {
-    quotient: quotient.toFixed(precision),
-    remainder: (remainder / multiplier).toFixed(precision),
-    steps
+    quotient: isInteger ? quotient.toString() : quotient.toFixed(precision),
+    remainder: isInteger ? Math.floor(remainder / multiplier).toString() : (remainder / multiplier).toFixed(precision),
+    steps,
+    isInteger
   };
 }
 
