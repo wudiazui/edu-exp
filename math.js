@@ -442,17 +442,14 @@ export async function generateVerticalArithmeticImage(expression) {
     let currentY = padding + 2 * lineHeight;
     let currentPosition = 0;
     //let currentX = arcTopX + charWidth * (dividendLength - 0.1);
-    let currentX = numberEndX - dividendLength * 0.7 * charWidth;
+    let g_currentX = numberEndX - dividendLength * 0.7 * charWidth;
     const num1Digits = num1.toString().split("");
 
     steps.steps.forEach((step, index) => {
       ctx.textAlign = "left"; // 设置左对齐
-      currentX +=
-        (step.dividend.toString().length - step.product.toString().length) *
-        charWidth *
-        0.7;
-      const productEndX =
-        currentX + step.product.toString().length * 0.7 * charWidth;
+      //currentX += (step.dividend.toString().length - step.product.toString().length) * charWidth * 0.7;
+      let currentX = g_currentX;
+      const productEndX = currentX + step.product.toString().length * 0.7 * charWidth;
       console.log("xy: ", currentX, productEndX, step.product);
       // 绘制乘积
       ctx.fillText(step.product.toString(), currentX, currentY);
@@ -461,30 +458,27 @@ export async function generateVerticalArithmeticImage(expression) {
       // 绘制步骤分隔线 (移动到乘积和差值之间)
       ctx.beginPath();
       ctx.moveTo(currentX, currentY - 0.5 * lineHeight);
-      ctx.lineTo(
-        productEndX +
-          (dividendLength - step.product.toString().length) * 0.7 * charWidth,
-        currentY - 0.5 * lineHeight,
-      );
+      ctx.lineTo(productEndX + (dividendLength - step.product.toString().length) * 0.7 * charWidth, currentY - 0.5 * lineHeight,);
       ctx.stroke();
       // 绘制差值和剩余的被除数数字
       let remainingDigits = "";
       if (index < steps.steps.length - 1) {
         const nextStep = steps.steps[index + 1];
-        const digitsNeeded = nextStep.dividend.toString().length - step.difference.toString().length;
+        //const digitsNeeded = nextStep.dividend.toString().length - step.difference.toString().length;
+        const digitsNeeded = num1Digits.length - step.product.toString().length;
         for (let i = 0; i < digitsNeeded; i++) {
           currentPosition += step.product.toString().length;
           remainingDigits += num1Digits[currentPosition];
         }
       }
-      console.log("difference:", step.difference);
-      console.log("remainingDigits:", remainingDigits);
-      currentX = productEndX - step.difference.toString().length * 0.7 * charWidth; // 修正为使用差值的长度
-      const differenceWithRemaining =
-        step.difference.toString() + remainingDigits;
+      console.log("difference:", step.difference, "remainingDigits:", remainingDigits);
+      currentX = productEndX - step.difference.toString().length * 0.7 * charWidth;// 修正为使用差值的长度
+
+      const differenceWithRemaining = step.difference.toString() + remainingDigits;
       console.log(differenceWithRemaining);
       ctx.fillText(differenceWithRemaining, currentX, currentY);
       currentY += lineHeight;
+      g_currentX = currentX;
     });
 
     // 如果有余数，显示在最后一行
