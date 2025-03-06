@@ -441,51 +441,73 @@ export async function generateVerticalArithmeticImage(expression) {
     // 绘制计算步骤
     let currentY = padding + 2 * lineHeight;
     let currentPosition = 0;
-    //let currentX = arcTopX + charWidth * (dividendLength - 0.1);
     let g_currentX = numberEndX - dividendLength * 0.7 * charWidth;
     const num1Digits = num1.toString().split("");
 
     steps.steps.forEach((step, index) => {
       ctx.textAlign = "left"; // 设置左对齐
-      //currentX += (step.dividend.toString().length - step.product.toString().length) * charWidth * 0.7;
       let currentX = g_currentX;
       const productEndX = currentX + step.product.toString().length * 0.7 * charWidth;
-      console.log("xy: ", currentX, productEndX, step.product);
+      
       // 绘制乘积
       ctx.fillText(step.product.toString(), currentX, currentY);
-      // 更新 currentX 为乘积数字的结束位置
       currentY += lineHeight;
+      
       // 绘制步骤分隔线 (移动到乘积和差值之间)
       ctx.beginPath();
       ctx.moveTo(currentX, currentY - 0.5 * lineHeight);
-      ctx.lineTo(productEndX + (dividendLength - step.product.toString().length) * 0.7 * charWidth, currentY - 0.5 * lineHeight,);
+      ctx.lineTo(productEndX, currentY - 0.5 * lineHeight);
       ctx.stroke();
+      
       // 绘制差值和剩余的被除数数字
       let remainingDigits = "";
+      
       if (index < steps.steps.length - 1) {
+        // 计算需要从原始被除数中带下来的数字
         const nextStep = steps.steps[index + 1];
-        //const digitsNeeded = nextStep.dividend.toString().length - step.difference.toString().length;
-        const digitsNeeded = num1Digits.length - step.product.toString().length;
+        const currentDigitLength = step.dividend.toString().length;
+        const differenceLength = step.difference.toString().length;
+        
+        // 计算当前位置和需要带下来的位数
+        if (index === 0) {
+          // 第一步，初始化当前位置
+          currentPosition = currentDigitLength;
+        }
+        
+        // 计算需要带下来的位数
+        const digitsNeeded = nextStep.dividend.toString().length - differenceLength;
+        
+        // 从原始被除数中获取需要带下来的数字
         for (let i = 0; i < digitsNeeded; i++) {
-          currentPosition += step.product.toString().length;
-          remainingDigits += num1Digits[currentPosition];
+          if (currentPosition < num1Digits.length) {
+            remainingDigits += num1Digits[currentPosition];
+            currentPosition++;
+          }
         }
       }
-      console.log("difference:", step.difference, "remainingDigits:", remainingDigits);
-      currentX = productEndX - step.difference.toString().length * 0.7 * charWidth;// 修正为使用差值的长度
-
-      const differenceWithRemaining = step.difference.toString() + remainingDigits;
-      console.log(differenceWithRemaining);
-      ctx.fillText(differenceWithRemaining, currentX, currentY);
+      
+      // 计算差值的位置，确保正确对齐
+      const differenceX = currentX + (step.product.toString().length - step.difference.toString().length) * 0.7 * charWidth;
+      
+      // 绘制差值
+      ctx.fillText(step.difference.toString(), differenceX, currentY);
+      
+      // 绘制带下来的数字
+      if (remainingDigits.length > 0) {
+        const remainingX = differenceX + step.difference.toString().length * 0.7 * charWidth;
+        ctx.fillText(remainingDigits, remainingX, currentY);
+      }
+      
+      // 更新下一步的起始X位置
+      if (remainingDigits.length > 0) {
+        g_currentX = differenceX;
+      } else {
+        g_currentX = differenceX + step.difference.toString().length * 0.7 * charWidth - 
+                    (index < steps.steps.length - 1 ? steps.steps[index + 1].dividend.toString().length * 0.7 * charWidth : 0);
+      }
+      
       currentY += lineHeight;
-      g_currentX = currentX;
     });
-
-    // 如果有余数，显示在最后一行
-    //if (parseInt(steps.remainder) > 0) {
-    //  currentY += lineHeight;  // 确保余数在新的一行显示
-    //  ctx.fillText(steps.remainder.toString(), currentX, currentY);
-    //}
   } else {
     // 绘制加减法过程（保持原有代码）
     if (
