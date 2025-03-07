@@ -27,29 +27,29 @@ export default function Main() {
       ocr: true,
       "clue-claiming": false
     });
-    
-    const [subject, setSubject] = useState("");
-    
-    // Load feature settings from Chrome storage on component mount
-    useEffect(() => {
-      if (typeof chrome !== "undefined" && chrome.storage) {
-        chrome.storage.sync.get(features, (items) => {
-          setFeatures(items);
-        });
-      } else {
-        // Fallback for development environment
-        console.log("Chrome storage not available, using default feature settings");
-        const storedSettings = localStorage.getItem("eduExpSettings");
-        if (storedSettings) {
-          try {
-            const parsedSettings = JSON.parse(storedSettings);
-            setFeatures(parsedSettings);
-          } catch (e) {
-            console.error("Failed to parse stored settings:", e);
-          }
+
+  const [subject, setSubject] = useState("");
+
+  // Load feature settings from Chrome storage on component mount
+  useEffect(() => {
+    if (typeof chrome !== "undefined" && chrome.storage) {
+      chrome.storage.sync.get(features, (items) => {
+        setFeatures(items);
+      });
+    } else {
+      // Fallback for development environment
+      console.log("Chrome storage not available, using default feature settings");
+      const storedSettings = localStorage.getItem("eduExpSettings");
+      if (storedSettings) {
+        try {
+          const parsedSettings = JSON.parse(storedSettings);
+          setFeatures(parsedSettings);
+        } catch (e) {
+          console.error("Failed to parse stored settings:", e);
         }
       }
-    }, []);
+    }
+  }, []);
 
   React.useEffect(() => {
     // 监听来自 background 的消息
@@ -108,7 +108,7 @@ export default function Main() {
   };
 
   const handleHostChange = (e) => {
-    const newHost = e.target.value;
+    const newHost = e.target.value.trim();
     setHost(newHost);
     // 更新 Chrome 存储
     chrome.storage.sync.set({ host: newHost }, () => {
@@ -154,7 +154,7 @@ export default function Main() {
   };
 
   const handleNameChange = (e) => {
-    setName(e.target.value);
+    setName(e.target.value.trim());
     chrome.storage.sync.set({ name: e.target.value });
   };
 
@@ -279,18 +279,18 @@ export default function Main() {
   }, [features]);
 
   return (<div className="container max-auto px-1 mt-2">
-    <div className="tabs tabs-boxed">
-      <a className={`tab ${activeTab === 'settings' ? 'tab-active' : ''}`} onClick={() => handleTabChange('settings')}>设置</a>
-      {features.jieti && (
-        <a className={`tab ${activeTab === 'solving' ? 'tab-active' : ''}`} onClick={() => handleTabChange('solving')}>解题</a>
-      )}
-      {features.ocr && (
-        <a className={`tab ${activeTab === 'ocr' ? 'tab-active' : ''}`} onClick={() => handleTabChange('ocr')}>文字识别</a>
-      )}
-      {features["clue-claiming"] && (
-        <a className={`tab ${activeTab === 'clue-claiming' ? 'tab-active' : ''}`} onClick={() => handleTabChange('clue-claiming')}>线索认领</a>
-      )}
-    </div>
+            <div className="tabs tabs-boxed">
+              <a className={`tab ${activeTab === 'settings' ? 'tab-active' : ''}`} onClick={() => handleTabChange('settings')}>设置</a>
+              {features.jieti && (
+                <a className={`tab ${activeTab === 'solving' ? 'tab-active' : ''}`} onClick={() => handleTabChange('solving')}>解题</a>
+              )}
+              {features.ocr && (
+                <a className={`tab ${activeTab === 'ocr' ? 'tab-active' : ''}`} onClick={() => handleTabChange('ocr')}>文字识别</a>
+              )}
+              {features["clue-claiming"] && (
+                <a className={`tab ${activeTab === 'clue-claiming' ? 'tab-active' : ''}`} onClick={() => handleTabChange('clue-claiming')}>线索认领</a>
+              )}
+            </div>
             {activeTab === 'settings' && (
               <div className="w-full mt-2">
                 <ApiSettingsForm
@@ -302,33 +302,33 @@ export default function Main() {
               </div>
             )}
             {activeTab === 'solving' && (
-                <QuestionAnswerForm
-                  question={question}
-                  setQuestion={setQuestion}
-                  handleQuestionChange={handleQuestionChange}
-                  answer={answer}
-                  setAnswer={setAnswer}
-                  analysis={analysis}
-                  setAnalysis={setAnalysis}
-                  isFormatting={isFormatting}
-                  handleFormat={handleFormat}
-                  isCompleteeing={isCompleteeing}
-                  handleComplete={handleComplete}
-                  isGeneratingAnswer={isGeneratingAnswer}
-                  handleGenerateAnswer={handleGenerateAnswer}
-                  isGeneratingAnalysis={isGeneratingAnalysis}
-                  handleGenerateAnalysis={handleGenerateAnalysis}
-                  isImageQuestion={isImageQuestion}
-                  setIsImageQuestion={setIsImageQuestion}
-                  selectedImage={selectedImage}
-                  setSelectedImage={setSelectedImage}
-                  selectedValue={selectedValue}
-                  setSelectedValue={setSelectedValue}
-                  host={host}
-                  uname={name}
-                  isSwapActive={isSwapActive}
-                  setIsSwapActive={handleSwapToggle}
-                />
+              <QuestionAnswerForm
+                question={question}
+                setQuestion={setQuestion}
+                handleQuestionChange={handleQuestionChange}
+                answer={answer}
+                setAnswer={setAnswer}
+                analysis={analysis}
+                setAnalysis={setAnalysis}
+                isFormatting={isFormatting}
+                handleFormat={handleFormat}
+                isCompleteeing={isCompleteeing}
+                handleComplete={handleComplete}
+                isGeneratingAnswer={isGeneratingAnswer}
+                handleGenerateAnswer={handleGenerateAnswer}
+                isGeneratingAnalysis={isGeneratingAnalysis}
+                handleGenerateAnalysis={handleGenerateAnalysis}
+                isImageQuestion={isImageQuestion}
+                setIsImageQuestion={setIsImageQuestion}
+                selectedImage={selectedImage}
+                setSelectedImage={setSelectedImage}
+                selectedValue={selectedValue}
+                setSelectedValue={setSelectedValue}
+                host={host}
+                uname={name}
+                isSwapActive={isSwapActive}
+                setIsSwapActive={handleSwapToggle}
+              />
             )}
             {activeTab === 'ocr' && (
               <OcrComponent
