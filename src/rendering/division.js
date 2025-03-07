@@ -119,11 +119,14 @@ function renderDivision(ctx, result, options) {
         }
     }
     
-    // 绘制除号结构
-    drawDivisionStruct(ctx, startX, startY, startX + dividendWidth + gap, fontSize);
+    // 增加被除数的起始位置，使其向右移动
+    const extraGap = gap * 0.8; // 减小额外间距，从1.5改为0.8
     
-    // 绘制被除数，在除号右侧
-    x = startX;
+    // 绘制除号结构
+    drawDivisionStruct(ctx, startX, startY, startX + dividendWidth + gap + extraGap, fontSize);
+    
+    // 绘制被除数，在除号右侧，增加额外间距
+    x = startX + extraGap;
     for (let i = 0; i < dividend.length; i++) {
         const s = dividend[i];
         ctx.fillText(s, x, y);
@@ -160,11 +163,11 @@ function renderDivision(ctx, result, options) {
     
     // 计算商的起始X坐标，使其右对齐
     // 商的最后一位应该与被除数的最后一位对齐
-    let quotientStartX = startX + dividendWidth - quotientWidth;
+    let quotientStartX = startX + extraGap + dividendWidth - quotientWidth;
     
     // 确保商的起始位置不小于startX
-    if (quotientStartX < startX) {
-        quotientStartX = startX;
+    if (quotientStartX < startX + extraGap) {
+        quotientStartX = startX + extraGap;
     }
     
     // 绘制商
@@ -204,7 +207,7 @@ function renderDivision(ctx, result, options) {
             
             if (i === 0) {
                 // 第一步，位置在被除数的第一个数字下方
-                stepX = startX;
+                stepX = startX + extraGap;
             } else {
                 // 后续步骤，位置根据前一步的余数确定
                 // 在math_n.js中，每一步的位置是根据被除数的位置和当前处理的位数确定的
@@ -285,8 +288,8 @@ function renderDivision(ctx, result, options) {
             }
             
             // 确保减数的起始位置不小于startX
-            if (subtractionStartX < startX) {
-                subtractionStartX = startX;
+            if (subtractionStartX < startX + extraGap) {
+                subtractionStartX = startX + extraGap;
             }
             
             // 绘制减数
@@ -303,8 +306,10 @@ function renderDivision(ctx, result, options) {
             
             // 绘制横线 - 与图片一致，只在减数下方绘制
             ctx.beginPath();
-            ctx.moveTo(subtractionStartX, currentY + lineHeight + gap/4);
-            ctx.lineTo(subtractionStartX + subtraction.length * gap, currentY + lineHeight + gap/4);
+            // 调整横线的垂直位置，使其稍微提高，并增加长度
+            ctx.moveTo(subtractionStartX - gap * 1.5, currentY + lineHeight + gap/6);
+            // 延长横线长度，左右各延长3个数字位置
+            ctx.lineTo(subtractionStartX + subtraction.length * gap + gap * 1.5, currentY + lineHeight + gap/6);
             ctx.stroke();
             
             // 绘制余数
