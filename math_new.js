@@ -869,6 +869,15 @@ function renderAddition(ctx, result, options) {
     x = prev_x - gap;
     ctx.fillText("+", x, y);
     
+    // 绘制横线
+    ctx.beginPath();
+    let lineY = y + fontSize * 0.05; // 最终微调横线位置，使其更加优雅
+    ctx.lineWidth = 1;
+    ctx.moveTo(maxLeft, lineY);
+    ctx.lineTo(Math.max(maxRight, startX + gap * 5), lineY);
+    ctx.stroke();
+    ctx.lineWidth = 2;
+    
     // 绘制和
     y += lineHeight;
     
@@ -915,8 +924,6 @@ function renderAddition(ctx, result, options) {
     
     // 绘制结果
     let arrResult = [];
-    let resultStartX = x; // 记录结果起始位置
-    
     for (i = sum.length - 1; i >= 0; i--) {
         s = sum[i];
         ctx.fillText(s, x, y);
@@ -931,19 +938,6 @@ function renderAddition(ctx, result, options) {
             x -= gap;
         }
     }
-    
-    // 在结果数字上方绘制横线
-    ctx.beginPath();
-    
-    // 绘制横线，确保位置正确
-    let lineY = y - lineHeight + gap/2;
-    ctx.lineWidth = 1;
-    ctx.moveTo(maxLeft, lineY);
-    ctx.lineTo(resultStartX + gap, lineY);
-    ctx.stroke();
-    
-    // 恢复线宽
-    ctx.lineWidth = 2;
     
     // 绘制进位
     if (options.showSteps && carries.length > 0) {
@@ -978,7 +972,7 @@ function renderAddition(ctx, result, options) {
     
     // 调整画布大小以适应内容
     if (options.autoResize) {
-        const newWidth = Math.max(maxRight, resultStartX + gap) + 3 * gap;
+        const newWidth = Math.max(maxRight, startX + gap * 5) + 3 * gap;
         const newHeight = y + 3 * gap;
         
         if (newWidth > options.width) {
@@ -1169,12 +1163,13 @@ function renderSubtraction(ctx, result, options) {
     ctx.fillText("-", x, y);
     
     // 绘制横线
-    let line_y = y + gap/2;
-    let line_x = x - gap/2;
-    
-    ctx.moveTo(line_x, line_y);
-    ctx.lineTo(startX, line_y);
+    ctx.beginPath();
+    let lineY = y + fontSize * 0.1; // 最终微调横线位置，使其更加优雅
+    ctx.lineWidth = 1;
+    ctx.moveTo(options.maxLeft, lineY);
+    ctx.lineTo(Math.max(startX, startX + gap * 5), lineY);
     ctx.stroke();
+    ctx.lineWidth = 2;
     
     y += lineHeight;
     
