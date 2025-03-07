@@ -9,7 +9,7 @@
  * @param {object} options - 渲染选项
  */
 function renderAddition(ctx, result, options) {
-    const { addend1, addend2, sum, carries } = result;
+    let { addend1, addend2, sum, carries } = result;
     const { fontSize } = options;
     
     // 设置绘图样式
@@ -30,8 +30,25 @@ function renderAddition(ctx, result, options) {
     let dot_pos2 = addend2.indexOf('.');
     if (dot_pos2 === -1) dot_pos2 = addend2.length;
     
-    // 计算起始位置
-    const gap = fontSize * 0.8; // 与math_n.js中的gap对应
+    // 确保sum中有小数点，如果原始数据有小数点
+    if (sum.indexOf('.') === -1 && (dot_pos1 < addend1.length || dot_pos2 < addend2.length)) {
+        // 如果加数中有小数点但结果没有，需要添加小数点
+        // 计算小数点应该在结果中的位置
+        let decimalPlaces1 = dot_pos1 < addend1.length ? addend1.length - dot_pos1 - 1 : 0;
+        let decimalPlaces2 = dot_pos2 < addend2.length ? addend2.length - dot_pos2 - 1 : 0;
+        let maxDecimalPlaces = Math.max(decimalPlaces1, decimalPlaces2);
+        
+        if (maxDecimalPlaces > 0) {
+            // 在结果中插入小数点
+            sum = sum.slice(0, sum.length - maxDecimalPlaces) + '.' + sum.slice(sum.length - maxDecimalPlaces);
+        }
+    }
+    
+    let dot_pos_sum = sum.indexOf('.');
+    if (dot_pos_sum === -1) dot_pos_sum = sum.length;
+    
+    // 计算起始位置 - 调整数字间距
+    const gap = fontSize * 0.65; // 减小间距，原来是0.8
     let startX;
     
     if (dot_pos1 >= dot_pos2) {
@@ -62,64 +79,6 @@ function renderAddition(ctx, result, options) {
     
     ctx.beginPath();
     
-    // 绘制顶部公式
-    let kx = maxLeft;
-    let ky = startY - gap;
-    
-    // 绘制第一个加数
-    for (let k = 0; k < addend1.length; k++) {
-        let ks = addend1[k];
-        ctx.fillText(ks, kx, ky);
-        
-        if (k < addend1.length - 1 && addend1[k+1] === ".") {
-            kx += gap * 2/3;
-        } else if (addend1[k] === ".") {
-            kx += gap - gap * 2/3;
-        } else {
-            kx += gap;
-        }
-    }
-    
-    // 绘制加号
-    ctx.fillText("+", kx, ky);
-    kx += gap;
-    
-    // 绘制第二个加数
-    for (let k = 0; k < addend2.length; k++) {
-        let ks = addend2[k];
-        ctx.fillText(ks, kx, ky);
-        
-        if (k < addend2.length - 1 && addend2[k+1] === ".") {
-            kx += gap * 2/3;
-        } else if (addend2[k] === ".") {
-            kx += gap - gap * 2/3;
-        } else {
-            kx += gap;
-        }
-    }
-    
-    // 绘制等号
-    ctx.fillText("=", kx, ky);
-    kx += gap;
-    
-    // 绘制结果
-    for (let k = 0; k < sum.length; k++) {
-        let ks = sum[k];
-        ctx.fillText(ks, kx, ky);
-        
-        if (k < sum.length - 1 && sum[k+1] === ".") {
-            kx += gap * 2/3;
-        } else if (sum[k] === ".") {
-            kx += gap - gap * 2/3;
-        } else {
-            kx += gap;
-        }
-    }
-    
-    if (maxRight < kx) {
-        maxRight = kx;
-    }
-    
     // 绘制竖式
     x = startX - gap - 5;
     y = startY + gap/2 + fontSize;
@@ -139,9 +98,9 @@ function renderAddition(ctx, result, options) {
         arrFactor1.push({"X": x, "Y": y, "V": s, "visible": true});
         
         if (s === ".") {
-            x -= gap * 2/3;
+            x -= gap * 0.5; // 调整小数点后的间距，原来是2/3
         } else if (i >= 1 && addend1[i-1] === ".") {
-            x -= gap - gap * 2/3;
+            x -= gap - gap * 0.5; // 调整小数点前的间距，原来是2/3
         } else {
             x -= gap;
         }
@@ -160,13 +119,13 @@ function renderAddition(ctx, result, options) {
         start_p = dot_pos2;
         
         if (dot_pos1 >= addend1.length) {
-            x += gap * 2/3;
+            x += gap * 0.5; // 调整小数点间距，原来是2/3
         }
     } else {
         start_p = addend2.length - 1;
         
         if (dot_pos1 < addend1.length) {
-            x -= gap * 2/3;
+            x -= gap * 0.5; // 调整小数点间距，原来是2/3
         }
     }
     
@@ -179,9 +138,9 @@ function renderAddition(ctx, result, options) {
         arrFactor2.push({"X": x, "Y": y, "V": s, "visible": true});
         
         if (s === ".") {
-            x -= gap * 2/3;
+            x -= gap * 0.5; // 调整小数点后的间距，原来是2/3
         } else if (i >= 1 && addend2[i-1] === ".") {
-            x -= gap - gap * 2/3;
+            x -= gap - gap * 0.5; // 调整小数点前的间距，原来是2/3
         } else {
             x -= gap;
         }
@@ -197,7 +156,7 @@ function renderAddition(ctx, result, options) {
         if (dot_pos1 >= addend1.length) {
             x = dot_pos_x + gap;
         } else {
-            x = dot_pos_x + gap/3;
+            x = dot_pos_x + gap * 0.3; // 调整小数点后的间距，原来是1/3
         }
         
         for (i = start_p + 1; i < addend2.length; i++) {
@@ -207,9 +166,9 @@ function renderAddition(ctx, result, options) {
             arrFactor2.push({"X": x, "Y": y, "V": s, "visible": true});
             
             if (s === ".") {
-                x += gap/3;
+                x += gap * 0.3; // 调整小数点间距，原来是1/3
             } else if (i < addend2.length - 1 && addend2[i+1] === ".") {
-                x += gap * 2/3;
+                x += gap * 0.5; // 调整小数点前的间距，原来是2/3
             } else {
                 x += gap;
             }
@@ -221,7 +180,7 @@ function renderAddition(ctx, result, options) {
     }
     
     // 绘制加号
-    x = prev_x - gap;
+    x = prev_x - gap * 0.9; // 调整加号位置，使其更靠近数字，原来是gap
     ctx.fillText("+", x, y);
     
     // 绘制横线
@@ -230,10 +189,10 @@ function renderAddition(ctx, result, options) {
     ctx.lineWidth = 1;
     
     // 找到最左侧的位置（包括加号）
-    let leftMostX = x - gap * 0.8; // 加号位置左侧一点点
+    let leftMostX = x - gap * 0.7; // 加号位置左侧一点点，原来是0.8
     
     // 计算结果的最右侧位置
-    let resultRightX = startX - gap - 5 + gap * (sum.length + 0.3); // 结果右侧多一点点
+    let resultRightX = startX - gap - 5 + gap * (sum.length + 0.2); // 结果右侧多一点点，原来是0.3
     
     // 调整横线起点和终点，使其刚好超过数字宽度一点
     ctx.moveTo(leftMostX, lineY);
@@ -244,94 +203,56 @@ function renderAddition(ctx, result, options) {
     // 绘制和
     y += lineHeight;
     
-    // 找到最右侧的位置，确保与上方数字对齐
-    x = startX - gap - 5;
-    
-    // 处理小数点对齐
-    let a1 = addend1;
-    let a2 = addend2;
-    
-    if (dot_pos1 !== -1 && dot_pos2 !== -1) {
-        // 两个数都有小数点
-        let decimal1 = addend1.length - dot_pos1 - 1;
-        let decimal2 = addend2.length - dot_pos2 - 1;
-        
-        if (decimal1 < decimal2) {
-            a1 = addend1 + "0".repeat(decimal2 - decimal1);
-        } else if (decimal2 < decimal1) {
-            a2 = addend2 + "0".repeat(decimal1 - decimal2);
-        }
-    } else if (dot_pos1 !== -1) {
-        // 只有第一个数有小数点
-        a2 = addend2 + "." + "0".repeat(addend1.length - dot_pos1 - 1);
-    } else if (dot_pos2 !== -1) {
-        // 只有第二个数有小数点
-        a1 = addend1 + "." + "0".repeat(addend2.length - dot_pos2 - 1);
-    }
-    
-    // 去掉小数点进行计算
-    let s1 = a1.replace(".", "");
-    let s2 = a2.replace(".", "");
-    
-    // 确保s1长度不小于s2
-    if (s1.length < s2.length) {
-        let temp = s1;
-        s1 = s2;
-        s2 = temp;
-    }
-    
-    // 对齐数字
-    while (s2.length < s1.length) {
-        s2 = "0" + s2;
-    }
+    // 修改：确保结果的小数点与上面的小数点对齐
+    // 先找到小数点的位置
+    let result_x = dot_pos_x;
     
     // 绘制结果
     let arrResult = [];
-    for (i = sum.length - 1; i >= 0; i--) {
+    
+    // 先绘制小数点左侧的数字（从小数点向左）
+    x = result_x;
+    for (i = dot_pos_sum - 1; i >= 0; i--) {
         s = sum[i];
         ctx.fillText(s, x, y);
         
         arrResult.push({"X": x, "Y": y, "V": s, "visible": true});
         
-        if (s === ".") {
-            x -= gap * 2/3;
-        } else if (i >= 1 && sum[i-1] === ".") {
-            x -= gap - gap * 2/3;
+        if (i >= 1 && sum[i-1] === ".") {
+            x -= gap - gap * 0.5; // 调整小数点前的间距，原来是2/3
         } else {
             x -= gap;
         }
     }
     
-    // 绘制进位
-    if (options.showSteps && carries.length > 0) {
-        ctx.font = `${fontSize * 0.7}pt ${options.fontFamily}`;
+    // 如果有小数点，绘制小数点
+    if (dot_pos_sum < sum.length) {
+        // 确保小数点明显可见
+        ctx.font = `bold ${fontSize}pt Times New Roman`;
+        ctx.fillText(".", result_x, y);
+        ctx.font = `${fontSize}pt Times New Roman`;
         
-        for (const carry of carries) {
-            const pos = carry.position;
-            // 找到对应位置的x坐标
-            let xPos;
+        arrResult.push({"X": result_x, "Y": y, "V": ".", "visible": true});
+        
+        // 绘制小数点右侧的数字（从小数点向右）
+        x = result_x + gap * 0.3; // 调整小数点后的间距，原来是1/3
+        for (i = dot_pos_sum + 1; i < sum.length; i++) {
+            s = sum[i];
+            ctx.fillText(s, x, y);
             
-            if (pos < 0) {
-                // 如果是最左侧的进位
-                xPos = arrResult[0].X - gap;
+            arrResult.push({"X": x, "Y": y, "V": s, "visible": true});
+            
+            if (i < sum.length - 1 && sum[i+1] === ".") {
+                x += gap * 0.5; // 调整小数点前的间距，原来是2/3
             } else {
-                // 找到对应位置的数字
-                const digits = sum.length - 1 - pos;
-                if (digits >= 0 && digits < arrResult.length) {
-                    xPos = arrResult[digits].X;
-                } else {
-                    continue; // 跳过无效位置
-                }
+                x += gap;
             }
-            
-            // 调整进位显示的位置，确保在数字上方
-            const yPos = startY + gap/2 + fontSize + lineHeight - fontSize * 0.3;
-            ctx.fillText(carry.value.toString(), xPos, yPos);
         }
-        
-        // 恢复字体
-        ctx.font = `${fontSize}pt ${options.fontFamily}`;
     }
+    
+    // 移除进位显示代码
+    // options.showSteps 设置为 false 来禁用进位显示
+    options.showSteps = false;
     
     // 调整画布大小以适应内容
     if (options.autoResize) {
