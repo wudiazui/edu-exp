@@ -299,15 +299,27 @@ function subtractionVertical(minuend, subtrahend) {
     minuend = trimZero(minuend);
     subtrahend = trimZero(subtrahend);
     
+    // 检查是否需要交换被减数和减数（处理负数结果）
+    let isNegative = false;
+    let originalMinuend = minuend;
+    let originalSubtrahend = subtrahend;
+    
+    if (parseFloat(minuend) < parseFloat(subtrahend)) {
+        isNegative = true;
+        minuend = originalSubtrahend;
+        subtrahend = originalMinuend;
+    }
+    
     // 计算减法
     let result = calculateSubtraction(minuend, subtrahend);
     
     // 返回计算结果和过程
     return {
-        minuend: minuend,
-        subtrahend: subtrahend,
+        minuend: originalMinuend,
+        subtrahend: originalSubtrahend,
         difference: result.difference,
-        borrows: result.borrows
+        borrows: result.borrows,
+        isNegative: isNegative
     };
 }
 
@@ -322,44 +334,58 @@ function calculateSubtraction(minuend, subtrahend) {
     let dot_pos1 = checkPoint(minuend, 0);
     let dot_pos2 = checkPoint(subtrahend, 0);
     
-    // 对齐小数点
-    let m = minuend;
-    let s = subtrahend;
-    
-    if (dot_pos1 != -1 && dot_pos2 != -1) {
-        // 两个数都有小数点
-        let decimal1 = minuend.length - dot_pos1 - 1;
-        let decimal2 = subtrahend.length - dot_pos2 - 1;
+    // 检查是否需要处理负数
+    let isNegative = false;
+    if (parseFloat(minuend) < parseFloat(subtrahend)) {
+        isNegative = true;
+        let temp = minuend;
+        minuend = subtrahend;
+        subtrahend = temp;
         
-        if (decimal1 < decimal2) {
-            m = minuend + "0".repeat(decimal2 - decimal1);
-        } else if (decimal2 < decimal1) {
-            s = subtrahend + "0".repeat(decimal1 - decimal2);
+        // 重新计算小数点位置
+        dot_pos1 = checkPoint(minuend, 0);
+        dot_pos2 = checkPoint(subtrahend, 0);
+    }
+    
+    // 对齐小数点
+    let gf1 = minuend.split('');
+    let gf2 = subtrahend.split('');
+    
+    // 处理小数部分对齐
+    let ld1 = 0, ld2 = 0;
+    
+    if (dot_pos1 !== -1) {
+        ld1 = minuend.length - dot_pos1 - 1;
+    }
+    
+    if (dot_pos2 !== -1) {
+        ld2 = subtrahend.length - dot_pos2 - 1;
+    }
+    
+    // 补齐小数位数
+    if (ld2 > ld1) {
+        if (ld1 === 0) {
+            gf1.push('.');
         }
-    } else if (dot_pos1 != -1) {
-        // 只有第一个数有小数点
-        s = subtrahend + "." + "0".repeat(minuend.length - dot_pos1 - 1);
-    } else if (dot_pos2 != -1) {
-        // 只有第二个数有小数点
-        m = minuend + "." + "0".repeat(subtrahend.length - dot_pos2 - 1);
+        for (let i = 0; i < ld2 - ld1; i++) {
+            gf1.push('0');
+        }
+    } else if (ld1 > ld2) {
+        if (ld2 === 0) {
+            gf2.push('.');
+        }
+        for (let i = 0; i < ld1 - ld2; i++) {
+            gf2.push('0');
+        }
     }
     
     // 去掉小数点进行计算
-    let s1 = m.replace(".", "");
-    let s2 = s.replace(".", "");
+    let s1 = gf1.join('').replace('.', '');
+    let s2 = gf2.join('').replace('.', '');
     
     // 确保s1长度不小于s2
     while (s2.length < s1.length) {
         s2 = "0" + s2;
-    }
-    
-    // 检查是否需要处理负数
-    let isNegative = false;
-    if (compareStrings(s1, s2) < 0) {
-        isNegative = true;
-        let temp = s1;
-        s1 = s2;
-        s2 = temp;
     }
     
     let difference = "";
@@ -385,14 +411,16 @@ function calculateSubtraction(minuend, subtrahend) {
     
     // 处理小数点
     let finalDifference = difference;
-    if (dot_pos1 != -1 || dot_pos2 != -1) {
-        let decimalPlaces = Math.max(
-            dot_pos1 != -1 ? minuend.length - dot_pos1 - 1 : 0,
-            dot_pos2 != -1 ? subtrahend.length - dot_pos2 - 1 : 0
-        );
-        
-        if (decimalPlaces > 0) {
-            finalDifference = difference.slice(0, -decimalPlaces) + "." + difference.slice(-decimalPlaces);
+    let decimalPlaces = Math.max(ld1, ld2);
+    
+    if (decimalPlaces > 0) {
+        // 插入小数点
+        let insertPos = difference.length - decimalPlaces;
+        if (insertPos > 0) {
+            finalDifference = difference.slice(0, insertPos) + "." + difference.slice(insertPos);
+        } else {
+            // 如果小数点需要在最前面，先补0
+            finalDifference = "0." + difference;
         }
     }
     
@@ -401,8 +429,11 @@ function calculateSubtraction(minuend, subtrahend) {
         finalDifference = "-" + finalDifference;
     }
     
+    // 去除多余的前导零和尾随零
+    finalDifference = trimZero(finalDifference);
+    
     return {
-        difference: trimZero(finalDifference),
+        difference: finalDifference,
         borrows: borrows
     };
 }
@@ -1002,7 +1033,7 @@ function renderAddition(ctx, result, options) {
  * @param {object} options - 渲染选项
  */
 function renderSubtraction(ctx, result, options) {
-    const { minuend, subtrahend, difference, borrows } = result;
+    const { minuend, subtrahend, difference, borrows, isNegative } = result;
     const { fontSize } = options;
     
     // 设置绘图样式，与math_n.js保持一致
@@ -1023,16 +1054,10 @@ function renderSubtraction(ctx, result, options) {
     let dot_pos2 = subtrahend.indexOf('.');
     if (dot_pos2 === -1) dot_pos2 = subtrahend.length;
     
-    // 检查是否需要交换被减数和减数（处理负数结果）
-    let neg = false;
-    let gfactor1 = minuend;
-    let gfactor2 = subtrahend;
-    
-    if (parseFloat(subtrahend) > parseFloat(minuend)) {
-        gfactor1 = subtrahend;
-        gfactor2 = minuend;
-        neg = true;
-    }
+    // 使用传入的isNegative标志
+    let neg = isNegative;
+    let gfactor1 = neg ? subtrahend : minuend;
+    let gfactor2 = neg ? minuend : subtrahend;
     
     // 重新计算小数点位置
     dot_pos1 = gfactor1.indexOf('.');
@@ -1097,9 +1122,7 @@ function renderSubtraction(ctx, result, options) {
         }
     }
     
-    if (x < options.width) {
-        options.maxLeft = x;
-    }
+    let maxLeft = x;
     
     // 重置x位置并增加y位置
     x = dot_pos_x;
@@ -1137,13 +1160,13 @@ function renderSubtraction(ctx, result, options) {
         }
     }
     
-    if (x < options.width) {
-        options.maxLeft = x;
+    if (x < maxLeft) {
+        maxLeft = x;
     }
     
     let prev_x = x;
     
-    if (start_p === dot_pos2) {
+    if (start_p === dot_pos2 && dot_pos2 < gfactor2.length - 1) {
         if (dot_pos1 >= gfactor1.length) {
             x = dot_pos_x + gap;
         } else {
@@ -1166,20 +1189,50 @@ function renderSubtraction(ctx, result, options) {
         }
     }
     
+    let maxRight = x;
+    
     // 绘制减号
     x = prev_x - gap;
     ctx.fillText("-", x, y);
     
     // 绘制横线
-    ctx.beginPath();
-    let lineY = y + fontSize * 0.1; // 最终微调横线位置，使其更加优雅
+    let line_x = x - gap/2;
+    let line_y = y - fontSize * 0.1; // 调整横线位置，让它稍微高一点
     ctx.lineWidth = 1;
-    ctx.moveTo(options.maxLeft, lineY);
-    ctx.lineTo(Math.max(startX, startX + gap * 5), lineY);
+    ctx.moveTo(line_x, line_y);
+    
+    line_x = startX;
+    if (line_x < maxRight) {
+        line_x = maxRight;
+    }
+    
+    ctx.lineTo(line_x, line_y);
     ctx.stroke();
     ctx.lineWidth = 2;
     
     y += lineHeight;
+    
+    // 处理小数点对齐
+    let a1 = gfactor1;
+    let a2 = gfactor2;
+    
+    if (dot_pos1 !== -1 && dot_pos2 !== -1) {
+        // 两个数都有小数点
+        let decimal1 = gfactor1.length - dot_pos1 - 1;
+        let decimal2 = gfactor2.length - dot_pos2 - 1;
+        
+        if (decimal1 < decimal2) {
+            a1 = gfactor1 + "0".repeat(decimal2 - decimal1);
+        } else if (decimal2 < decimal1) {
+            a2 = gfactor2 + "0".repeat(decimal1 - decimal2);
+        }
+    } else if (dot_pos1 !== -1) {
+        // 只有第一个数有小数点
+        a2 = gfactor2 + "." + "0".repeat(gfactor1.length - dot_pos1 - 1);
+    } else if (dot_pos2 !== -1) {
+        // 只有第二个数有小数点
+        a1 = gfactor1 + "." + "0".repeat(gfactor2.length - dot_pos2 - 1);
+    }
     
     // 绘制差
     x = startX - gap - 5;
@@ -1210,14 +1263,75 @@ function renderSubtraction(ctx, result, options) {
     
     // 绘制借位
     if (options.showSteps && borrows.length > 0) {
+        ctx.font = `${fontSize * 0.7}pt ${options.fontFamily || 'Times New Roman'}`;
+        
         for (const borrow of borrows) {
             const pos = borrow.position;
-            const xPos = startX - (pos + 1) * gap - 5;
-            const yPos = startY + gap/2;
+            if (pos >= 0) {  // 确保位置有效
+                const xPos = startX - (pos + 1) * gap - 5;
+                const yPos = startY + gap/2;
+                ctx.fillText("1", xPos, yPos);
+            }
+        }
+        ctx.font = `${fontSize}pt ${options.fontFamily || 'Times New Roman'}`;
+    }
+    
+    // 如果需要，绘制公式形式
+    if (options.showFormula) {
+        const formulaY = y + lineHeight * 1.5;
+        let formulaX = maxLeft;
+        
+        // 绘制公式: minuend - subtrahend = difference
+        for (i = 0; i < gfactor1.length; i++) {
+            s = gfactor1[i];
+            ctx.fillText(s, formulaX, formulaY);
             
-            ctx.font = `${fontSize * 0.7}pt ${options.fontFamily}`;
-            ctx.fillText("1", xPos, yPos);
-            ctx.font = `${fontSize}pt ${options.fontFamily}`;
+            if (i < gfactor1.length - 1 && gfactor1[i+1] === ".") {
+                formulaX += gap * 2/3;
+            } else if (s === ".") {
+                formulaX += gap - gap * 2/3;
+            } else {
+                formulaX += gap;
+            }
+        }
+        
+        ctx.fillText("-", formulaX, formulaY);
+        formulaX += gap;
+        
+        for (i = 0; i < gfactor2.length; i++) {
+            s = gfactor2[i];
+            ctx.fillText(s, formulaX, formulaY);
+            
+            if (i < gfactor2.length - 1 && gfactor2[i+1] === ".") {
+                formulaX += gap * 2/3;
+            } else if (s === ".") {
+                formulaX += gap - gap * 2/3;
+            } else {
+                formulaX += gap;
+            }
+        }
+        
+        ctx.fillText("=", formulaX, formulaY);
+        formulaX += gap;
+        
+        if (!options.hideResult) {
+            const resultToShow = neg ? "-" + displayDiff : displayDiff;
+            for (i = 0; i < resultToShow.length; i++) {
+                s = resultToShow[i];
+                ctx.fillText(s, formulaX, formulaY);
+                
+                if (i < resultToShow.length - 1 && resultToShow[i+1] === ".") {
+                    formulaX += gap * 2/3;
+                } else if (s === ".") {
+                    formulaX += gap - gap * 2/3;
+                } else {
+                    formulaX += gap;
+                }
+            }
+        }
+        
+        if (formulaX > maxRight) {
+            maxRight = formulaX;
         }
     }
     
