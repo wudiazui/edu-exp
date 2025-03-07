@@ -2,8 +2,8 @@ import { claimAuditTask, getAuditTaskList, getAuditTaskLabel, replaceLatexWithIm
 
 import {generateVerticalArithmeticImage} from "../src/index.js";
 
-//import {generateVerticalArithmeticImage} from "../math_new.js";
-
+// 添加竖式计算的通知ID变量
+let verticalArithmeticNotificationId = null;
 
 console.log('hello from content_scripts');
 // 添加一个变量来存储复制的HTML
@@ -428,10 +428,28 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
           const range = selection.getRangeAt(0);
           const selectedText = range.toString().trim();
 
+          // 显示加载中通知
+          verticalArithmeticNotificationId = showNotification('正在生成竖式计算...', 'info', true);
+
           const imageBlob = await generateVerticalArithmeticImage(selectedText);
 
+          // 隐藏加载中通知
+          hideNotification(verticalArithmeticNotificationId);
+
+          // 显示成功通知
+          showNotification('竖式计算生成成功', 'success');
+
+          // 显示上传中通知
+          const uploadNotificationId = showNotification('正在上传竖式计算图片...', 'info', true);
+          
           // Upload the image and get the response
           const uploadResponse = await img_upload(imageBlob);
+          
+          // 隐藏上传中通知
+          hideNotification(uploadNotificationId);
+          
+          // 显示上传成功通知
+          showNotification('竖式计算图片上传成功', 'success');
 
           // Create img element with the uploaded image URL
           const img = document.createElement('img');
@@ -457,6 +475,30 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
         }
       } catch (error) {
         console.error('Error processing math image:', error);
+        
+        // 如果有加载中通知，先隐藏
+        if (verticalArithmeticNotificationId) {
+          hideNotification(verticalArithmeticNotificationId);
+          verticalArithmeticNotificationId = null;
+        }
+        
+        // 确定错误类型并显示相应的错误消息
+        let errorMessage = '未知错误';
+        if (error.message) {
+          errorMessage = error.message;
+          
+          // 根据错误消息判断错误类型
+          if (error.message.includes('upload') || error.message.includes('网络')) {
+            errorMessage = '图片上传失败: ' + error.message;
+          } else if (error.message.includes('parse') || error.message.includes('syntax')) {
+            errorMessage = '表达式格式错误: ' + error.message;
+          } else if (error.message.includes('render') || error.message.includes('canvas')) {
+            errorMessage = '渲染计算过程失败: ' + error.message;
+          }
+        }
+        
+        // 显示错误通知
+        showNotification('竖式计算处理失败: ' + errorMessage, 'error');
       }
     })();
     return true; // Keep message channel open for async operation
