@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>竖式计算演示</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .input-container {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        input {
+            flex: 1;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px 0 0 4px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 0 4px 4px 0;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .result-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+        }
+        .calculation {
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+            text-align: center;
+            min-width: 200px;
+        }
+        .calculation p {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        .examples {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .example-btn {
+            padding: 5px 10px;
+            background-color: #eee;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .example-btn:hover {
+            background-color: #ddd;
+        }
+    </style>
+</head>
+<body>
+    <h1>竖式计算演示</h1>
+    
+    <div class="examples">
+        <span>示例:</span>
+        <button class="example-btn" data-expr="123+456">123+456</button>
+        <button class="example-btn" data-expr="789-456">789-456</button>
+        <button class="example-btn" data-expr="78×56">78×56</button>
+        <button class="example-btn" data-expr="125÷5">125÷5</button>
+        <button class="example-btn" data-expr="12.34+56.78">12.34+56.78</button>
+        <button class="example-btn" data-expr="100-45.75">100-45.75</button>
+        <button class="example-btn" data-expr="12.5×4">12.5×4</button>
+        <button class="example-btn" data-expr="10÷3">10÷3</button>
+    </div>
+    
+    <div class="input-container">
+        <input type="text" id="expression" placeholder="输入计算表达式，例如: 123+456, 78-45, 12×34, 56÷7">
+        <button id="calculate">计算</button>
+    </div>
+    
+    <div class="result-container" id="result"></div>
+    
+    <script type="module">
+        import { renderVerticalCalculation, insertVerticalCalculationImage } from './math_new.js';
+        
+        // 计算按钮点击事件
+        document.getElementById('calculate').addEventListener('click', async () => {
+            const expression = document.getElementById('expression').value.trim();
+            if (!expression) {
+                alert('请输入计算表达式');
+                return;
+            }
+            
+            await renderCalculation(expression);
+        });
+        
+        // 示例按钮点击事件
+        document.querySelectorAll('.example-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const expression = btn.dataset.expr;
+                document.getElementById('expression').value = expression;
+                await renderCalculation(expression);
+            });
+        });
+        
+        // 回车键触发计算
+        document.getElementById('expression').addEventListener('keypress', async (e) => {
+            if (e.key === 'Enter') {
+                const expression = document.getElementById('expression').value.trim();
+                if (expression) {
+                    await renderCalculation(expression);
+                }
+            }
+        });
+        
+        // 渲染计算结果
+        async function renderCalculation(expression) {
+            const resultContainer = document.getElementById('result');
+            
+            // 创建新的计算结果容器
+            const calculationDiv = document.createElement('div');
+            calculationDiv.className = 'calculation';
+            
+            // 创建图片容器
+            const imageContainer = document.createElement('div');
+            imageContainer.id = 'calc-' + Date.now();
+            calculationDiv.appendChild(imageContainer);
+            
+            // 添加表达式文本
+            const expressionText = document.createElement('p');
+            expressionText.textContent = expression;
+            calculationDiv.appendChild(expressionText);
+            
+            // 添加到结果容器
+            resultContainer.prepend(calculationDiv);
+            
+            // 插入竖式计算图片
+            await insertVerticalCalculationImage(expression, imageContainer);
+        }
+    </script>
+</body>
+</html> 

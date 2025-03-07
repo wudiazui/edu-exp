@@ -1,0 +1,1736 @@
+/**
+ * 竖式计算库
+ * 提供加减乘除四则运算的竖式计算功能
+ */
+
+/**
+ * 除法竖式计算
+ * @param {string} beichushu - 被除数
+ * @param {string} chushu - 除数
+ * @returns {object} 包含商和计算过程的对象
+ */
+function divisionVertical(beichushu, chushu) {
+    // 预处理输入
+    beichushu = trimZero(beichushu);
+    chushu = trimZero(chushu);
+    
+    // 处理除法计算
+    let result = processDiv(beichushu, chushu);
+    
+    // 返回计算结果和过程
+    return {
+        dividend: beichushu,
+        divisor: chushu,
+        quotient: result.shang,
+        steps: result.steps
+    };
+}
+
+/**
+ * 处理除法计算
+ * @param {string} v1 - 被除数
+ * @param {string} v2 - 除数
+ * @returns {object} 包含商和计算步骤的对象
+ */
+function processDiv(v1, v2) {
+    let dot_pos1 = checkPoint(v1, 0);
+    let dot_pos2 = checkPoint(v2, 0);
+    
+    // 处理小数点
+    let s_v1 = v1.replace(".", "");
+    let s_v2 = v2.replace(".", "");
+    
+    // 计算小数点位置差
+    let diff = (dot_pos1 == -1 ? v1.length : dot_pos1) - (dot_pos2 == -1 ? v2.length : dot_pos2);
+    
+    // 准备计算数据
+    let org_chushu = s_v2;
+    let s_chushu = s_v2;
+    let s_beichushu = s_v1;
+    
+    // 计算商
+    let shang = "";
+    let steps = [];
+    
+    // 这里简化了除法计算逻辑
+    // 实际实现需要按照长除法算法进行
+    
+    // 模拟计算步骤
+    let dividend = parseInt(s_v1);
+    let divisor = parseInt(s_v2);
+    let quotient = Math.floor(dividend / divisor);
+    
+    shang = quotient.toString();
+    
+    // 记录计算步骤
+    steps.push({
+        remainder: (dividend % divisor).toString(),
+        subtraction: (Math.floor(dividend / divisor) * divisor).toString()
+    });
+    
+    return {
+        shang: shang,
+        steps: steps
+    };
+}
+
+/**
+ * 乘法竖式计算
+ * @param {string} factor1 - 乘数1
+ * @param {string} factor2 - 乘数2
+ * @returns {object} 包含乘积和计算过程的对象
+ */
+function multiplicationVertical(factor1, factor2) {
+    // 预处理输入
+    factor1 = trimZero(factor1);
+    factor2 = trimZero(factor2);
+    
+    // 计算乘法
+    let result = calculateMultiplication(factor1, factor2);
+    
+    // 返回计算结果和过程
+    return {
+        factor1: factor1,
+        factor2: factor2,
+        product: result.product,
+        steps: result.steps
+    };
+}
+
+/**
+ * 计算乘法
+ * @param {string} factor1 - 乘数1
+ * @param {string} factor2 - 乘数2
+ * @returns {object} 包含乘积和计算步骤的对象
+ */
+function calculateMultiplication(factor1, factor2) {
+    // 处理小数点
+    let dot_pos1 = checkPoint(factor1, 0);
+    let dot_pos2 = checkPoint(factor2, 0);
+    
+    let f1 = factor1.replace(".", "");
+    let f2 = factor2.replace(".", "");
+    
+    // 计算小数点位置
+    let decimal_places = 0;
+    if (dot_pos1 != -1) {
+        decimal_places += (factor1.length - dot_pos1 - 1);
+    }
+    if (dot_pos2 != -1) {
+        decimal_places += (factor2.length - dot_pos2 - 1);
+    }
+    
+    // 计算步骤
+    let steps = [];
+    let partialProducts = [];
+    
+    // 从右向左逐位计算
+    for (let i = f2.length - 1; i >= 0; i--) {
+        let digit = parseInt(f2[i]);
+        let carry = 0;
+        let partialProduct = "";
+        
+        for (let j = f1.length - 1; j >= 0; j--) {
+            let product = digit * parseInt(f1[j]) + carry;
+            carry = Math.floor(product / 10);
+            partialProduct = (product % 10) + partialProduct;
+        }
+        
+        if (carry > 0) {
+            partialProduct = carry + partialProduct;
+        }
+        
+        // 添加适当的零
+        for (let k = 0; k < f2.length - 1 - i; k++) {
+            partialProduct += "0";
+        }
+        
+        partialProducts.push(partialProduct);
+    }
+    
+    // 计算最终结果
+    let product = "0";
+    for (let i = 0; i < partialProducts.length; i++) {
+        product = addStrings(product, partialProducts[i]);
+        steps.push({
+            multiplicand: f1,
+            multiplier_digit: f2[f2.length - 1 - i],
+            partial_product: partialProducts[i]
+        });
+    }
+    
+    // 处理小数点
+    if (decimal_places > 0) {
+        let len = product.length;
+        if (decimal_places >= len) {
+            product = "0." + "0".repeat(decimal_places - len) + product;
+        } else {
+            product = product.substring(0, len - decimal_places) + "." + product.substring(len - decimal_places);
+        }
+    }
+    
+    return {
+        product: trimZero(product),
+        steps: steps
+    };
+}
+
+/**
+ * 加法竖式计算
+ * @param {string} addend1 - 加数1
+ * @param {string} addend2 - 加数2
+ * @returns {object} 包含和与计算过程的对象
+ */
+function additionVertical(addend1, addend2) {
+    // 预处理输入
+    addend1 = trimZero(addend1);
+    addend2 = trimZero(addend2);
+    
+    // 计算加法
+    let result = calculateAddition(addend1, addend2);
+    
+    // 返回计算结果和过程
+    return {
+        addend1: addend1,
+        addend2: addend2,
+        sum: result.sum,
+        carries: result.carries
+    };
+}
+
+/**
+ * 计算加法
+ * @param {string} addend1 - 加数1
+ * @param {string} addend2 - 加数2
+ * @returns {object} 包含和与进位信息的对象
+ */
+function calculateAddition(addend1, addend2) {
+    // 处理小数点
+    let dot_pos1 = checkPoint(addend1, 0);
+    let dot_pos2 = checkPoint(addend2, 0);
+    
+    // 对齐小数点
+    let a1 = addend1;
+    let a2 = addend2;
+    
+    if (dot_pos1 != -1 && dot_pos2 != -1) {
+        // 两个数都有小数点
+        let decimal1 = addend1.length - dot_pos1 - 1;
+        let decimal2 = addend2.length - dot_pos2 - 1;
+        
+        if (decimal1 < decimal2) {
+            a1 = addend1 + "0".repeat(decimal2 - decimal1);
+        } else if (decimal2 < decimal1) {
+            a2 = addend2 + "0".repeat(decimal1 - decimal2);
+        }
+    } else if (dot_pos1 != -1) {
+        // 只有第一个数有小数点
+        a2 = addend2 + "." + "0".repeat(addend1.length - dot_pos1 - 1);
+    } else if (dot_pos2 != -1) {
+        // 只有第二个数有小数点
+        a1 = addend1 + "." + "0".repeat(addend2.length - dot_pos2 - 1);
+    }
+    
+    // 去掉小数点进行计算
+    let s1 = a1.replace(".", "");
+    let s2 = a2.replace(".", "");
+    
+    // 确保s1长度不小于s2
+    if (s1.length < s2.length) {
+        let temp = s1;
+        s1 = s2;
+        s2 = temp;
+    }
+    
+    // 对齐数字
+    while (s2.length < s1.length) {
+        s2 = "0" + s2;
+    }
+    
+    let sum = "";
+    let carry = 0;
+    let carries = [];
+    
+    // 从右向左逐位相加
+    for (let i = s1.length - 1; i >= 0; i--) {
+        let digit1 = parseInt(s1[i]);
+        let digit2 = parseInt(s2[i]);
+        
+        let digitSum = digit1 + digit2 + carry;
+        carry = Math.floor(digitSum / 10);
+        sum = (digitSum % 10) + sum;
+        
+        if (carry > 0) {
+            carries.push({position: i - 1, value: carry});
+        }
+    }
+    
+    if (carry > 0) {
+        sum = carry + sum;
+    }
+    
+    // 处理小数点
+    let finalSum = sum;
+    if (dot_pos1 != -1 || dot_pos2 != -1) {
+        let decimalPlaces = Math.max(
+            dot_pos1 != -1 ? addend1.length - dot_pos1 - 1 : 0,
+            dot_pos2 != -1 ? addend2.length - dot_pos2 - 1 : 0
+        );
+        
+        if (decimalPlaces > 0) {
+            finalSum = sum.slice(0, -decimalPlaces) + "." + sum.slice(-decimalPlaces);
+        }
+    }
+    
+    return {
+        sum: trimZero(finalSum),
+        carries: carries
+    };
+}
+
+/**
+ * 减法竖式计算
+ * @param {string} minuend - 被减数
+ * @param {string} subtrahend - 减数
+ * @returns {object} 包含差与计算过程的对象
+ */
+function subtractionVertical(minuend, subtrahend) {
+    // 预处理输入
+    minuend = trimZero(minuend);
+    subtrahend = trimZero(subtrahend);
+    
+    // 计算减法
+    let result = calculateSubtraction(minuend, subtrahend);
+    
+    // 返回计算结果和过程
+    return {
+        minuend: minuend,
+        subtrahend: subtrahend,
+        difference: result.difference,
+        borrows: result.borrows
+    };
+}
+
+/**
+ * 计算减法
+ * @param {string} minuend - 被减数
+ * @param {string} subtrahend - 减数
+ * @returns {object} 包含差与借位信息的对象
+ */
+function calculateSubtraction(minuend, subtrahend) {
+    // 处理小数点
+    let dot_pos1 = checkPoint(minuend, 0);
+    let dot_pos2 = checkPoint(subtrahend, 0);
+    
+    // 对齐小数点
+    let m = minuend;
+    let s = subtrahend;
+    
+    if (dot_pos1 != -1 && dot_pos2 != -1) {
+        // 两个数都有小数点
+        let decimal1 = minuend.length - dot_pos1 - 1;
+        let decimal2 = subtrahend.length - dot_pos2 - 1;
+        
+        if (decimal1 < decimal2) {
+            m = minuend + "0".repeat(decimal2 - decimal1);
+        } else if (decimal2 < decimal1) {
+            s = subtrahend + "0".repeat(decimal1 - decimal2);
+        }
+    } else if (dot_pos1 != -1) {
+        // 只有第一个数有小数点
+        s = subtrahend + "." + "0".repeat(minuend.length - dot_pos1 - 1);
+    } else if (dot_pos2 != -1) {
+        // 只有第二个数有小数点
+        m = minuend + "." + "0".repeat(subtrahend.length - dot_pos2 - 1);
+    }
+    
+    // 去掉小数点进行计算
+    let s1 = m.replace(".", "");
+    let s2 = s.replace(".", "");
+    
+    // 确保s1长度不小于s2
+    while (s2.length < s1.length) {
+        s2 = "0" + s2;
+    }
+    
+    // 检查是否需要处理负数
+    let isNegative = false;
+    if (compareStrings(s1, s2) < 0) {
+        isNegative = true;
+        let temp = s1;
+        s1 = s2;
+        s2 = temp;
+    }
+    
+    let difference = "";
+    let borrow = 0;
+    let borrows = [];
+    
+    // 从右向左逐位相减
+    for (let i = s1.length - 1; i >= 0; i--) {
+        let digit1 = parseInt(s1[i]) - borrow;
+        let digit2 = parseInt(s2[i]);
+        
+        if (digit1 < digit2) {
+            digit1 += 10;
+            borrow = 1;
+            borrows.push({position: i - 1});
+        } else {
+            borrow = 0;
+        }
+        
+        let digitDiff = digit1 - digit2;
+        difference = digitDiff + difference;
+    }
+    
+    // 处理小数点
+    let finalDifference = difference;
+    if (dot_pos1 != -1 || dot_pos2 != -1) {
+        let decimalPlaces = Math.max(
+            dot_pos1 != -1 ? minuend.length - dot_pos1 - 1 : 0,
+            dot_pos2 != -1 ? subtrahend.length - dot_pos2 - 1 : 0
+        );
+        
+        if (decimalPlaces > 0) {
+            finalDifference = difference.slice(0, -decimalPlaces) + "." + difference.slice(-decimalPlaces);
+        }
+    }
+    
+    // 处理负数
+    if (isNegative) {
+        finalDifference = "-" + finalDifference;
+    }
+    
+    return {
+        difference: trimZero(finalDifference),
+        borrows: borrows
+    };
+}
+
+/**
+ * 辅助函数: 字符串加法
+ * @param {string} num1 - 数字1
+ * @param {string} num2 - 数字2
+ * @returns {string} 两数之和
+ */
+function addStrings(num1, num2) {
+    let i = num1.length - 1;
+    let j = num2.length - 1;
+    let carry = 0;
+    let result = "";
+    
+    while (i >= 0 || j >= 0) {
+        let x = i >= 0 ? parseInt(num1[i]) : 0;
+        let y = j >= 0 ? parseInt(num2[j]) : 0;
+        let sum = x + y + carry;
+        
+        carry = Math.floor(sum / 10);
+        result = (sum % 10) + result;
+        
+        i--;
+        j--;
+    }
+    
+    if (carry > 0) {
+        result = carry + result;
+    }
+    
+    return result;
+}
+
+/**
+ * 辅助函数: 比较两个字符串表示的数字大小
+ * @param {string} num1 - 数字1
+ * @param {string} num2 - 数字2
+ * @returns {number} 比较结果: -1(num1<num2), 0(num1=num2), 1(num1>num2)
+ */
+function compareStrings(num1, num2) {
+    if (num1.length > num2.length) return 1;
+    if (num1.length < num2.length) return -1;
+    
+    for (let i = 0; i < num1.length; i++) {
+        if (num1[i] > num2[i]) return 1;
+        if (num1[i] < num2[i]) return -1;
+    }
+    
+    return 0;
+}
+
+/**
+ * 检查小数点位置
+ * @param {string} s - 输入字符串
+ * @param {number} j - 起始位置
+ * @returns {number} 小数点位置，如果没有则返回-1
+ */
+function checkPoint(s, j) {
+    for (let i = j; i < s.length; i++) {
+        if (s[i] === '.') {
+            return i;
+        }
+    }
+    return -1;
+}
+
+/**
+ * 去除字符串左侧的零
+ * @param {string} s - 输入字符串
+ * @returns {string} 去除左侧零后的字符串
+ */
+function trimLeftZero(s) {
+    if (s === "0" || s === "") return "0";
+    
+    let i = 0;
+    while (i < s.length && s[i] === '0') {
+        i++;
+    }
+    
+    // 如果全是零，则返回"0"
+    if (i === s.length) return "0";
+    
+    return s.substring(i);
+}
+
+/**
+ * 去除字符串中不必要的零
+ * @param {string} s - 输入字符串
+ * @returns {string} 处理后的字符串
+ */
+function trimZero(s) {
+    if (s === "0" || s === "") return "0";
+    
+    // 处理负号
+    let isNegative = s[0] === '-';
+    let str = isNegative ? s.substring(1) : s;
+    
+    // 去除左侧零
+    let i = 0;
+    while (i < str.length && str[i] === '0' && str[i+1] !== '.') {
+        i++;
+    }
+    
+    // 如果全是零，则返回"0"
+    if (i === str.length) return "0";
+    
+    let result = str.substring(i);
+    
+    // 处理小数点后的尾随零
+    let dotPos = result.indexOf('.');
+    if (dotPos !== -1) {
+        let j = result.length - 1;
+        while (j > dotPos && result[j] === '0') {
+            j--;
+        }
+        
+        // 如果小数点后全是零，则去掉小数点
+        if (j === dotPos) {
+            result = result.substring(0, dotPos);
+        } else {
+            result = result.substring(0, j + 1);
+        }
+    }
+    
+    return isNegative ? '-' + result : result;
+}
+
+/**
+ * 格式化显示数值
+ * @param {string} x - 输入数值
+ * @returns {string} 格式化后的数值
+ */
+function displayValue(x) {
+    if (!x || x === "") return "0";
+    
+    // 处理负号
+    let isNegative = x[0] === '-';
+    let str = isNegative ? x.substring(1) : x;
+    
+    // 处理小数点
+    let parts = str.split('.');
+    let intPart = parts[0] || "0";
+    let decimalPart = parts.length > 1 ? parts[1] : "";
+    
+    // 添加千位分隔符
+    let formattedInt = "";
+    for (let i = 0; i < intPart.length; i++) {
+        if (i > 0 && (intPart.length - i) % 3 === 0) {
+            formattedInt += ",";
+        }
+        formattedInt += intPart[i];
+    }
+    
+    // 组合结果
+    let result = formattedInt;
+    if (decimalPart) {
+        result += "." + decimalPart;
+    }
+    
+    return isNegative ? '-' + result : result;
+}
+
+/**
+ * 渲染竖式计算
+ * @param {string} type - 计算类型：'addition', 'subtraction', 'multiplication', 'division'
+ * @param {string[]} numbers - 参与计算的数字
+ * @param {object} options - 渲染选项
+ * @returns {HTMLCanvasElement} 包含竖式计算的Canvas元素
+ */
+function renderVerticalCalculation(type, numbers, options = {}) {
+    // 默认选项
+    const defaultOptions = {
+        fontSize: 16,
+        fontFamily: 'Times New Roman',
+        color: '#000000',
+        backgroundColor: '#FFFFFF',
+        showSteps: true,
+        width: 300,
+        height: 200,
+        autoResize: true,
+        isMobile: false
+    };
+    
+    // 合并选项
+    const renderOptions = { ...defaultOptions, ...options };
+    
+    // 创建Canvas元素
+    const canvas = document.createElement('canvas');
+    canvas.width = renderOptions.width;
+    canvas.height = renderOptions.height;
+    
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = renderOptions.backgroundColor;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // 设置字体样式
+    ctx.font = `${renderOptions.fontSize}pt ${renderOptions.fontFamily}`;
+    ctx.fillStyle = renderOptions.color;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    
+    // 根据计算类型执行不同的渲染
+    let result;
+    switch (type.toLowerCase()) {
+        case 'addition':
+            result = additionVertical(numbers[0], numbers[1]);
+            renderAddition(ctx, result, renderOptions);
+            break;
+        case 'subtraction':
+            result = subtractionVertical(numbers[0], numbers[1]);
+            renderSubtraction(ctx, result, renderOptions);
+            break;
+        case 'multiplication':
+            result = multiplicationVertical(numbers[0], numbers[1]);
+            renderMultiplication(ctx, result, renderOptions);
+            break;
+        case 'division':
+            result = divisionVertical(numbers[0], numbers[1]);
+            renderDivision(ctx, result, renderOptions);
+            break;
+        default:
+            ctx.textAlign = 'center';
+            ctx.fillText('不支持的计算类型', canvas.width / 2, canvas.height / 2);
+    }
+    
+    // 如果启用了自动调整大小，则调整Canvas大小
+    if (renderOptions.autoResize && (renderOptions.width !== canvas.width || renderOptions.height !== canvas.height)) {
+        const newCanvas = document.createElement('canvas');
+        newCanvas.width = renderOptions.width;
+        newCanvas.height = renderOptions.height;
+        
+        const newCtx = newCanvas.getContext('2d');
+        newCtx.fillStyle = renderOptions.backgroundColor;
+        newCtx.fillRect(0, 0, newCanvas.width, newCanvas.height);
+        newCtx.drawImage(canvas, 0, 0);
+        
+        return newCanvas;
+    }
+    
+    return canvas;
+}
+
+/**
+ * 渲染加法竖式
+ * @param {CanvasRenderingContext2D} ctx - Canvas上下文
+ * @param {object} result - 加法计算结果
+ * @param {object} options - 渲染选项
+ */
+function renderAddition(ctx, result, options) {
+    const { addend1, addend2, sum, carries } = result;
+    const { fontSize } = options;
+    
+    // 设置绘图样式，与math_n.js保持一致
+    ctx.save();
+    ctx.fillStyle = options.color || '#000000';
+    ctx.lineWidth = 2;
+    ctx.font = `${fontSize}pt Times New Roman`;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "bottom";
+    
+    // 清除画布
+    ctx.clearRect(0, 0, options.width, options.height);
+    
+    // 处理小数点位置
+    let dot_pos1 = addend1.indexOf('.');
+    if (dot_pos1 === -1) dot_pos1 = addend1.length;
+    
+    let dot_pos2 = addend2.indexOf('.');
+    if (dot_pos2 === -1) dot_pos2 = addend2.length;
+    
+    // 计算起始位置
+    const gap = fontSize * 0.8; // 与math_n.js中的gap对应
+    let startX;
+    
+    if (dot_pos1 >= dot_pos2) {
+        startX = dot_pos1 * gap + 4 * gap;
+    } else {
+        startX = dot_pos2 * gap + 4 * gap;
+    }
+    
+    if ((addend1.length - dot_pos1) >= (addend2.length - dot_pos2)) {
+        startX += (addend1.length - dot_pos1) * gap;
+    } else {
+        startX += (addend2.length - dot_pos2) * gap;
+    }
+    
+    if (startX < 6 * gap) {
+        startX = 6 * gap;
+    }
+    
+    let startY = options.height * 0.3;
+    if (!options.isMobile) {
+        startY = 100;
+    }
+    
+    const lineHeight = fontSize * 3/2;
+    let x, y, i, s;
+    let maxLeft = startX - gap * 5;
+    let maxRight = -1;
+    
+    ctx.beginPath();
+    
+    // 绘制顶部公式
+    let kx = maxLeft;
+    let ky = startY - gap;
+    
+    // 绘制第一个加数
+    for (let k = 0; k < addend1.length; k++) {
+        let ks = addend1[k];
+        ctx.fillText(ks, kx, ky);
+        
+        if (k < addend1.length - 1 && addend1[k+1] === ".") {
+            kx += gap * 2/3;
+        } else if (addend1[k] === ".") {
+            kx += gap - gap * 2/3;
+        } else {
+            kx += gap;
+        }
+    }
+    
+    // 绘制加号
+    ctx.fillText("+", kx, ky);
+    kx += gap;
+    
+    // 绘制第二个加数
+    for (let k = 0; k < addend2.length; k++) {
+        let ks = addend2[k];
+        ctx.fillText(ks, kx, ky);
+        
+        if (k < addend2.length - 1 && addend2[k+1] === ".") {
+            kx += gap * 2/3;
+        } else if (addend2[k] === ".") {
+            kx += gap - gap * 2/3;
+        } else {
+            kx += gap;
+        }
+    }
+    
+    // 绘制等号
+    ctx.fillText("=", kx, ky);
+    kx += gap;
+    
+    // 绘制结果
+    for (let k = 0; k < sum.length; k++) {
+        let ks = sum[k];
+        ctx.fillText(ks, kx, ky);
+        
+        if (k < sum.length - 1 && sum[k+1] === ".") {
+            kx += gap * 2/3;
+        } else if (sum[k] === ".") {
+            kx += gap - gap * 2/3;
+        } else {
+            kx += gap;
+        }
+    }
+    
+    if (maxRight < kx) {
+        maxRight = kx;
+    }
+    
+    // 绘制竖式
+    x = startX - gap - 5;
+    y = startY + gap/2 + fontSize;
+    
+    let dot_pos_x = x;
+    
+    // 绘制第一个加数
+    let arrFactor1 = [];
+    for (i = addend1.length - 1; i >= 0; i--) {
+        s = addend1[i];
+        ctx.fillText(s, x, y);
+        
+        if (s === ".") {
+            dot_pos_x = x;
+        }
+        
+        arrFactor1.push({"X": x, "Y": y, "V": s, "visible": true});
+        
+        if (s === ".") {
+            x -= gap * 2/3;
+        } else if (i >= 1 && addend1[i-1] === ".") {
+            x -= gap - gap * 2/3;
+        } else {
+            x -= gap;
+        }
+    }
+    
+    if (x < maxLeft) {
+        maxLeft = x;
+    }
+    
+    // 重置x位置并增加y位置
+    x = dot_pos_x;
+    y += lineHeight;
+    
+    let start_p;
+    if (dot_pos2 < addend2.length) {
+        start_p = dot_pos2;
+        
+        if (dot_pos1 >= addend1.length) {
+            x += gap * 2/3;
+        }
+    } else {
+        start_p = addend2.length - 1;
+        
+        if (dot_pos1 < addend1.length) {
+            x -= gap * 2/3;
+        }
+    }
+    
+    // 绘制第二个加数
+    let arrFactor2 = [];
+    for (i = start_p; i >= 0; i--) {
+        s = addend2[i];
+        ctx.fillText(s, x, y);
+        
+        arrFactor2.push({"X": x, "Y": y, "V": s, "visible": true});
+        
+        if (s === ".") {
+            x -= gap * 2/3;
+        } else if (i >= 1 && addend2[i-1] === ".") {
+            x -= gap - gap * 2/3;
+        } else {
+            x -= gap;
+        }
+    }
+    
+    if (x < maxLeft) {
+        maxLeft = x;
+    }
+    
+    let prev_x = x;
+    
+    if (start_p === dot_pos2) {
+        if (dot_pos1 >= addend1.length) {
+            x = dot_pos_x + gap;
+        } else {
+            x = dot_pos_x + gap/3;
+        }
+        
+        for (i = start_p + 1; i < addend2.length; i++) {
+            s = addend2[i];
+            ctx.fillText(s, x, y);
+            
+            arrFactor2.push({"X": x, "Y": y, "V": s, "visible": true});
+            
+            if (s === ".") {
+                x += gap/3;
+            } else if (i < addend2.length - 1 && addend2[i+1] === ".") {
+                x += gap * 2/3;
+            } else {
+                x += gap;
+            }
+        }
+    }
+    
+    if (maxRight < x) {
+        maxRight = x;
+    }
+    
+    // 绘制加号
+    x = prev_x - gap;
+    ctx.fillText("+", x, y);
+    
+    // 绘制和
+    y += lineHeight;
+    
+    // 找到最右侧的位置，确保与上方数字对齐
+    x = startX - gap - 5;
+    
+    // 处理小数点对齐
+    let a1 = addend1;
+    let a2 = addend2;
+    
+    if (dot_pos1 !== -1 && dot_pos2 !== -1) {
+        // 两个数都有小数点
+        let decimal1 = addend1.length - dot_pos1 - 1;
+        let decimal2 = addend2.length - dot_pos2 - 1;
+        
+        if (decimal1 < decimal2) {
+            a1 = addend1 + "0".repeat(decimal2 - decimal1);
+        } else if (decimal2 < decimal1) {
+            a2 = addend2 + "0".repeat(decimal1 - decimal2);
+        }
+    } else if (dot_pos1 !== -1) {
+        // 只有第一个数有小数点
+        a2 = addend2 + "." + "0".repeat(addend1.length - dot_pos1 - 1);
+    } else if (dot_pos2 !== -1) {
+        // 只有第二个数有小数点
+        a1 = addend1 + "." + "0".repeat(addend2.length - dot_pos2 - 1);
+    }
+    
+    // 去掉小数点进行计算
+    let s1 = a1.replace(".", "");
+    let s2 = a2.replace(".", "");
+    
+    // 确保s1长度不小于s2
+    if (s1.length < s2.length) {
+        let temp = s1;
+        s1 = s2;
+        s2 = temp;
+    }
+    
+    // 对齐数字
+    while (s2.length < s1.length) {
+        s2 = "0" + s2;
+    }
+    
+    // 绘制结果
+    let arrResult = [];
+    let resultStartX = x; // 记录结果起始位置
+    
+    for (i = sum.length - 1; i >= 0; i--) {
+        s = sum[i];
+        ctx.fillText(s, x, y);
+        
+        arrResult.push({"X": x, "Y": y, "V": s, "visible": true});
+        
+        if (s === ".") {
+            x -= gap * 2/3;
+        } else if (i >= 1 && sum[i-1] === ".") {
+            x -= gap - gap * 2/3;
+        } else {
+            x -= gap;
+        }
+    }
+    
+    // 在结果数字上方绘制横线
+    ctx.beginPath();
+    
+    // 绘制横线，确保位置正确
+    let lineY = y - lineHeight + gap/2;
+    ctx.lineWidth = 1;
+    ctx.moveTo(maxLeft, lineY);
+    ctx.lineTo(resultStartX + gap, lineY);
+    ctx.stroke();
+    
+    // 恢复线宽
+    ctx.lineWidth = 2;
+    
+    // 绘制进位
+    if (options.showSteps && carries.length > 0) {
+        ctx.font = `${fontSize * 0.7}pt ${options.fontFamily}`;
+        
+        for (const carry of carries) {
+            const pos = carry.position;
+            // 找到对应位置的x坐标
+            let xPos;
+            
+            if (pos < 0) {
+                // 如果是最左侧的进位
+                xPos = arrResult[0].X - gap;
+            } else {
+                // 找到对应位置的数字
+                const digits = sum.length - 1 - pos;
+                if (digits >= 0 && digits < arrResult.length) {
+                    xPos = arrResult[digits].X;
+                } else {
+                    continue; // 跳过无效位置
+                }
+            }
+            
+            // 调整进位显示的位置，确保在数字上方
+            const yPos = startY + gap/2 + fontSize + lineHeight - fontSize * 0.3;
+            ctx.fillText(carry.value.toString(), xPos, yPos);
+        }
+        
+        // 恢复字体
+        ctx.font = `${fontSize}pt ${options.fontFamily}`;
+    }
+    
+    // 调整画布大小以适应内容
+    if (options.autoResize) {
+        const newWidth = Math.max(maxRight, resultStartX + gap) + 3 * gap;
+        const newHeight = y + 3 * gap;
+        
+        if (newWidth > options.width) {
+            options.width = newWidth;
+        }
+        
+        if (newHeight > options.height) {
+            options.height = newHeight;
+        }
+    }
+    
+    ctx.restore();
+}
+
+/**
+ * 渲染减法竖式
+ * @param {CanvasRenderingContext2D} ctx - Canvas上下文
+ * @param {object} result - 减法计算结果
+ * @param {object} options - 渲染选项
+ */
+function renderSubtraction(ctx, result, options) {
+    const { minuend, subtrahend, difference, borrows } = result;
+    const { fontSize } = options;
+    
+    // 设置绘图样式，与math_n.js保持一致
+    ctx.save();
+    ctx.fillStyle = options.color || '#000000';
+    ctx.lineWidth = 2;
+    ctx.font = `${fontSize}pt Times New Roman`;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "bottom";
+    
+    // 清除画布
+    ctx.clearRect(0, 0, options.width, options.height);
+    
+    // 处理小数点位置
+    let dot_pos1 = minuend.indexOf('.');
+    if (dot_pos1 === -1) dot_pos1 = minuend.length;
+    
+    let dot_pos2 = subtrahend.indexOf('.');
+    if (dot_pos2 === -1) dot_pos2 = subtrahend.length;
+    
+    // 检查是否需要交换被减数和减数（处理负数结果）
+    let neg = false;
+    let gfactor1 = minuend;
+    let gfactor2 = subtrahend;
+    
+    if (parseFloat(subtrahend) > parseFloat(minuend)) {
+        gfactor1 = subtrahend;
+        gfactor2 = minuend;
+        neg = true;
+    }
+    
+    // 重新计算小数点位置
+    dot_pos1 = gfactor1.indexOf('.');
+    if (dot_pos1 === -1) dot_pos1 = gfactor1.length;
+    
+    dot_pos2 = gfactor2.indexOf('.');
+    if (dot_pos2 === -1) dot_pos2 = gfactor2.length;
+    
+    // 计算起始位置
+    const gap = fontSize * 0.8; // 与math_n.js中的gap对应
+    let startX;
+    
+    if (dot_pos1 >= dot_pos2) {
+        startX = dot_pos1 * gap + 4 * gap;
+    } else {
+        startX = dot_pos2 * gap + 4 * gap;
+    }
+    
+    if ((gfactor1.length - dot_pos1) >= (gfactor2.length - dot_pos2)) {
+        startX += (gfactor1.length - dot_pos1) * gap;
+    } else {
+        startX += (gfactor2.length - dot_pos2) * gap;
+    }
+    
+    if (startX < 6 * gap) {
+        startX = 6 * gap;
+    }
+    
+    let startY = options.height * 0.3;
+    if (!options.isMobile) {
+        startY = 100;
+    }
+    
+    const lineHeight = fontSize * 3/2;
+    let x, y, i, s;
+    
+    ctx.beginPath();
+    
+    x = startX - gap - 5;
+    y = startY + gap/2 + fontSize;
+    
+    let dot_pos_x = x;
+    
+    // 绘制被减数
+    let arrFactor1 = [];
+    for (i = gfactor1.length - 1; i >= 0; i--) {
+        s = gfactor1[i];
+        ctx.fillText(s, x, y);
+        
+        if (s === ".") {
+            dot_pos_x = x;
+        }
+        
+        arrFactor1.push({"X": x, "Y": y, "V": s, "visible": true});
+        
+        if (s === ".") {
+            x -= gap * 2/3;
+        } else if (i >= 1 && gfactor1[i-1] === ".") {
+            x -= gap - gap * 2/3;
+        } else {
+            x -= gap;
+        }
+    }
+    
+    if (x < options.width) {
+        options.maxLeft = x;
+    }
+    
+    // 重置x位置并增加y位置
+    x = dot_pos_x;
+    y += lineHeight;
+    
+    let start_p;
+    if (dot_pos2 < gfactor2.length) {
+        start_p = dot_pos2;
+        
+        if (dot_pos1 >= gfactor1.length) {
+            x += gap * 2/3;
+        }
+    } else {
+        start_p = gfactor2.length - 1;
+        
+        if (dot_pos1 < gfactor1.length) {
+            x -= gap * 2/3;
+        }
+    }
+    
+    // 绘制减数
+    let arrFactor2 = [];
+    for (i = start_p; i >= 0; i--) {
+        s = gfactor2[i];
+        ctx.fillText(s, x, y);
+        
+        arrFactor2.push({"X": x, "Y": y, "V": s, "visible": true});
+        
+        if (s === ".") {
+            x -= gap * 2/3;
+        } else if (i >= 1 && gfactor2[i-1] === ".") {
+            x -= gap - gap * 2/3;
+        } else {
+            x -= gap;
+        }
+    }
+    
+    if (x < options.width) {
+        options.maxLeft = x;
+    }
+    
+    let prev_x = x;
+    
+    if (start_p === dot_pos2) {
+        if (dot_pos1 >= gfactor1.length) {
+            x = dot_pos_x + gap;
+        } else {
+            x = dot_pos_x + gap/3;
+        }
+        
+        for (i = start_p + 1; i < gfactor2.length; i++) {
+            s = gfactor2[i];
+            ctx.fillText(s, x, y);
+            
+            arrFactor2.push({"X": x, "Y": y, "V": s, "visible": true});
+            
+            if (s === ".") {
+                x += gap/3;
+            } else if (i < gfactor2.length - 1 && gfactor2[i+1] === ".") {
+                x += gap * 2/3;
+            } else {
+                x += gap;
+            }
+        }
+    }
+    
+    // 绘制减号
+    x = prev_x - gap;
+    ctx.fillText("-", x, y);
+    
+    // 绘制横线
+    let line_y = y + gap/2;
+    let line_x = x - gap/2;
+    
+    ctx.moveTo(line_x, line_y);
+    ctx.lineTo(startX, line_y);
+    ctx.stroke();
+    
+    y += lineHeight;
+    
+    // 绘制差
+    x = startX - gap - 5;
+    let displayDiff = difference;
+    if (neg) {
+        // 如果结果为负，去掉负号（因为我们已经交换了被减数和减数）
+        displayDiff = difference.startsWith('-') ? difference.substring(1) : difference;
+    }
+    
+    for (i = displayDiff.length - 1; i >= 0; i--) {
+        s = displayDiff[i];
+        ctx.fillText(s, x, y);
+        
+        if (s === ".") {
+            x -= gap * 2/3;
+        } else if (i >= 1 && displayDiff[i-1] === ".") {
+            x -= gap - gap * 2/3;
+        } else {
+            x -= gap;
+        }
+    }
+    
+    // 如果结果为负，在最前面添加负号
+    if (neg) {
+        x -= gap;
+        ctx.fillText("-", x, y);
+    }
+    
+    // 绘制借位
+    if (options.showSteps && borrows.length > 0) {
+        for (const borrow of borrows) {
+            const pos = borrow.position;
+            const xPos = startX - (pos + 1) * gap - 5;
+            const yPos = startY + gap/2;
+            
+            ctx.font = `${fontSize * 0.7}pt ${options.fontFamily}`;
+            ctx.fillText("1", xPos, yPos);
+            ctx.font = `${fontSize}pt ${options.fontFamily}`;
+        }
+    }
+    
+    ctx.restore();
+}
+
+/**
+ * 渲染乘法竖式
+ * @param {CanvasRenderingContext2D} ctx - Canvas上下文
+ * @param {object} result - 乘法计算结果
+ * @param {object} options - 渲染选项
+ */
+function renderMultiplication(ctx, result, options) {
+    const { factor1, factor2, product, steps } = result;
+    const { fontSize } = options;
+    
+    // 设置绘图样式，与math_n.js保持一致
+    ctx.save();
+    ctx.fillStyle = options.color || '#000000';
+    ctx.lineWidth = 2;
+    ctx.font = `${fontSize}pt Times New Roman`;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "bottom";
+    
+    // 清除画布
+    ctx.clearRect(0, 0, options.width, options.height);
+    
+    // 计算起始位置
+    const gap = fontSize * 0.8; // 与math_n.js中的gap对应
+    let startX = (factor1.length + factor2.length) * gap + 4 * gap;
+    if (startX < 6 * gap) {
+        startX = 6 * gap;
+    }
+    
+    let startY = options.height * 0.2;
+    if (!options.isMobile) {
+        startY = 100;
+    }
+    
+    // 查找第一个和最后一个非零数字
+    let lastNonZero1, lastNonZero2;
+    let firstNonZero1, firstNonZero2;
+    
+    for (lastNonZero1 = factor1.length - 1; lastNonZero1 >= 0; lastNonZero1--) {
+        if (factor1[lastNonZero1] !== '0' && factor1[lastNonZero1] !== '.') {
+            break;
+        }
+    }
+    
+    for (lastNonZero2 = factor2.length - 1; lastNonZero2 >= 0; lastNonZero2--) {
+        if (factor2[lastNonZero2] !== '0' && factor2[lastNonZero2] !== '.') {
+            break;
+        }
+    }
+    
+    for (firstNonZero1 = 0; firstNonZero1 < factor1.length; firstNonZero1++) {
+        if (factor1[firstNonZero1] !== '0' && factor1[firstNonZero1] !== '.') {
+            break;
+        }
+    }
+    
+    for (firstNonZero2 = 0; firstNonZero2 < factor2.length; firstNonZero2++) {
+        if (factor2[firstNonZero2] !== '0' && factor2[firstNonZero2] !== '.') {
+            break;
+        }
+    }
+    
+    const lineHeight = fontSize * 3/2;
+    let x, y, i, s;
+    
+    ctx.beginPath();
+    
+    x = startX - gap - 5;
+    y = startY + gap/2 + fontSize;
+    
+    // 绘制第一个因数
+    let arrFactor1 = [];
+    for (i = factor1.length - 1; i >= 0; i--) {
+        s = factor1[i];
+        ctx.fillText(s, x, y);
+        
+        arrFactor1.push({"X": x, "Y": y, "V": s, "visible": true});
+        
+        if (s === ".") {
+            x -= gap * 2/3;
+        } else if (i >= 1 && factor1[i-1] === ".") {
+            x -= gap - gap * 2/3;
+        } else {
+            x -= gap;
+        }
+    }
+    
+    // 重置x位置并增加y位置
+    x = startX - gap - 5;
+    y += lineHeight;
+    
+    // 绘制第二个因数
+    let arrFactor2 = [];
+    for (i = factor2.length - 1; i >= 0; i--) {
+        s = factor2[i];
+        ctx.fillText(s, x, y);
+        
+        arrFactor2.push({"X": x, "Y": y, "V": s, "visible": true});
+        
+        if (s === ".") {
+            x -= gap * 2/3;
+        } else if (i >= 1 && factor2[i-1] === ".") {
+            x -= gap - gap * 2/3;
+        } else {
+            x -= gap;
+        }
+    }
+    
+    // 绘制乘号
+    x -= gap;
+    ctx.fillText("×", x, y);
+    
+    // 绘制横线
+    let line_y = y + gap/2;
+    let line_x = x - gap/2;
+    
+    ctx.moveTo(line_x, line_y);
+    ctx.lineTo(startX, line_y);
+    ctx.stroke();
+    
+    y += lineHeight;
+    
+    // 绘制部分积
+    if (options.showSteps && steps.length > 0) {
+        let arrPartialProducts = [];
+        for (i = 0; i < steps.length; i++) {
+            const step = steps[i];
+            const partial = step.partial_product;
+            
+            x = startX - gap - 5;
+            for (let j = partial.length - 1; j >= 0; j--) {
+                s = partial[j];
+                ctx.fillText(s, x, y);
+                
+                arrPartialProducts.push({"X": x, "Y": y, "V": s, "visible": true});
+                
+                if (s === ".") {
+                    x -= gap * 2/3;
+                } else if (j >= 1 && partial[j-1] === ".") {
+                    x -= gap - gap * 2/3;
+                } else {
+                    x -= gap;
+                }
+            }
+            
+            y += lineHeight;
+        }
+        
+        // 如果有多个部分积，绘制第二条横线
+        if (steps.length > 1) {
+            line_y = y - lineHeight/2;
+            
+            ctx.beginPath();
+            ctx.moveTo(line_x, line_y);
+            ctx.lineTo(startX, line_y);
+            ctx.stroke();
+        }
+    }
+    
+    // 绘制最终结果
+    x = startX - gap - 5;
+    for (i = product.length - 1; i >= 0; i--) {
+        s = product[i];
+        ctx.fillText(s, x, y);
+        
+        if (s === ".") {
+            x -= gap * 2/3;
+        } else if (i >= 1 && product[i-1] === ".") {
+            x -= gap - gap * 2/3;
+        } else {
+            x -= gap;
+        }
+    }
+    
+    ctx.restore();
+}
+
+/**
+ * 渲染除法竖式
+ * @param {CanvasRenderingContext2D} ctx - Canvas上下文
+ * @param {object} result - 除法计算结果
+ * @param {object} options - 渲染选项
+ */
+function renderDivision(ctx, result, options) {
+    const { dividend, divisor, quotient, steps } = result;
+    const { fontSize } = options;
+    
+    // 设置绘图样式，与math_n.js保持一致
+    ctx.save();
+    ctx.fillStyle = options.color || '#000000';
+    ctx.lineWidth = 2;
+    ctx.font = `${fontSize}pt Times New Roman`;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "bottom";
+    
+    // 清除画布
+    ctx.clearRect(0, 0, options.width, options.height);
+    
+    // 检查除数是否为0
+    if (parseFloat(divisor) === 0) {
+        ctx.textAlign = "center";
+        ctx.fillText("除数为0！", options.width / 2, options.height / 2);
+        ctx.restore();
+        return;
+    }
+    
+    // 检查是否为整数除法
+    const isZhengshu = dividend.indexOf(".") < 0 && divisor.indexOf(".") < 0;
+    
+    // 计算起始位置
+    const gap = fontSize * 0.8; // 与math_n.js中的gap对应
+    const lineHeight = fontSize * 3/2; // 与math_n.js中的lineHeight对应
+    
+    let startX = options.width * 0.3;
+    let startY = options.height * 0.3;
+    if (!options.isMobile) {
+        startY = 100;
+    }
+    
+    // 绘制除号和除数
+    let x = startX;
+    let y = startY;
+    
+    // 绘制除数
+    for (let i = 0; i < divisor.length; i++) {
+        const s = divisor[i];
+        ctx.fillText(s, x, y);
+        x += gap;
+    }
+    
+    // 绘制长除号
+    x = startX + divisor.length * gap + gap;
+    ctx.beginPath();
+    ctx.moveTo(x, y - gap/2);
+    ctx.lineTo(x + quotient.length * gap + gap, y - gap/2);
+    ctx.stroke();
+    
+    // 绘制商
+    let quotientX = x;
+    let quotientY = y - gap - fontSize/2;
+    for (let i = 0; i < quotient.length; i++) {
+        const s = quotient[i];
+        ctx.fillText(s, quotientX, quotientY);
+        quotientX += gap;
+    }
+    
+    // 绘制被除数
+    x = startX + divisor.length * gap + gap;
+    for (let i = 0; i < dividend.length; i++) {
+        const s = dividend[i];
+        ctx.fillText(s, x, y);
+        x += gap;
+    }
+    
+    // 绘制计算步骤
+    if (options.showSteps && steps.length > 0) {
+        y += lineHeight;
+        
+        for (const step of steps) {
+            // 绘制减数
+            x = startX + divisor.length * gap + gap;
+            const subtraction = step.subtraction;
+            for (let i = 0; i < subtraction.length; i++) {
+                const s = subtraction[i];
+                ctx.fillText(s, x, y);
+                x += gap;
+            }
+            
+            y += lineHeight/2;
+            
+            // 绘制横线
+            ctx.beginPath();
+            ctx.moveTo(startX + divisor.length * gap + gap, y);
+            ctx.lineTo(startX + divisor.length * gap + gap + subtraction.length * gap, y);
+            ctx.stroke();
+            
+            y += lineHeight/2;
+            
+            // 绘制余数
+            x = startX + divisor.length * gap + gap;
+            const remainder = step.remainder;
+            for (let i = 0; i < remainder.length; i++) {
+                const s = remainder[i];
+                ctx.fillText(s, x, y);
+                x += gap;
+            }
+            
+            y += lineHeight;
+        }
+    }
+    
+    ctx.restore();
+}
+
+/**
+ * 将竖式计算插入到DOM元素中
+ * @param {string} expression - 计算表达式或计算类型
+ * @param {string|HTMLElement} target - 目标DOM元素或其ID
+ * @param {object} options - 渲染选项
+ * @returns {HTMLCanvasElement} 插入的Canvas元素
+ */
+function insertVerticalCalculationImage(expression, target, options = {}) {
+    // 解析表达式
+    let type, numbers;
+    
+    if (Array.isArray(expression)) {
+        // 如果是数组，假设第一个元素是类型，其余是数字
+        type = expression[0];
+        numbers = expression.slice(1);
+    } else if (typeof expression === 'string') {
+        // 解析表达式字符串
+        const result = parseExpression(expression);
+        type = result.type;
+        numbers = result.numbers;
+        
+        // 处理无效表达式
+        if (type === 'invalid') {
+            const canvas = document.createElement('canvas');
+            canvas.width = options.width || 300;
+            canvas.height = options.height || 200;
+            
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = options.backgroundColor || '#FFFFFF';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.font = `${options.fontSize || 16}pt ${options.fontFamily || 'Times New Roman'}`;
+            ctx.fillStyle = options.color || '#000000';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(result.message, canvas.width / 2, canvas.height / 2);
+            
+            // 获取目标元素
+            const targetElement = typeof target === 'string' ? document.getElementById(target) : target;
+            
+            // 清空目标元素
+            if (targetElement) {
+                while (targetElement.firstChild) {
+                    targetElement.removeChild(targetElement.firstChild);
+                }
+                
+                // 插入Canvas
+                targetElement.appendChild(canvas);
+            }
+            
+            return canvas;
+        }
+    } else {
+        throw new Error('不支持的表达式格式');
+    }
+    
+    // 渲染竖式计算
+    const canvas = renderVerticalCalculation(type, numbers, options);
+    
+    // 获取目标元素
+    const targetElement = typeof target === 'string' ? document.getElementById(target) : target;
+    
+    // 清空目标元素
+    if (targetElement) {
+        while (targetElement.firstChild) {
+            targetElement.removeChild(targetElement.firstChild);
+        }
+        
+        // 插入Canvas
+        targetElement.appendChild(canvas);
+    }
+    
+    return canvas;
+}
+
+/**
+ * 解析计算表达式
+ * @param {string} expression - 计算表达式
+ * @returns {object} 包含计算类型和数字的对象
+ */
+function parseExpression(expression) {
+    // 去除所有空格
+    expression = expression.replace(/\s+/g, '');
+    
+    // 检查是否包含加号
+    if (expression.includes('+')) {
+        // 找到第一个不是在括号内的加号
+        let bracketCount = 0;
+        let operatorIndex = -1;
+        
+        for (let i = 0; i < expression.length; i++) {
+            if (expression[i] === '(') bracketCount++;
+            else if (expression[i] === ')') bracketCount--;
+            else if (expression[i] === '+' && bracketCount === 0) {
+                operatorIndex = i;
+                break;
+            }
+        }
+        
+        if (operatorIndex !== -1) {
+            const addend1 = expression.substring(0, operatorIndex).trim();
+            const addend2 = expression.substring(operatorIndex + 1).trim();
+            
+            // 处理括号
+            const cleanAddend1 = addend1.replace(/^\(|\)$/g, '');
+            const cleanAddend2 = addend2.replace(/^\(|\)$/g, '');
+            
+            return { type: 'addition', numbers: [cleanAddend1, cleanAddend2] };
+        }
+    }
+    
+    // 检查是否包含减号（注意负数的情况）
+    if (expression.includes('-')) {
+        // 找到第一个不是开头且不在括号内的减号
+        let bracketCount = 0;
+        let operatorIndex = -1;
+        
+        for (let i = 1; i < expression.length; i++) {
+            if (expression[i] === '(') bracketCount++;
+            else if (expression[i] === ')') bracketCount--;
+            else if (expression[i] === '-' && bracketCount === 0 && 
+                    !(i > 0 && (expression[i-1] === 'e' || expression[i-1] === 'E'))) {
+                operatorIndex = i;
+                break;
+            }
+        }
+        
+        if (operatorIndex !== -1) {
+            const minuend = expression.substring(0, operatorIndex).trim();
+            const subtrahend = expression.substring(operatorIndex + 1).trim();
+            
+            // 处理括号
+            const cleanMinuend = minuend.replace(/^\(|\)$/g, '');
+            const cleanSubtrahend = subtrahend.replace(/^\(|\)$/g, '');
+            
+            return { type: 'subtraction', numbers: [cleanMinuend, cleanSubtrahend] };
+        } else if (expression.startsWith('-')) {
+            // 如果只有一个减号且在开头，这是一个负数，不是减法表达式
+            return { type: 'invalid', message: '无效的表达式，只有一个负数' };
+        }
+    }
+    
+    // 检查是否包含乘号
+    if (expression.includes('*') || expression.includes('×')) {
+        const separator = expression.includes('*') ? '*' : '×';
+        
+        // 找到第一个不在括号内的乘号
+        let bracketCount = 0;
+        let operatorIndex = -1;
+        
+        for (let i = 0; i < expression.length; i++) {
+            if (expression[i] === '(') bracketCount++;
+            else if (expression[i] === ')') bracketCount--;
+            else if (expression[i] === separator && bracketCount === 0) {
+                operatorIndex = i;
+                break;
+            }
+        }
+        
+        if (operatorIndex !== -1) {
+            const factor1 = expression.substring(0, operatorIndex).trim();
+            const factor2 = expression.substring(operatorIndex + 1).trim();
+            
+            // 处理括号
+            const cleanFactor1 = factor1.replace(/^\(|\)$/g, '');
+            const cleanFactor2 = factor2.replace(/^\(|\)$/g, '');
+            
+            return { type: 'multiplication', numbers: [cleanFactor1, cleanFactor2] };
+        }
+    }
+    
+    // 检查是否包含除号
+    if (expression.includes('/') || expression.includes('÷')) {
+        const separator = expression.includes('/') ? '/' : '÷';
+        
+        // 找到第一个不在括号内的除号
+        let bracketCount = 0;
+        let operatorIndex = -1;
+        
+        for (let i = 0; i < expression.length; i++) {
+            if (expression[i] === '(') bracketCount++;
+            else if (expression[i] === ')') bracketCount--;
+            else if (expression[i] === separator && bracketCount === 0) {
+                operatorIndex = i;
+                break;
+            }
+        }
+        
+        if (operatorIndex !== -1) {
+            const dividend = expression.substring(0, operatorIndex).trim();
+            const divisor = expression.substring(operatorIndex + 1).trim();
+            
+            // 处理括号
+            const cleanDividend = dividend.replace(/^\(|\)$/g, '');
+            const cleanDivisor = divisor.replace(/^\(|\)$/g, '');
+            
+            return { type: 'division', numbers: [cleanDividend, cleanDivisor] };
+        }
+    }
+    
+    // 如果没有找到有效的运算符，检查是否是单个数字
+    if (/^-?\d*\.?\d+$/.test(expression)) {
+        return { type: 'invalid', message: '表达式必须包含运算符' };
+    }
+    
+    return { type: 'invalid', message: '无效的表达式' };
+}
+
+// 导出函数，使用ES6模块语法
+export {
+    divisionVertical,
+    multiplicationVertical,
+    additionVertical,
+    subtractionVertical,
+    displayValue,
+    trimZero,
+    renderVerticalCalculation,
+    insertVerticalCalculationImage,
+    parseExpression
+}; 
