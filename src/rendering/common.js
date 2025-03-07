@@ -29,8 +29,9 @@ function renderVerticalCalculation(type, numbers, options = {}) {
         color: '#000000',
         backgroundColor: '#FFFFFF',
         showSteps: true,
-        width: 200,  // 减小默认宽度
-        height: 200,  // 减小默认高度
+        width: 180,  // 减小默认宽度
+        height: 150,  // 减小默认高度
+        padding: 10,  // 减小默认内边距，原来是20
         autoResize: true,
         isMobile: false
     };
@@ -113,15 +114,15 @@ function drawDivisionStruct(ctx, startX, startY, endX, fontSize) {
     
     // 保存当前线宽
     const w = ctx.lineWidth;
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2; // 减小线宽，原来是3
     
     // 绘制横线 - 完全按照math_n.js的方式
     ctx.moveTo(startX - 1, startY);
     ctx.lineTo(endX, startY);
     
-    // 绘制左侧弧线 - 完全按照math_n.js的方式
+    // 绘制左侧弧线 - 减小弧线半径使其更紧凑
     ctx.moveTo(startX, startY);
-    const r = fontSize * 3; // 使用与math_n.js完全相同的半径
+    const r = fontSize * 2.5; // 减小半径，原来是3
     ctx.arc(startX - r, startY, r, 0.05 * Math.PI, 0.25 * Math.PI); // 使用与math_n.js完全相同的角度
     
     // 恢复线宽

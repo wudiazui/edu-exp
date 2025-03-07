@@ -46,8 +46,9 @@ export async function generateVerticalArithmeticImage(expression) {
         showSteps: true,
         autoResize: true,
         // 设置初始画布大小为较小的值，让autoResize功能动态调整
-        width: 200,
-        height: 200
+        width: 160,  // 进一步减小默认宽度，原来是180
+        height: 120,  // 进一步减小默认高度，原来是150
+        padding: 8    // 进一步减小内边距，原来是10
     };
     
     // 渲染竖式计算

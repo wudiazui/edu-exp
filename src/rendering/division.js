@@ -25,6 +25,10 @@ function renderDivision(ctx, result, options) {
     // 清除画布
     ctx.clearRect(0, 0, options.width, options.height);
     
+    // 初始化最大边界变量，用于自动调整画布大小
+    let maxRight = 0;
+    let maxBottom = 0;
+    
     // 检查除数是否为0
     if (parseFloat(divisor) === 0) {
         ctx.textAlign = "center";
@@ -38,7 +42,7 @@ function renderDivision(ctx, result, options) {
     
     // 计算起始位置
     const gap = fontSize * 0.8; // 与math_n.js中的gap对应
-    const lineHeight = fontSize * 1.5; // 与math_n.js中的lineHeight对应
+    const lineHeight = fontSize * 1.5; // 减小行高，原来是1.5
     
     // 获取小数点位置，用于对齐
     const dot_pos1 = dividend.indexOf(".");
@@ -70,15 +74,15 @@ function renderDivision(ctx, result, options) {
         }
     } else {
         // 如果没有小数点，使用默认计算方式
-        startX = 50 + (divisor.length + 1) * gap;
+        startX = 40 + (divisor.length + 1) * gap; // 减小起始位置，原来是50
     }
     
     // 确保最小起始位置
-    if (startX < 6 * gap) {
-        startX = 6 * gap;
+    if (startX < 5 * gap) { // 减小最小起始位置，原来是6
+        startX = 5 * gap;
     }
     
-    let startY = options.isMobile ? 200 : 100;
+    let startY = options.isMobile ? 150 : 50; // 减小起始Y坐标，原来是200/100
     
     // 绘制除号结构
     // 首先绘制除数
@@ -123,7 +127,7 @@ function renderDivision(ctx, result, options) {
     }
     
     // 增加被除数的起始位置，使其向右移动
-    const extraGap = gap * 0.8; // 减小额外间距，从1.5改为0.8
+    const extraGap = gap * 0.5; // 减小额外间距，从0.8改为0.5
     
     // 绘制除号结构
     drawDivisionStruct(ctx, startX, startY, startX + dividendWidth + gap + extraGap, fontSize);
@@ -145,10 +149,13 @@ function renderDivision(ctx, result, options) {
         } else {
             x += gap;
         }
+        
+        // 更新最大右边界
+        maxRight = Math.max(maxRight, x);
     }
     
     // 绘制商，在除号上方，采用右对齐方式
-    let quotientY = startY - gap/2;
+    let quotientY = startY - gap/3; // 减小商与除号的距离，原来是gap/2
     
     // 处理商，只保留整数部分
     let integerQuotient = quotient;
@@ -186,6 +193,9 @@ function renderDivision(ctx, result, options) {
         arrShang.push({"X": x, "Y": quotientY, "V": s, "visible": true});
         
         x += gap;
+        
+        // 更新最大右边界
+        maxRight = Math.max(maxRight, x);
     }
     
     // 绘制计算步骤
@@ -322,6 +332,41 @@ function renderDivision(ctx, result, options) {
             
             // 绘制减数
             x = subtractionStartX;
+            
+            // 获取当前被减数的位置信息
+            // 对于第一步，被减数是被除数的前几位
+            // 对于后续步骤，被减数是前一步的余数加上当前位
+            let minuendStartX = 0;
+            let minuendLength = 0;
+            
+            if (i === 0) {
+                // 第一步，被减数是被除数的前几位
+                minuendLength = divisor.length;
+                if (parseInt(dividend.substring(0, minuendLength)) < parseInt(divisor)) {
+                    minuendLength++;
+                }
+                
+                // 获取被减数的起始位置
+                minuendStartX = arrBeiChushu[0].X;
+            } else {
+                // 后续步骤，被减数是前一步的余数加上当前位
+                // 这里简化处理，使用当前行的起始位置
+                minuendStartX = subtractionStartX;
+                
+                // 获取前一步的余数长度
+                const prevRemainder = steps[i-1].remainder;
+                minuendLength = prevRemainder.length + 1; // 余数加上当前位
+            }
+            
+            // 确保减数右对齐
+            // 如果减数比被减数短，需要右对齐
+            if (subtraction.length < minuendLength) {
+                // 计算右对齐的起始位置
+                subtractionStartX = minuendStartX + (minuendLength - subtraction.length) * gap;
+            }
+            
+            // 绘制减数
+            x = subtractionStartX;
             for (let j = 0; j < subtraction.length; j++) {
                 const s = subtraction[j];
                 ctx.fillText(s, x, currentY + lineHeight);
@@ -357,9 +402,13 @@ function renderDivision(ctx, result, options) {
                 ctx.fillText(s, x, currentY + lineHeight * 2);
                 
                 // 存储余数位置信息
-                arrAmonRlt.push({"X": x, "Y": currentY + lineHeight * 2, "V": s, "visible": true});
+                arrAmonRlt.push({"X": x, "Y": currentY + lineHeight * 1.7, "V": s, "visible": true});
                 
                 x += gap;
+                
+                // 更新最大右边界和底部边界
+                maxRight = Math.max(maxRight, x);
+                maxBottom = Math.max(maxBottom, currentY + lineHeight * 1.8);
             }
             
             // 将剩余的数字向下补位
@@ -384,89 +433,61 @@ function renderDivision(ctx, result, options) {
                         ctx.fillText(s, remainingX, currentY + lineHeight * 2);
                         
                         // 存储补位数字的位置信息
-                        arrAmonRlt.push({"X": remainingX, "Y": currentY + lineHeight * 2, "V": s, "visible": true});
+                        arrAmonRlt.push({"X": remainingX, "Y": currentY + lineHeight * 1.7, "V": s, "visible": true});
                         
                         remainingX += gap;
+                        
+                        // 更新最大右边界和底部边界
+                        maxRight = Math.max(maxRight, remainingX);
+                        maxBottom = Math.max(maxBottom, currentY + lineHeight * 2);
                     }
                 }
             }
             
             // 更新Y坐标
-            currentY += lineHeight * 2;
+            currentY += lineHeight * 2.2; // 减小步骤间距，原来可能是2.5或3
+            
+            // 更新最大底部边界
+            maxBottom = Math.max(maxBottom, currentY);
         }
     }
     
-    // 添加自动调整画布大小的功能
-    if (options.autoResize && ctx.canvas) {
-        // 计算所需的画布宽度和高度
-        const padding = gap * 3; // 适当的内边距
+    // 如果启用了自动调整大小，则调整Canvas大小
+    if (options.autoResize) {
+        // 计算所需的宽度和高度
+        let requiredWidth = maxRight + gap * 2; // 减小右侧边距
+        let requiredHeight = maxBottom + gap * 2; // 减小底部边距
         
-        // 跟踪最左侧和最右侧的位置
-        let leftmostX = Number.MAX_VALUE;
-        let rightmostX = 0;
+        // 确保最小宽度和高度
+        if (requiredWidth < 150) requiredWidth = 150; // 减小最小宽度，原来可能更大
+        if (requiredHeight < 120) requiredHeight = 120; // 减小最小高度，原来可能更大
         
-        // 检查除数位置
-        for (let i = 0; i < arrChushu.length; i++) {
-            leftmostX = Math.min(leftmostX, arrChushu[i].X - gap/2);
-            rightmostX = Math.max(rightmostX, arrChushu[i].X + gap/2);
+        // 如果当前画布大小不足，则调整大小
+        if (ctx.canvas.width < requiredWidth || ctx.canvas.height < requiredHeight) {
+            // 更新画布大小
+            ctx.canvas.width = requiredWidth;
+            ctx.canvas.height = requiredHeight;
+            
+            // 重新绘制内容
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            ctx.fillStyle = options.backgroundColor || '#FFFFFF';
+            ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            
+            // 重新设置字体和样式
+            ctx.font = `${options.fontSize}pt ${options.fontFamily || 'Times New Roman'}`;
+            ctx.fillStyle = options.color || '#000000';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'bottom';
+            
+            // 重新调用渲染函数，但禁用autoResize以避免无限循环
+            renderDivision(ctx, result, {...options, autoResize: false});
+            return;
         }
-        
-        // 检查被除数位置
-        for (let i = 0; i < arrBeiChushu.length; i++) {
-            leftmostX = Math.min(leftmostX, arrBeiChushu[i].X - gap/2);
-            rightmostX = Math.max(rightmostX, arrBeiChushu[i].X + gap/2);
-        }
-        
-        // 检查商的位置
-        for (let i = 0; i < arrShang.length; i++) {
-            leftmostX = Math.min(leftmostX, arrShang[i].X - gap/2);
-            rightmostX = Math.max(rightmostX, arrShang[i].X + gap/2);
-        }
-        
-        // 检查所有中间步骤的位置
-        for (let i = 0; i < arrAmonRlt.length; i++) {
-            leftmostX = Math.min(leftmostX, arrAmonRlt[i].X - gap/2);
-            rightmostX = Math.max(rightmostX, arrAmonRlt[i].X + gap/2);
-        }
-        
-        // 如果没有找到有效的位置（可能是空数组），使用默认值
-        if (leftmostX === Number.MAX_VALUE) {
-            leftmostX = startX - gap * 5;
-        }
-        
-        if (rightmostX === 0) {
-            rightmostX = startX + dividend.length * gap + gap * 5;
-        }
-        
-        // 确保除号结构也被包含在内
-        leftmostX = Math.min(leftmostX, startX - divisor.length * gap - gap * 2);
-        
-        // 添加适当的边距
-        const requiredWidth = rightmostX - leftmostX + padding * 2;
-        
-        // 计算所需的高度，确保包含所有内容
-        // 使用currentY作为最底部的位置，并添加适当的边距
-        const requiredHeight = currentY + padding * 2;
-        
-        // 更新画布大小
-        ctx.canvas.width = requiredWidth;
-        ctx.canvas.height = requiredHeight;
-        
-        // 重新绘制内容
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-        ctx.fillStyle = options.backgroundColor || '#FFFFFF';
-        ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-        
-        // 重新设置字体和样式
-        ctx.font = `${options.fontSize}pt ${options.fontFamily || 'Times New Roman'}`;
-        ctx.fillStyle = options.color || '#000000';
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'bottom';
-        
-        // 重新调用渲染函数，但禁用autoResize以避免无限循环
-        renderDivision(ctx, result, {...options, autoResize: false});
-        return;
     }
+    
+    // 更新最大右边界和底部边界
+    maxRight = Math.max(maxRight, startX + dividendWidth + gap + extraGap);
+    maxBottom = Math.max(maxBottom, startY + lineHeight);
     
     ctx.restore();
 }
