@@ -311,6 +311,13 @@ function renderDivision(ctx, result, options) {
             x = subtractionStartX;
             const remainder = step.remainder;
             
+            // 确保余数的位置与减数对齐
+            // 如果余数比减数短，需要右对齐
+            if (remainder.length < subtraction.length) {
+                // 计算右对齐的起始位置
+                x = subtractionStartX + (subtraction.length - remainder.length) * gap;
+            }
+            
             for (let j = 0; j < remainder.length; j++) {
                 const s = remainder[j];
                 ctx.fillText(s, x, currentY + lineHeight * 2);
