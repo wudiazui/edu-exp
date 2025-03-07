@@ -14,6 +14,16 @@ function divisionVertical(beichushu, chushu) {
     beichushu = trimZero(beichushu);
     chushu = trimZero(chushu);
     
+    // 检查除数是否为0
+    if (parseFloat(chushu) === 0) {
+        return {
+            dividend: beichushu,
+            divisor: chushu,
+            quotient: "除数不能为0",
+            steps: []
+        };
+    }
+    
     // 处理除法计算
     let result = processDiv(beichushu, chushu);
     
@@ -33,43 +43,89 @@ function divisionVertical(beichushu, chushu) {
  * @returns {object} 包含商和计算步骤的对象
  */
 function processDiv(v1, v2) {
-    let dot_pos1 = checkPoint(v1, 0);
-    let dot_pos2 = checkPoint(v2, 0);
+    // 预处理输入
+    let s1 = v1.toString();
+    let s2 = v2.toString();
+    let pos1 = s1.indexOf(".");
+    let pos2 = s2.indexOf(".");
     
-    // 处理小数点
-    let s_v1 = v1.replace(".", "");
-    let s_v2 = v2.replace(".", "");
+    // 计算结果
+    let res;
     
-    // 计算小数点位置差
-    let diff = (dot_pos1 == -1 ? v1.length : dot_pos1) - (dot_pos2 == -1 ? v2.length : dot_pos2);
+    // 处理整数除法
+    if (pos1 < 0 && pos2 < 0) {
+        res = parseInt(v1) / parseInt(v2);
+    }
+    // 处理除数有小数点的情况
+    else if (pos1 < 0) {
+        let fact = s2.length - pos2 - 1;
+        let sn = s2.substring(0, pos2) + s2.substring(pos2 + 1, s2.length);
+        
+        // 被除数补零
+        let s1WithZeros = s1;
+        for (let i = 0; i < fact; i++) {
+            s1WithZeros += "0";
+        }
+        
+        res = parseInt(s1WithZeros) / parseInt(sn);
+    }
+    // 处理被除数有小数点的情况
+    else if (pos2 < 0) {
+        let fact = s1.length - pos1 - 1;
+        let sn = s1.substring(0, pos1) + s1.substring(pos1 + 1, s1.length);
+        
+        // 除数补零
+        let s2WithZeros = s2;
+        for (let i = 0; i < fact; i++) {
+            s2WithZeros += "0";
+        }
+        
+        res = parseInt(sn) / parseInt(s2WithZeros);
+    }
+    // 处理两者都有小数点的情况
+    else {
+        let fact1 = s1.length - pos1 - 1;
+        let fact2 = s2.length - pos2 - 1;
+        
+        let sn1 = s1.substring(0, pos1) + s1.substring(pos1 + 1, s1.length);
+        let sn2 = s2.substring(0, pos2) + s2.substring(pos2 + 1, s2.length);
+        
+        // 对齐小数位数
+        if (fact1 < fact2) {
+            for (let i = 0; i < fact2 - fact1; i++) {
+                sn1 += "0";
+            }
+        } else if (fact1 > fact2) {
+            for (let i = 0; i < fact1 - fact2; i++) {
+                sn2 += "0";
+            }
+        }
+        
+        res = parseInt(sn1) / parseInt(sn2);
+    }
     
-    // 准备计算数据
-    let org_chushu = s_v2;
-    let s_chushu = s_v2;
-    let s_beichushu = s_v1;
+    // 处理结果
+    let s = Math.floor(res).toString(); // 只取整数部分
     
-    // 计算商
-    let shang = "";
+    // 模拟长除法计算步骤
     let steps = [];
     
-    // 这里简化了除法计算逻辑
-    // 实际实现需要按照长除法算法进行
+    // 准备计算数据
+    let dividend = parseInt(v1);
+    let divisor = parseInt(v2);
     
-    // 模拟计算步骤
-    let dividend = parseInt(s_v1);
-    let divisor = parseInt(s_v2);
+    // 计算商和余数
     let quotient = Math.floor(dividend / divisor);
-    
-    shang = quotient.toString();
+    let remainder = dividend % divisor;
     
     // 记录计算步骤
     steps.push({
-        remainder: (dividend % divisor).toString(),
-        subtraction: (Math.floor(dividend / divisor) * divisor).toString()
+        remainder: remainder.toString(),
+        subtraction: (quotient * divisor).toString()
     });
     
     return {
-        shang: shang,
+        shang: s,
         steps: steps
     };
 }
@@ -1701,87 +1757,143 @@ function renderDivision(ctx, result, options) {
     
     // 计算起始位置
     const gap = fontSize * 0.8; // 与math_n.js中的gap对应
-    const lineHeight = fontSize * 3/2; // 与math_n.js中的lineHeight对应
+    const lineHeight = fontSize * 1.5; // 与math_n.js中的lineHeight对应
     
-    let startX = options.width * 0.3;
-    let startY = options.height * 0.3;
-    if (!options.isMobile) {
-        startY = 100;
-    }
+    // 计算起始位置，参考math_n.js中的计算方式
+    let startX = 50 + (divisor.length + 1) * gap;
+    let startY = options.isMobile ? 200 : 100;
     
-    // 绘制除号和除数
-    let x = startX;
-    let y = startY;
+    // 绘制除号结构
+    // 首先绘制除数
+    let x = startX - gap - 5;
+    let y = startY + gap/2 + fontSize;
     
-    // 绘制除数
-    for (let i = 0; i < divisor.length; i++) {
+    // 绘制除数，从右向左绘制
+    for (let i = divisor.length - 1; i >= 0; i--) {
         const s = divisor[i];
         ctx.fillText(s, x, y);
-        x += gap;
+        
+        // 处理小数点位置
+        if (s === ".") {
+            x -= gap * 2/3;
+        } else if (i > 0 && divisor[i-1] === ".") {
+            x -= gap - gap * 2/3;
+        } else {
+            x -= gap;
+        }
     }
     
-    // 绘制长除号
-    x = startX + divisor.length * gap + gap;
-    ctx.beginPath();
-    ctx.moveTo(x, y - gap/2);
-    ctx.lineTo(x + quotient.length * gap + gap, y - gap/2);
-    ctx.stroke();
+    // 绘制除号结构 - 调整为与图片一致的样式
+    drawDivisionStruct(ctx, startX, startY, startX + Math.max(dividend.length, quotient.length) * gap + gap, fontSize);
     
-    // 绘制商
-    let quotientX = x;
-    let quotientY = y - gap - fontSize/2;
-    for (let i = 0; i < quotient.length; i++) {
-        const s = quotient[i];
-        ctx.fillText(s, quotientX, quotientY);
-        quotientX += gap;
-    }
-    
-    // 绘制被除数
-    x = startX + divisor.length * gap + gap;
+    // 绘制被除数，在除号右侧
+    x = startX;
     for (let i = 0; i < dividend.length; i++) {
         const s = dividend[i];
         ctx.fillText(s, x, y);
+        
+        // 处理小数点位置
+        if (s === ".") {
+            x += gap * 2/3;
+        } else if (i < dividend.length - 1 && dividend[i+1] === ".") {
+            x += gap - gap * 2/3;
+        } else {
+            x += gap;
+        }
+    }
+    
+    // 绘制商，在除号上方
+    x = startX;
+    let quotientY = y - gap - fontSize/2;
+    
+    // 绘制商
+    for (let i = 0; i < quotient.length; i++) {
+        const s = quotient[i];
+        ctx.fillText(s, x, quotientY);
         x += gap;
     }
     
     // 绘制计算步骤
-    if (options.showSteps && steps.length > 0) {
-        y += lineHeight;
+    if (steps.length > 0) {
+        let currentY = y;
         
-        for (const step of steps) {
+        // 处理每一步计算
+        for (let i = 0; i < steps.length; i++) {
+            const step = steps[i];
+            
             // 绘制减数
-            x = startX + divisor.length * gap + gap;
+            x = startX;
             const subtraction = step.subtraction;
-            for (let i = 0; i < subtraction.length; i++) {
-                const s = subtraction[i];
-                ctx.fillText(s, x, y);
+            
+            // 对齐被除数
+            let padding = dividend.length - subtraction.length;
+            if (padding > 0) {
+                x += padding * gap;
+            }
+            
+            for (let j = 0; j < subtraction.length; j++) {
+                const s = subtraction[j];
+                ctx.fillText(s, x, currentY + lineHeight);
                 x += gap;
             }
             
-            y += lineHeight/2;
-            
-            // 绘制横线
+            // 绘制横线 - 调整位置使其与图片一致
             ctx.beginPath();
-            ctx.moveTo(startX + divisor.length * gap + gap, y);
-            ctx.lineTo(startX + divisor.length * gap + gap + subtraction.length * gap, y);
+            ctx.moveTo(startX, currentY + lineHeight + gap/4);
+            ctx.lineTo(startX + dividend.length * gap, currentY + lineHeight + gap/4);
             ctx.stroke();
             
-            y += lineHeight/2;
-            
             // 绘制余数
-            x = startX + divisor.length * gap + gap;
+            x = startX;
             const remainder = step.remainder;
-            for (let i = 0; i < remainder.length; i++) {
-                const s = remainder[i];
-                ctx.fillText(s, x, y);
+            
+            // 对齐被除数
+            padding = dividend.length - remainder.length;
+            if (padding > 0) {
+                x += padding * gap;
+            }
+            
+            for (let j = 0; j < remainder.length; j++) {
+                const s = remainder[j];
+                ctx.fillText(s, x, currentY + lineHeight * 2);
                 x += gap;
             }
             
-            y += lineHeight;
+            // 更新Y坐标
+            currentY += lineHeight * 2;
         }
     }
     
     ctx.restore();
+}
+
+/**
+ * 绘制除法结构
+ * @param {CanvasRenderingContext2D} ctx - Canvas上下文
+ * @param {number} startX - 起始X坐标
+ * @param {number} startY - 起始Y坐标
+ * @param {number} endX - 结束X坐标
+ * @param {number} fontSize - 字体大小
+ */
+function drawDivisionStruct(ctx, startX, startY, endX, fontSize) {
+    ctx.beginPath();
+    
+    // 保存当前线宽
+    const w = ctx.lineWidth;
+    ctx.lineWidth = 2;
+    
+    // 绘制横线 - 调整位置使其与图片一致
+    ctx.moveTo(startX, startY);
+    ctx.lineTo(endX, startY);
+    
+    // 绘制左侧弧线 - 调整为与图片一致的样式
+    ctx.moveTo(startX, startY);
+    const r = fontSize * 2.5;
+    ctx.arc(startX - r, startY, r, 0, 0.5 * Math.PI);
+    
+    // 恢复线宽
+    ctx.lineWidth = w;
+    ctx.stroke();
 }
 
 /**
