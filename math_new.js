@@ -78,7 +78,7 @@ function processDiv(v1, v2) {
  * 乘法竖式计算
  * @param {string} factor1 - 乘数1
  * @param {string} factor2 - 乘数2
- * @returns {object} 包含乘积和计算过程的对象
+ * @returns {object} 包含乘积与计算过程的对象
  */
 function multiplicationVertical(factor1, factor2) {
     // 预处理输入
@@ -108,6 +108,7 @@ function calculateMultiplication(factor1, factor2) {
     let dot_pos1 = checkPoint(factor1, 0);
     let dot_pos2 = checkPoint(factor2, 0);
     
+    // 移除小数点进行计算
     let f1 = factor1.replace(".", "");
     let f2 = factor2.replace(".", "");
     
@@ -122,14 +123,14 @@ function calculateMultiplication(factor1, factor2) {
     
     // 计算步骤
     let steps = [];
-    let partialProducts = [];
     
-    // 从右向左逐位计算
+    // 从右向左逐位计算（与图片一致）
     for (let i = f2.length - 1; i >= 0; i--) {
         let digit = parseInt(f2[i]);
         let carry = 0;
         let partialProduct = "";
         
+        // 计算当前位的部分积
         for (let j = f1.length - 1; j >= 0; j--) {
             let product = digit * parseInt(f1[j]) + carry;
             carry = Math.floor(product / 10);
@@ -140,23 +141,30 @@ function calculateMultiplication(factor1, factor2) {
             partialProduct = carry + partialProduct;
         }
         
-        // 添加适当的零
-        for (let k = 0; k < f2.length - 1 - i; k++) {
-            partialProduct += "0";
+        // 根据位置添加末尾的零（与图片一致）
+        let position = f2.length - 1 - i;
+        let displayProduct = partialProduct;
+        
+        // 只有当不是最低位时才添加零
+        if (position > 0) {
+            for (let k = 0; k < position; k++) {
+                displayProduct += "0";
+            }
         }
         
-        partialProducts.push(partialProduct);
+        // 记录步骤
+        steps.push({
+            multiplicand: f1,
+            multiplier_digit: f2[i],
+            partial_product: displayProduct,
+            position: position
+        });
     }
     
     // 计算最终结果
     let product = "0";
-    for (let i = 0; i < partialProducts.length; i++) {
-        product = addStrings(product, partialProducts[i]);
-        steps.push({
-            multiplicand: f1,
-            multiplier_digit: f2[f2.length - 1 - i],
-            partial_product: partialProducts[i]
-        });
+    for (let i = 0; i < steps.length; i++) {
+        product = addStrings(product, steps[i].partial_product);
     }
     
     // 处理小数点
@@ -613,8 +621,8 @@ function renderVerticalCalculation(type, numbers, options = {}) {
         color: '#000000',
         backgroundColor: '#FFFFFF',
         showSteps: true,
-        width: 300,
-        height: 200,
+        width: 400,  // 增加默认宽度
+        height: 400,  // 增加默认高度
         autoResize: true,
         isMobile: false
     };
@@ -663,16 +671,8 @@ function renderVerticalCalculation(type, numbers, options = {}) {
     
     // 如果启用了自动调整大小，则调整Canvas大小
     if (renderOptions.autoResize && (renderOptions.width !== canvas.width || renderOptions.height !== canvas.height)) {
-        const newCanvas = document.createElement('canvas');
-        newCanvas.width = renderOptions.width;
-        newCanvas.height = renderOptions.height;
-        
-        const newCtx = newCanvas.getContext('2d');
-        newCtx.fillStyle = renderOptions.backgroundColor;
-        newCtx.fillRect(0, 0, newCanvas.width, newCanvas.height);
-        newCtx.drawImage(canvas, 0, 0);
-        
-        return newCanvas;
+        // 直接返回已经调整过大小的canvas，不需要创建新的
+        return canvas;
     }
     
     return canvas;
@@ -1346,6 +1346,18 @@ function renderSubtraction(ctx, result, options) {
  */
 function renderMultiplication(ctx, result, options) {
     const { factor1, factor2, product, steps } = result;
+    // 合并默认选项
+    options = {
+        fontSize: 16,
+        width: 400,
+        height: 300,
+        color: '#000000',
+        showSteps: true,
+        isMobile: false,
+        autoResize: true,
+        ...options
+    };
+    
     const { fontSize } = options;
     
     // 设置绘图样式，与math_n.js保持一致
@@ -1366,9 +1378,10 @@ function renderMultiplication(ctx, result, options) {
         startX = 6 * gap;
     }
     
-    let startY = options.height * 0.2;
+    // 增加起始Y位置，确保有足够空间显示
+    let startY = options.height * 0.1;
     if (!options.isMobile) {
-        startY = 100;
+        startY = 60;
     }
     
     // 查找第一个和最后一个非零数字
@@ -1399,11 +1412,16 @@ function renderMultiplication(ctx, result, options) {
         }
     }
     
-    const lineHeight = fontSize * 3/2;
+    // 增加行高，使内容更加分散
+    const lineHeight = fontSize * 2;
     let x, y, i, s;
+    let nonZero_x = 0;
+    let line_x, line_y;
+    let maxRight = -1;
     
     ctx.beginPath();
     
+    // 调整起始X位置，确保有足够空间显示
     x = startX - gap - 5;
     y = startY + gap/2 + fontSize;
     
@@ -1412,6 +1430,10 @@ function renderMultiplication(ctx, result, options) {
     for (i = factor1.length - 1; i >= 0; i--) {
         s = factor1[i];
         ctx.fillText(s, x, y);
+        
+        if (s !== "0" && s !== "." && nonZero_x <= 0) {
+            nonZero_x = x;
+        }
         
         arrFactor1.push({"X": x, "Y": y, "V": s, "visible": true});
         
@@ -1424,17 +1446,33 @@ function renderMultiplication(ctx, result, options) {
         }
     }
     
-    // 重置x位置并增加y位置
-    x = startX - gap - 5;
     y += lineHeight;
+    
+    // 重置x位置
+    if (nonZero_x > 0) {
+        x = nonZero_x;
+    } else {
+        x = startX - gap - 5;
+    }
     
     // 绘制第二个因数
     let arrFactor2 = [];
+    let arrPos = new Array(factor2.length);
+    for (i = 0; i < arrPos.length; i++) {
+        arrPos[i] = -1;
+    }
+    
+    let lastNonZero2startPos = lastNonZero2;
+    if (lastNonZero2startPos < 0) {
+        lastNonZero2startPos = 0;
+    }
+    
     for (i = factor2.length - 1; i >= 0; i--) {
         s = factor2[i];
         ctx.fillText(s, x, y);
         
         arrFactor2.push({"X": x, "Y": y, "V": s, "visible": true});
+        arrPos[i] = x;
         
         if (s === ".") {
             x -= gap * 2/3;
@@ -1449,24 +1487,47 @@ function renderMultiplication(ctx, result, options) {
     x -= gap;
     ctx.fillText("×", x, y);
     
-    // 绘制横线
-    let line_y = y + gap/2;
-    let line_x = x - gap/2;
+    // 确定横线的起始和结束位置
+    let maxLeft = startX;
+    if (nonZero_x <= 0) {
+        nonZero_x = arrPos[factor2.length - 1];
+    }
     
-    ctx.moveTo(line_x, line_y);
-    ctx.lineTo(startX, line_y);
+    // 确保横线足够长，覆盖所有数字
+    line_x = x - gap;
+    let rightX = Math.max(startX, arrPos[0] + gap * 2);
+    
+    // 绘制第一条横线 - 在乘数下方
+    line_y = y + fontSize * 0.2;
+    ctx.beginPath();
+    ctx.moveTo(rightX, line_y);
+    ctx.lineTo(line_x, line_y);
     ctx.stroke();
+    
+    if (line_x < maxLeft) {
+        maxLeft = line_x;
+    }
+    
+    if (maxRight < rightX) {
+        maxRight = rightX;
+    }
     
     y += lineHeight;
     
     // 绘制部分积
-    if (options.showSteps && steps.length > 0) {
+    let lastPartialY = y;
+    if (options.showSteps && steps && steps.length > 0) {
         let arrPartialProducts = [];
+        
+        // 从右向左逐位绘制部分积
         for (i = 0; i < steps.length; i++) {
             const step = steps[i];
             const partial = step.partial_product;
+            const position = step.position || 0;
             
+            // 从右向左绘制部分积，确保数字对齐
             x = startX - gap - 5;
+            
             for (let j = partial.length - 1; j >= 0; j--) {
                 s = partial[j];
                 ctx.fillText(s, x, y);
@@ -1482,17 +1543,27 @@ function renderMultiplication(ctx, result, options) {
                 }
             }
             
+            lastPartialY = y;
             y += lineHeight;
         }
         
-        // 如果有多个部分积，绘制第二条横线
+        // 如果有多个部分积，绘制第二条横线 - 在部分积之后
         if (steps.length > 1) {
-            line_y = y - lineHeight/2;
-            
             ctx.beginPath();
-            ctx.moveTo(line_x, line_y);
-            ctx.lineTo(startX, line_y);
+            // 调整横线位置，使其在最后一个部分积下方
+            line_y = lastPartialY + fontSize * 0.2;
+            
+            ctx.moveTo(rightX, line_y);
+            ctx.lineTo(line_x, line_y);
             ctx.stroke();
+            
+            if (line_x < maxLeft) {
+                maxLeft = line_x;
+            }
+            
+            if (maxRight < rightX) {
+                maxRight = rightX;
+            }
         }
     }
     
@@ -1508,6 +1579,24 @@ function renderMultiplication(ctx, result, options) {
             x -= gap - gap * 2/3;
         } else {
             x -= gap;
+        }
+    }
+    
+    // 确保画布大小足够显示所有内容
+    if (options.autoResize && ctx.canvas) {
+        const padding = gap * 6; // 增加内边距
+        const newWidth = Math.max(maxRight + padding, startX + padding);
+        const newHeight = y + lineHeight + padding;
+        
+        // 只有当画布尺寸不足时才调整
+        if (ctx.canvas.width < newWidth || ctx.canvas.height < newHeight) {
+            ctx.canvas.width = newWidth;
+            ctx.canvas.height = newHeight;
+            
+            // 重新绘制内容
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            renderMultiplication(ctx, result, {...options, autoResize: false});
+            return;
         }
     }
     
@@ -1651,6 +1740,12 @@ function insertVerticalCalculationImage(expression, target, options = {}) {
         const result = parseExpression(expression);
         type = result.type;
         numbers = result.numbers;
+        
+        // 为乘法和除法提供更大的默认尺寸
+        if (type === 'multiplication' || type === 'division') {
+            options.width = options.width || 500;
+            options.height = options.height || 500;
+        }
         
         // 处理无效表达式
         if (type === 'invalid') {

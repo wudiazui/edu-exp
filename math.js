@@ -192,10 +192,23 @@ function getMultiplicationSteps(num1, num2) {
   };
 }
 
-function getDivisionSteps(num1, num2, precision = 2) {
+function getDivisionSteps(num1, num2, precision = 6) {
   // Convert inputs to numbers and handle decimals
   num1 = parseFloat(num1);
   num2 = parseFloat(num2);
+
+  if (num2 === 0) {
+    return {
+      quotient: "undefined",
+      remainder: "0",
+      steps: [],
+      isInteger: false,
+      isRecurring: false,
+      recurringPattern: "",
+      decimalPosition: -1,
+      hasRemainder: false
+    };
+  }
 
   // Move decimal point to make num1 and num2 integers
   const num1Str = num1.toString();
@@ -211,43 +224,77 @@ function getDivisionSteps(num1, num2, precision = 2) {
   const adjustedNum1 = num1 * multiplier;
   const adjustedNum2 = num2 * multiplier;
 
-  // Calculate quotient with desired precision
-  const precisionMultiplier = Math.pow(10, precision);
-  const quotient =
-    Math.floor((adjustedNum1 * precisionMultiplier) / adjustedNum2) /
-    precisionMultiplier;
-  const remainder = adjustedNum1 % adjustedNum2;
+  // Calculate initial quotient
+  const initialQuotient = adjustedNum1 / adjustedNum2;
+  const isInteger = Number.isInteger(initialQuotient);
 
-  // Check if quotient is an integer to determine how to format it
-  const isInteger = Number.isInteger(quotient);
+  // 只取整数部分的商
+  const integerQuotient = Math.floor(initialQuotient);
+  // 计算余数
+  const remainder = adjustedNum1 - integerQuotient * adjustedNum2;
+  // 标记是否有余数
+  const hasRemainder = remainder > 0;
 
-  // Generate calculation steps
+  // 格式化商和余数
+  let quotientStr = integerQuotient.toString();
+  let remainderStr = remainder.toString();
+
+  // 检查是否有循环小数（仅用于显示说明，实际计算仍使用整数部分）
+  let isRecurring = false;
+  let recurringPattern = "";
+
+  if (!isInteger) {
+    // 检测循环小数模式
+    const extendedPrecision = precision * 2;
+    const extendedQuotient = (adjustedNum1 / adjustedNum2).toFixed(extendedPrecision);
+    const decimalPart = extendedQuotient.split('.')[1] || "";
+
+    // 尝试检测循环模式
+    if (decimalPart.length > 0) {
+      for (let patternLength = 1; patternLength <= Math.min(6, Math.floor(decimalPart.length / 2)); patternLength++) {
+        const pattern = decimalPart.substring(0, patternLength);
+        const nextPattern = decimalPart.substring(patternLength, patternLength * 2);
+
+        if (pattern === nextPattern) {
+          isRecurring = true;
+          recurringPattern = pattern;
+          break;
+        }
+      }
+
+      // 如果没有找到短模式，尝试更长的模式
+      if (!isRecurring && decimalPart.length > 12) {
+        for (let patternLength = 7; patternLength <= Math.min(12, Math.floor(decimalPart.length / 2)); patternLength++) {
+          const pattern = decimalPart.substring(0, patternLength);
+          const nextPattern = decimalPart.substring(patternLength, patternLength * 2);
+
+          if (pattern === nextPattern) {
+            isRecurring = true;
+            recurringPattern = pattern;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  // 生成计算步骤
   const steps = [];
   const adjustedNum1Str = adjustedNum1.toString();
   let currentNum = "";
   let position = 0;
 
-  // Process each digit of the adjusted number
-  for (let i = 0; i < adjustedNum1Str.length + precision; i++) {
-    if (i < adjustedNum1Str.length) {
-      currentNum += adjustedNum1Str[i];
-    } else {
-      // Add zeros for decimal calculation only if needed
-      if (!isInteger) {
-        currentNum += "0";
-      } else if (i === adjustedNum1Str.length) {
-        // Exit the loop early for integer results
-        break;
-      }
-    }
+  // 跟踪小数点在商中的位置
+  const decimalPosition = adjustedNum1Str.length;
 
+  // 处理每一位数字
+  // 只计算到整数部分结束
+  for (let i = 0; i < adjustedNum1Str.length; i++) {
+    currentNum += adjustedNum1Str[i];
     let currentNumInt = parseInt(currentNum);
 
-    // If current number is smaller than divisor and not at the end, continue
-    if (
-      currentNumInt < adjustedNum2 &&
-      i < adjustedNum1Str.length + (isInteger ? 0 : precision) - 1
-    ) {
+    // 如果当前数字小于除数且不是最后一位，继续
+    if (currentNumInt < adjustedNum2 && i < adjustedNum1Str.length - 1) {
       continue;
     }
 
@@ -260,19 +307,27 @@ function getDivisionSteps(num1, num2, precision = 2) {
       product: product,
       difference: difference,
       quotientDigit: currentDigit,
+      broughtDownZero: false
     });
 
-    // Update current number to remainder
+    // 更新当前数字为余数
     currentNum = difference.toString();
   }
 
+  // 如果最后一步的差值不为0，这就是余数
+  if (steps.length > 0 && steps[steps.length - 1].difference > 0) {
+    // 已经在hasRemainder中标记了
+  }
+
   return {
-    quotient: isInteger ? quotient.toString() : quotient.toFixed(precision),
-    remainder: isInteger
-      ? Math.floor(remainder / multiplier).toString()
-      : (remainder / multiplier).toFixed(precision),
+    quotient: quotientStr,
+    remainder: remainderStr,
     steps,
     isInteger,
+    isRecurring,
+    recurringPattern,
+    decimalPosition,
+    hasRemainder
   };
 }
 
@@ -441,73 +496,148 @@ export async function generateVerticalArithmeticImage(expression) {
     // 绘制计算步骤
     let currentY = padding + 2 * lineHeight;
     let currentPosition = 0;
-    let g_currentX = numberEndX - dividendLength * 0.7 * charWidth;
+    // 使用传统竖式布局
+    const stepStartX = arcTopX + charWidth * 0.5; // 从弧线右侧开始
     const num1Digits = num1.toString().split("");
+    let decimalPointDrawn = false;
 
-    steps.steps.forEach((step, index) => {
-      ctx.textAlign = "left"; // 设置左对齐
-      let currentX = g_currentX;
-      const productEndX = currentX + step.product.toString().length * 0.7 * charWidth;
-      
-      // 绘制乘积
-      ctx.fillText(step.product.toString(), currentX, currentY);
-      currentY += lineHeight;
-      
-      // 绘制步骤分隔线 (移动到乘积和差值之间)
+    // 调整画布高度以适应所有步骤
+    const totalStepsHeight = steps.steps.length * lineHeight * 2 + lineHeight;
+    const minHeight = padding * 2 + lineHeight * 3 + totalStepsHeight;
+    if (height < minHeight) {
+      height = minHeight;
+      canvas.height = height;
+      // 重新设置背景
+      ctx.fillStyle = "white";
+      ctx.fillRect(0, 0, width, height);
+      ctx.fillStyle = "black";
+      ctx.font = "24px monospace";
+      ctx.textBaseline = "middle";
+
+      // 重新绘制之前的内容
+      // 绘制除数
+      ctx.textAlign = "right";
+      ctx.fillText(num2.toString(), arcTopX, padding + lineHeight);
+
+      // 重新绘制弧线
       ctx.beginPath();
-      ctx.moveTo(currentX, currentY - 0.5 * lineHeight);
-      ctx.lineTo(productEndX, currentY - 0.5 * lineHeight);
+      ctx.arc(
+        padding + charWidth * 0.01,
+        padding + lineHeight * 0.8,
+        radius,
+        startAngle,
+        endAngle,
+        false,
+      );
+      ctx.stroke();
+
+      // 重新绘制横线
+      ctx.beginPath();
+      ctx.moveTo(arcTopX + charWidth * 0.5, padding + lineHeight * 0.5);
+      ctx.lineTo(
+        arcTopX + charWidth * (dividendLength + 0.1),
+        padding + lineHeight * 0.5,
+      );
+      ctx.stroke();
+
+      // 重新绘制被除数
+      ctx.textAlign = "right";
+      ctx.fillText(num1.toString(), numberEndX, padding + lineHeight);
+
+      // 重新绘制商
+      ctx.fillText(steps.quotient, numberEndX, padding);
+    }
+
+    // 处理第一步
+    if (steps.steps.length > 0) {
+      const firstStep = steps.steps[0];
+      
+      // 计算第一步被除数的位数和乘积的位数
+      const firstDividendStr = firstStep.dividend.toString();
+      const firstProductStr = firstStep.product.toString();
+      
+      // 绘制第一个乘积，与原始被除数对齐
+      ctx.textAlign = "right";
+      
+      // 确保乘积与被除数对齐（按位对齐）
+      // 例如：被除数712，乘积64，应该让6对齐7，4对齐1
+      // 但实际上需要向右偏移一位，让6对齐1，4对齐2
+      const productX = numberEndX - charWidth;
+      ctx.fillText(firstProductStr, productX, currentY);
+
+      // 绘制第一个分隔线
+      ctx.beginPath();
+      ctx.moveTo(stepStartX, currentY + lineHeight * 0.5);
+      ctx.lineTo(numberEndX, currentY + lineHeight * 0.5);
+      ctx.stroke();
+
+      currentY += lineHeight;
+
+      // 计算差值
+      const firstDifferenceStr = firstStep.difference.toString();
+      // 差值应该向右偏移一位
+      const differenceX = numberEndX - charWidth;
+      ctx.fillText(firstDifferenceStr, differenceX, currentY);
+
+      // 更新当前位置
+      currentPosition = firstStep.dividend.toString().length;
+    }
+
+    // 处理后续步骤
+    for (let i = 1; i < steps.steps.length; i++) {
+      const step = steps.steps[i];
+      currentY += lineHeight;
+
+      // 检查是否需要绘制小数点
+      if (!decimalPointDrawn && currentPosition >= steps.decimalPosition) {
+        // 在适当位置绘制小数点
+        ctx.fillStyle = "blue";
+        const decimalX = numberEndX - (currentPosition - steps.decimalPosition) * charWidth;
+        ctx.fillText(".", decimalX, currentY - lineHeight * 0.5);
+        ctx.fillStyle = "black";
+        decimalPointDrawn = true;
+      }
+
+      // 如果是带下零的步骤，特殊处理
+      if (step.broughtDownZero) {
+        ctx.fillStyle = "blue";
+        // 零应该与前一步差值的最后一位对齐
+        const zeroX = numberEndX;
+        ctx.fillText("0", zeroX, currentY);
+        ctx.fillStyle = "black";
+        continue;
+      }
+      
+      // 计算当前步骤被除数和乘积的字符串
+      const dividendStr = step.dividend.toString();
+      const productStr = step.product.toString();
+      
+      // 乘积应该向右偏移一位
+      const productX = numberEndX - charWidth;
+      ctx.fillText(productStr, productX, currentY);
+
+      // 绘制分隔线
+      ctx.beginPath();
+      ctx.moveTo(stepStartX, currentY + lineHeight * 0.5);
+      ctx.lineTo(numberEndX, currentY + lineHeight * 0.5);
       ctx.stroke();
       
-      // 绘制差值和剩余的被除数数字
-      let remainingDigits = "";
-      
-      if (index < steps.steps.length - 1) {
-        // 计算需要从原始被除数中带下来的数字
-        const nextStep = steps.steps[index + 1];
-        const currentDigitLength = step.dividend.toString().length;
-        const differenceLength = step.difference.toString().length;
-        
-        // 计算当前位置和需要带下来的位数
-        if (index === 0) {
-          // 第一步，初始化当前位置
-          currentPosition = currentDigitLength;
-        }
-        
-        // 计算需要带下来的位数
-        const digitsNeeded = nextStep.dividend.toString().length - differenceLength;
-        
-        // 从原始被除数中获取需要带下来的数字
-        for (let i = 0; i < digitsNeeded; i++) {
-          if (currentPosition < num1Digits.length) {
-            remainingDigits += num1Digits[currentPosition];
-            currentPosition++;
-          }
-        }
-      }
-      
-      // 计算差值的位置，确保正确对齐
-      const differenceX = currentX + (step.product.toString().length - step.difference.toString().length) * 0.7 * charWidth;
-      
-      // 绘制差值
-      ctx.fillText(step.difference.toString(), differenceX, currentY);
-      
-      // 绘制带下来的数字
-      if (remainingDigits.length > 0) {
-        const remainingX = differenceX + step.difference.toString().length * 0.7 * charWidth;
-        ctx.fillText(remainingDigits, remainingX, currentY);
-      }
-      
-      // 更新下一步的起始X位置
-      if (remainingDigits.length > 0) {
-        g_currentX = differenceX;
-      } else {
-        g_currentX = differenceX + step.difference.toString().length * 0.7 * charWidth - 
-                    (index < steps.steps.length - 1 ? steps.steps[index + 1].dividend.toString().length * 0.7 * charWidth : 0);
-      }
-      
       currentY += lineHeight;
-    });
+      
+      // 计算差值
+      const differenceStr = step.difference.toString();
+      // 差值应该向右偏移一位
+      const differenceX = numberEndX - charWidth;
+      ctx.fillText(differenceStr, differenceX, currentY);
+
+      // 更新当前位置
+      if (i < steps.steps.length - 1) {
+        const nextStep = steps.steps[i + 1];
+        const differenceLength = step.difference.toString().length;
+        const digitsNeeded = nextStep.dividend.toString().length - differenceLength;
+        currentPosition += digitsNeeded;
+      }
+    }
   } else {
     // 绘制加减法过程（保持原有代码）
     if (
@@ -640,4 +770,112 @@ export async function generateVerticalArithmeticImage(expression) {
       resolve(blob);
     }, "image/png");
   });
+}
+
+/**
+ * 主接口函数 - 接收表达式并返回竖式计算图片
+ * @param {string} expression - 数学表达式，如 "123+456", "78-45", "12*34", "56/7"
+ * @param {Object} options - 配置选项
+ * @param {string} options.backgroundColor - 背景颜色，默认为白色
+ * @param {string} options.textColor - 文本颜色，默认为黑色
+ * @param {number} options.fontSize - 字体大小，默认为20
+ * @param {string} options.fontFamily - 字体，默认为Arial
+ * @param {number} options.precision - 除法精度，默认为2
+ * @returns {Promise<Blob>} 返回图片的Blob对象
+ */
+export async function renderVerticalCalculation(expression, options = {}) {
+  // 默认选项
+  const defaultOptions = {
+    backgroundColor: "white",
+    textColor: "black",
+    fontSize: 20,
+    fontFamily: "Arial",
+    precision: 2
+  };
+
+  // 合并选项
+  const mergedOptions = { ...defaultOptions, ...options };
+
+  try {
+    // 解析表达式
+    const { num1, operator, num2 } = parseExpression(expression);
+
+    // 根据运算符生成对应的竖式计算图片
+    let result;
+    if (operator === "/") {
+      // 除法需要传递精度参数
+      result = await generateVerticalArithmeticImage(expression, mergedOptions.precision);
+    } else {
+      result = await generateVerticalArithmeticImage(expression);
+    }
+
+    return result;
+  } catch (error) {
+    console.error("渲染竖式计算出错:", error);
+
+    // 创建一个错误信息图片
+    const canvas = document.createElement("canvas");
+    canvas.width = 400;
+    canvas.height = 100;
+    const ctx = canvas.getContext("2d");
+
+    // 设置背景
+    ctx.fillStyle = mergedOptions.backgroundColor;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // 设置文本样式
+    ctx.fillStyle = "red";
+    ctx.font = `${mergedOptions.fontSize}px ${mergedOptions.fontFamily}`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    // 绘制错误信息
+    ctx.fillText("表达式格式错误: " + error.message, canvas.width / 2, canvas.height / 2);
+
+    // 返回错误图片
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => {
+        resolve(blob);
+      }, 'image/png');
+    });
+  }
+}
+
+/**
+ * 将竖式计算图片插入到指定的DOM元素中
+ * @param {string} expression - 数学表达式
+ * @param {string|HTMLElement} container - 容器元素或其ID
+ * @param {Object} options - 配置选项
+ */
+export async function insertVerticalCalculationImage(expression, container, options = {}) {
+  // 获取容器元素
+  const containerElement = typeof container === 'string'
+    ? document.getElementById(container)
+    : container;
+
+  if (!containerElement) {
+    console.error('容器元素不存在');
+    return;
+  }
+
+  try {
+    // 生成竖式计算图片
+    const imageBlob = await renderVerticalCalculation(expression, options);
+
+    // 创建图片元素
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(imageBlob);
+    img.alt = `竖式计算: ${expression}`;
+    img.style.maxWidth = '100%';
+
+    // 清空容器并插入图片
+    containerElement.innerHTML = '';
+    containerElement.appendChild(img);
+
+    // 释放Blob URL
+    img.onload = () => URL.revokeObjectURL(img.src);
+  } catch (error) {
+    console.error('插入竖式计算图片失败:', error);
+    containerElement.innerHTML = `<div style="color: red;">计算错误: ${error.message}</div>`;
+  }
 }
