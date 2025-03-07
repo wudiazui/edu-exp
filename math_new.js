@@ -871,10 +871,18 @@ function renderAddition(ctx, result, options) {
     
     // 绘制横线
     ctx.beginPath();
-    let lineY = y + fontSize * 0.05; // 最终微调横线位置，使其更加优雅
+    let lineY = y + fontSize * 0.05; // 横线位置靠近加数
     ctx.lineWidth = 1;
-    ctx.moveTo(maxLeft, lineY);
-    ctx.lineTo(Math.max(maxRight, startX + gap * 5), lineY);
+    
+    // 找到最左侧的位置（包括加号）
+    let leftMostX = x - gap * 0.8; // 加号位置左侧一点点
+    
+    // 计算结果的最右侧位置
+    let resultRightX = startX - gap - 5 + gap * (sum.length + 0.3); // 结果右侧多一点点
+    
+    // 调整横线起点和终点，使其刚好超过数字宽度一点
+    ctx.moveTo(leftMostX, lineY);
+    ctx.lineTo(resultRightX, lineY);
     ctx.stroke();
     ctx.lineWidth = 2;
     
