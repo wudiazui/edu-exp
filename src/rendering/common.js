@@ -36,6 +36,12 @@ function renderVerticalCalculation(type, numbers, options = {}) {
         isMobile: false
     };
     
+    // 为除法操作特别设置较小的初始尺寸
+    if (type.toLowerCase() === 'division') {
+        defaultOptions.width = 150;
+        defaultOptions.height = 120;
+    }
+    
     // 合并选项
     const renderOptions = { ...defaultOptions, ...options };
     
