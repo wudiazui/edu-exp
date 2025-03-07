@@ -108,10 +108,6 @@ function calculateMultiplication(factor1, factor2) {
     let dot_pos1 = checkPoint(factor1, 0);
     let dot_pos2 = checkPoint(factor2, 0);
     
-    // 移除小数点进行计算
-    let f1 = factor1.replace(".", "");
-    let f2 = factor2.replace(".", "");
-    
     // 计算小数点位置
     let decimal_places = 0;
     if (dot_pos1 != -1) {
@@ -121,10 +117,14 @@ function calculateMultiplication(factor1, factor2) {
         decimal_places += (factor2.length - dot_pos2 - 1);
     }
     
+    // 移除小数点进行计算
+    let f1 = factor1.replace(".", "");
+    let f2 = factor2.replace(".", "");
+    
     // 计算步骤
     let steps = [];
     
-    // 从右向左逐位计算（与图片一致）
+    // 从右向左逐位计算
     for (let i = f2.length - 1; i >= 0; i--) {
         let digit = parseInt(f2[i]);
         let carry = 0;
@@ -141,7 +141,7 @@ function calculateMultiplication(factor1, factor2) {
             partialProduct = carry + partialProduct;
         }
         
-        // 根据位置添加末尾的零（与图片一致）
+        // 根据位置添加末尾的零
         let position = f2.length - 1 - i;
         let displayProduct = partialProduct;
         
@@ -152,9 +152,19 @@ function calculateMultiplication(factor1, factor2) {
             }
         }
         
+        // 处理部分积中的小数点
+        if (decimal_places > 0) {
+            let len = displayProduct.length;
+            if (decimal_places >= len) {
+                displayProduct = "0." + "0".repeat(decimal_places - len) + displayProduct;
+            } else {
+                displayProduct = displayProduct.substring(0, len - decimal_places) + "." + displayProduct.substring(len - decimal_places);
+            }
+        }
+        
         // 记录步骤
         steps.push({
-            multiplicand: f1,
+            multiplicand: factor1,
             multiplier_digit: f2[i],
             partial_product: displayProduct,
             position: position
@@ -164,10 +174,12 @@ function calculateMultiplication(factor1, factor2) {
     // 计算最终结果
     let product = "0";
     for (let i = 0; i < steps.length; i++) {
-        product = addStrings(product, steps[i].partial_product);
+        // 对于加法，需要移除小数点再计算
+        let partialWithoutDot = steps[i].partial_product.replace(".", "");
+        product = addStrings(product, partialWithoutDot);
     }
     
-    // 处理小数点
+    // 处理最终结果中的小数点
     if (decimal_places > 0) {
         let len = product.length;
         if (decimal_places >= len) {
@@ -1516,8 +1528,21 @@ function renderMultiplication(ctx, result, options) {
     
     // 绘制部分积
     let lastPartialY = y;
+    let skipFinalResult = false;
+    
     if (options.showSteps && steps && steps.length > 0) {
         let arrPartialProducts = [];
+        
+        // 检查是否只有一个部分积且与最终结果相同（考虑小数点）
+        if (steps.length === 1) {
+            // 移除小数点后比较
+            let partialWithoutDot = steps[0].partial_product.replace(".", "");
+            let productWithoutDot = product.replace(".", "");
+            
+            if (partialWithoutDot === productWithoutDot) {
+                skipFinalResult = true;
+            }
+        }
         
         // 从右向左逐位绘制部分积
         for (i = 0; i < steps.length; i++) {
@@ -1567,18 +1592,20 @@ function renderMultiplication(ctx, result, options) {
         }
     }
     
-    // 绘制最终结果
-    x = startX - gap - 5;
-    for (i = product.length - 1; i >= 0; i--) {
-        s = product[i];
-        ctx.fillText(s, x, y);
-        
-        if (s === ".") {
-            x -= gap * 2/3;
-        } else if (i >= 1 && product[i-1] === ".") {
-            x -= gap - gap * 2/3;
-        } else {
-            x -= gap;
+    // 绘制最终结果，但如果只有一个部分积且与最终结果相同，则跳过
+    if (!skipFinalResult) {
+        x = startX - gap - 5;
+        for (i = product.length - 1; i >= 0; i--) {
+            s = product[i];
+            ctx.fillText(s, x, y);
+            
+            if (s === ".") {
+                x -= gap * 2/3;
+            } else if (i >= 1 && product[i-1] === ".") {
+                x -= gap - gap * 2/3;
+            } else {
+                x -= gap;
+            }
         }
     }
     
