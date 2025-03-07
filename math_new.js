@@ -1428,8 +1428,12 @@ function renderMultiplication(ctx, result, options) {
     const lineHeight = fontSize * 2;
     let x, y, i, s;
     let nonZero_x = 0;
-    let line_x, line_y;
+    let line_y;
     let maxRight = -1;
+    
+    // 跟踪最左侧和最右侧的数字位置
+    let leftMostX = Infinity;
+    let rightMostX = -Infinity;
     
     ctx.beginPath();
     
@@ -1442,6 +1446,10 @@ function renderMultiplication(ctx, result, options) {
     for (i = factor1.length - 1; i >= 0; i--) {
         s = factor1[i];
         ctx.fillText(s, x, y);
+        
+        // 跟踪最左侧和最右侧的位置
+        leftMostX = Math.min(leftMostX, x - gap/2);
+        rightMostX = Math.max(rightMostX, x + gap/2);
         
         if (s !== "0" && s !== "." && nonZero_x <= 0) {
             nonZero_x = x;
@@ -1483,6 +1491,10 @@ function renderMultiplication(ctx, result, options) {
         s = factor2[i];
         ctx.fillText(s, x, y);
         
+        // 跟踪最左侧和最右侧的位置
+        leftMostX = Math.min(leftMostX, x - gap/2);
+        rightMostX = Math.max(rightMostX, x + gap/2);
+        
         arrFactor2.push({"X": x, "Y": y, "V": s, "visible": true});
         arrPos[i] = x;
         
@@ -1499,29 +1511,62 @@ function renderMultiplication(ctx, result, options) {
     x -= gap;
     ctx.fillText("×", x, y);
     
-    // 确定横线的起始和结束位置
-    let maxLeft = startX;
-    if (nonZero_x <= 0) {
-        nonZero_x = arrPos[factor2.length - 1];
-    }
-    
-    // 确保横线足够长，覆盖所有数字
-    line_x = x - gap;
-    let rightX = Math.max(startX, arrPos[0] + gap * 2);
+    // 跟踪乘号的位置
+    leftMostX = Math.min(leftMostX, x - gap/2);
     
     // 绘制第一条横线 - 在乘数下方
     line_y = y + fontSize * 0.2;
-    ctx.beginPath();
-    ctx.moveTo(rightX, line_y);
-    ctx.lineTo(line_x, line_y);
-    ctx.stroke();
     
-    if (line_x < maxLeft) {
-        maxLeft = line_x;
+    // 预先计算部分积和最终结果的位置
+    if (options.showSteps && steps && steps.length > 0) {
+        for (i = 0; i < steps.length; i++) {
+            const partial = steps[i].partial_product;
+            let tempX = startX - gap - 5;
+            
+            for (let j = partial.length - 1; j >= 0; j--) {
+                // 跟踪最左侧和最右侧的位置
+                leftMostX = Math.min(leftMostX, tempX - gap/2);
+                rightMostX = Math.max(rightMostX, tempX + gap/2);
+                
+                if (partial[j] === ".") {
+                    tempX -= gap * 2/3;
+                } else if (j >= 1 && partial[j-1] === ".") {
+                    tempX -= gap - gap * 2/3;
+                } else {
+                    tempX -= gap;
+                }
+            }
+        }
     }
     
-    if (maxRight < rightX) {
-        maxRight = rightX;
+    // 检查最终结果的位置
+    let tempX = startX - gap - 5;
+    for (i = product.length - 1; i >= 0; i--) {
+        // 跟踪最左侧和最右侧的位置
+        leftMostX = Math.min(leftMostX, tempX - gap/2);
+        rightMostX = Math.max(rightMostX, tempX + gap/2);
+        
+        if (product[i] === ".") {
+            tempX -= gap * 2/3;
+        } else if (i >= 1 && product[i-1] === ".") {
+            tempX -= gap - gap * 2/3;
+        } else {
+            tempX -= gap;
+        }
+    }
+    
+    // 添加适当的边距，右侧多一些
+    leftMostX -= gap/2;
+    rightMostX += gap * 2; // 右侧多出来一些，看起来更顺眼
+    
+    // 绘制第一条横线
+    ctx.beginPath();
+    ctx.moveTo(rightMostX, line_y);
+    ctx.lineTo(leftMostX, line_y);
+    ctx.stroke();
+    
+    if (maxRight < rightMostX) {
+        maxRight = rightMostX;
     }
     
     y += lineHeight;
@@ -1578,17 +1623,9 @@ function renderMultiplication(ctx, result, options) {
             // 调整横线位置，使其在最后一个部分积下方
             line_y = lastPartialY + fontSize * 0.2;
             
-            ctx.moveTo(rightX, line_y);
-            ctx.lineTo(line_x, line_y);
+            ctx.moveTo(rightMostX, line_y);
+            ctx.lineTo(leftMostX, line_y);
             ctx.stroke();
-            
-            if (line_x < maxLeft) {
-                maxLeft = line_x;
-            }
-            
-            if (maxRight < rightX) {
-                maxRight = rightX;
-            }
         }
     }
     
