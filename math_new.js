@@ -105,24 +105,107 @@ function processDiv(v1, v2) {
     }
     
     // 处理结果
-    let s = Math.floor(res).toString(); // 只取整数部分
+    let s = res.toString();
+    let pos = s.indexOf(".");
+    if (pos >= 0) {
+        // 限制小数位数
+        s = s.substring(0, Math.min(pos + 7, s.length));
+        // 去除末尾的0
+        while (s.charAt(s.length - 1) === "0") {
+            s = s.substring(0, s.length - 1);
+        }
+        // 如果小数点在最后，去除小数点
+        if (s.charAt(s.length - 1) === ".") {
+            s = s.substring(0, s.length - 1);
+        }
+    }
     
     // 模拟长除法计算步骤
     let steps = [];
     
     // 准备计算数据
-    let dividend = parseInt(v1);
-    let divisor = parseInt(v2);
+    let dividend = v1;
+    let divisor = v2;
     
-    // 计算商和余数
-    let quotient = Math.floor(dividend / divisor);
-    let remainder = dividend % divisor;
+    // 移除小数点进行计算
+    if (pos1 >= 0 || pos2 >= 0) {
+        // 计算需要移动的小数位数
+        let decimalPlaces = 0;
+        if (pos1 >= 0) {
+            decimalPlaces += (s1.length - pos1 - 1);
+        }
+        if (pos2 >= 0) {
+            decimalPlaces -= (s2.length - pos2 - 1);
+        }
+        
+        // 移除小数点
+        dividend = s1.replace(".", "");
+        divisor = s2.replace(".", "");
+        
+        // 根据小数位数调整被除数
+        if (decimalPlaces > 0) {
+            for (let i = 0; i < decimalPlaces; i++) {
+                dividend += "0";
+            }
+        } else if (decimalPlaces < 0) {
+            for (let i = 0; i < -decimalPlaces; i++) {
+                divisor += "0";
+            }
+        }
+    }
     
-    // 记录计算步骤
-    steps.push({
-        remainder: remainder.toString(),
-        subtraction: (quotient * divisor).toString()
-    });
+    // 转换为整数进行计算
+    let intDividend = parseInt(dividend);
+    let intDivisor = parseInt(divisor);
+    
+    // 执行长除法计算
+    let currentDividend = dividend.toString();
+    let currentDivisor = divisor.toString();
+    let quotient = "";
+    
+    // 模拟手工长除法计算过程
+    let index = 0;
+    let tempDividend = "";
+    
+    while (index < currentDividend.length) {
+        // 添加下一位到临时被除数
+        tempDividend += currentDividend.charAt(index);
+        
+        // 如果临时被除数小于除数，且不是最后一位，则继续添加下一位并在商中添加0
+        if (parseInt(tempDividend) < intDivisor) {
+            if (index > 0) { // 不是第一位时才添加0到商
+                quotient += "0";
+            }
+            index++;
+            continue;
+        }
+        
+        // 计算当前位的商
+        let digitQuotient = Math.floor(parseInt(tempDividend) / intDivisor);
+        quotient += digitQuotient.toString();
+        
+        // 计算当前位的乘积和余数
+        let product = digitQuotient * intDivisor;
+        let remainder = parseInt(tempDividend) - product;
+        
+        // 记录计算步骤
+        steps.push({
+            subtraction: product.toString(),
+            remainder: remainder.toString(),
+            position: index - tempDividend.length + 1 // 记录当前步骤的位置
+        });
+        
+        // 更新临时被除数为余数
+        tempDividend = remainder.toString();
+        
+        // 移动到下一位
+        index++;
+        
+        // 如果余数为0且已经处理完所有位，则结束计算
+        if (remainder === 0 && index >= currentDividend.length) {
+            break;
+        }
+    }
     
     return {
         shang: s,
@@ -1759,8 +1842,44 @@ function renderDivision(ctx, result, options) {
     const gap = fontSize * 0.8; // 与math_n.js中的gap对应
     const lineHeight = fontSize * 1.5; // 与math_n.js中的lineHeight对应
     
+    // 获取小数点位置，用于对齐
+    const dot_pos1 = dividend.indexOf(".");
+    const dot_pos2 = divisor.indexOf(".");
+    
     // 计算起始位置，参考math_n.js中的计算方式
-    let startX = 50 + (divisor.length + 1) * gap;
+    let startX;
+    
+    // 根据小数点位置计算起始X坐标，参考math_n.js的方式
+    if (dot_pos1 >= 0 || dot_pos2 >= 0) {
+        // 如果有小数点，根据小数点位置计算
+        if (dot_pos1 >= dot_pos2) {
+            startX = dot_pos1 * gap + 4 * gap;
+        } else {
+            startX = dot_pos2 * gap + 4 * gap;
+        }
+        
+        // 考虑小数点后的位数
+        if (dot_pos1 >= 0 && dot_pos2 >= 0) {
+            if (dividend.length - dot_pos1 >= divisor.length - dot_pos2) {
+                startX += (dividend.length - dot_pos1) * gap;
+            } else {
+                startX += (divisor.length - dot_pos2) * gap;
+            }
+        } else if (dot_pos1 >= 0) {
+            startX += (dividend.length - dot_pos1) * gap;
+        } else if (dot_pos2 >= 0) {
+            startX += (divisor.length - dot_pos2) * gap;
+        }
+    } else {
+        // 如果没有小数点，使用默认计算方式
+        startX = 50 + (divisor.length + 1) * gap;
+    }
+    
+    // 确保最小起始位置
+    if (startX < 6 * gap) {
+        startX = 6 * gap;
+    }
+    
     let startY = options.isMobile ? 200 : 100;
     
     // 绘制除号结构
@@ -1768,10 +1887,17 @@ function renderDivision(ctx, result, options) {
     let x = startX - gap - 5;
     let y = startY + gap/2 + fontSize;
     
+    // 存储除数和被除数的位置信息，用于后续步骤对齐
+    let arrChushu = [];
+    let arrBeiChushu = [];
+    
     // 绘制除数，从右向左绘制
     for (let i = divisor.length - 1; i >= 0; i--) {
         const s = divisor[i];
         ctx.fillText(s, x, y);
+        
+        // 存储除数位置信息
+        arrChushu.push({"X": x, "Y": y, "V": s, "visible": true});
         
         // 处理小数点位置
         if (s === ".") {
@@ -1783,14 +1909,29 @@ function renderDivision(ctx, result, options) {
         }
     }
     
-    // 绘制除号结构 - 调整为与图片一致的样式
-    drawDivisionStruct(ctx, startX, startY, startX + Math.max(dividend.length, quotient.length) * gap + gap, fontSize);
+    // 计算被除数的宽度，用于确定除号结构的宽度
+    let dividendWidth = 0;
+    for (let i = 0; i < dividend.length; i++) {
+        if (dividend[i] === ".") {
+            dividendWidth += gap * 2/3;
+        } else if (i < dividend.length - 1 && dividend[i+1] === ".") {
+            dividendWidth += gap - gap * 2/3;
+        } else {
+            dividendWidth += gap;
+        }
+    }
+    
+    // 绘制除号结构 - 完全按照math_n.js的方式
+    drawDivisionStruct(ctx, startX, startY, startX + dividendWidth + gap, fontSize);
     
     // 绘制被除数，在除号右侧
     x = startX;
     for (let i = 0; i < dividend.length; i++) {
         const s = dividend[i];
         ctx.fillText(s, x, y);
+        
+        // 存储被除数位置信息
+        arrBeiChushu.push({"X": x, "Y": y, "V": s, "visible": true});
         
         // 处理小数点位置
         if (s === ".") {
@@ -1802,60 +1943,183 @@ function renderDivision(ctx, result, options) {
         }
     }
     
-    // 绘制商，在除号上方
-    x = startX;
-    let quotientY = y - gap - fontSize/2;
+    // 绘制商，在除号上方，采用右对齐方式
+    let quotientY = startY - gap/2;
+    let arrShang = []; // 存储商的位置信息
+    
+    // 计算商的起始位置，使其右对齐
+    // 首先计算商的总宽度
+    let quotientWidth = 0;
+    for (let i = 0; i < quotient.length; i++) {
+        if (quotient[i] === ".") {
+            quotientWidth += gap * 2/3;
+        } else if (i < quotient.length - 1 && quotient[i+1] === ".") {
+            quotientWidth += gap - gap * 2/3;
+        } else {
+            quotientWidth += gap;
+        }
+    }
+    
+    // 计算商的起始X坐标，使其右对齐
+    // 商的最后一位应该与被除数的最后一位对齐
+    let quotientStartX = startX + dividendWidth - quotientWidth;
+    
+    // 确保商的起始位置不小于startX
+    if (quotientStartX < startX) {
+        quotientStartX = startX;
+    }
     
     // 绘制商
+    x = quotientStartX;
     for (let i = 0; i < quotient.length; i++) {
         const s = quotient[i];
         ctx.fillText(s, x, quotientY);
-        x += gap;
+        
+        // 存储商的位置信息
+        arrShang.push({"X": x, "Y": quotientY, "V": s, "visible": true});
+        
+        // 处理小数点位置
+        if (s === ".") {
+            x += gap * 2/3;
+        } else if (i < quotient.length - 1 && quotient[i+1] === ".") {
+            x += gap - gap * 2/3;
+        } else {
+            x += gap;
+        }
     }
     
-    // 绘制计算步骤
-    if (steps.length > 0) {
+    // 绘制计算步骤 - 严格按照math_n.js的方式
+    if (steps && steps.length > 0) {
         let currentY = y;
+        let arrAmonRlt = []; // 存储计算步骤的位置信息
         
         // 处理每一步计算
         for (let i = 0; i < steps.length; i++) {
             const step = steps[i];
             
-            // 绘制减数
-            x = startX;
-            const subtraction = step.subtraction;
+            // 确定当前步骤的位置 - 严格按照math_n.js的方式
+            // 对于第一步，位置应该在被除数的第一个数字下方
+            // 对于后续步骤，位置应该根据前一步的余数和下一位被除数确定
             
-            // 对齐被除数
-            let padding = dividend.length - subtraction.length;
-            if (padding > 0) {
-                x += padding * gap;
+            // 计算当前步骤的位置
+            let stepX;
+            
+            if (i === 0) {
+                // 第一步，位置在被除数的第一个数字下方
+                stepX = startX;
+            } else {
+                // 后续步骤，位置根据前一步的余数确定
+                // 在math_n.js中，每一步的位置是根据被除数的位置和当前处理的位数确定的
+                // 这里我们简化处理，根据前一步的余数长度和当前步骤的位置确定
+                
+                // 获取前一步的余数
+                const prevRemainder = steps[i-1].remainder;
+                
+                // 如果前一步的余数为0，则下一步应该右移一位
+                if (prevRemainder === "0") {
+                    stepX = arrBeiChushu[i].X;
+                } else {
+                    // 否则，根据余数的长度和被除数的位置确定
+                    // 在math_n.js中，这部分逻辑比较复杂，这里我们简化处理
+                    stepX = arrBeiChushu[i].X;
+                }
             }
             
+            // 绘制减数（当前商位 * 除数）
+            const subtraction = step.subtraction;
+            
+            // 计算减数的宽度
+            let subtractionWidth = subtraction.length * gap;
+            
+            // 确定减数的起始位置，使其最后一位与被减数的最后一位对齐
+            // 如果是第一步，则与被除数的前几位对齐
+            let subtractionStartX;
+            
+            if (i === 0) {
+                // 第一步，减数的最后一位应该与被减数的第divisor.length位对齐
+                // 例如：712 ÷ 8，第一步是计算71 ÷ 8，减数是64，应该与71对齐
+                let minuendLength = divisor.length;
+                if (parseInt(dividend.substring(0, minuendLength)) < parseInt(divisor)) {
+                    // 如果被减数小于除数，则多取一位
+                    minuendLength++;
+                }
+                // 减数的最后一位应该与被减数的最后一位对齐
+                // 找到被减数的最后一位的位置
+                let lastDigitIndex = minuendLength - 1;
+                if (lastDigitIndex < arrBeiChushu.length) {
+                    // 减数的最后一位应该与被减数的最后一位对齐
+                    subtractionStartX = arrBeiChushu[lastDigitIndex].X - (subtraction.length - 1) * gap;
+                } else {
+                    // 如果超出被除数的长度，则使用最后一位的位置
+                    subtractionStartX = arrBeiChushu[arrBeiChushu.length - 1].X - (subtraction.length - 1) * gap;
+                }
+            } else {
+                // 后续步骤，减数的最后一位应该与当前处理的被除数位对齐
+                // 例如：712 ÷ 8，第二步是计算72 ÷ 8，减数是72，应该与72对齐
+                
+                // 获取前一步的余数
+                const prevRemainder = steps[i-1].remainder;
+                
+                // 计算当前步骤处理的被除数位的索引
+                // 如果前一步的余数为0，则当前步骤处理的是下一位
+                // 否则，当前步骤处理的是前一步余数加上下一位
+                let currentDigitIndex;
+                
+                if (i === 1) {
+                    // 第二步，索引应该是第一步处理的最后一位加1
+                    let firstStepLastDigitIndex = divisor.length - 1;
+                    if (parseInt(dividend.substring(0, divisor.length)) < parseInt(divisor)) {
+                        firstStepLastDigitIndex++;
+                    }
+                    currentDigitIndex = firstStepLastDigitIndex + 1;
+                } else {
+                    // 后续步骤，索引应该是前一步处理的最后一位加1
+                    currentDigitIndex = divisor.length + i - 1;
+                }
+                
+                if (currentDigitIndex < arrBeiChushu.length) {
+                    // 减数的最后一位应该与当前处理的被除数位对齐
+                    subtractionStartX = arrBeiChushu[currentDigitIndex].X - (subtraction.length - 1) * gap;
+                } else {
+                    // 如果超出被除数的长度，则使用最后一位的位置
+                    subtractionStartX = arrBeiChushu[arrBeiChushu.length - 1].X - (subtraction.length - 1) * gap;
+                }
+            }
+            
+            // 确保减数的起始位置不小于startX
+            if (subtractionStartX < startX) {
+                subtractionStartX = startX;
+            }
+            
+            // 绘制减数
+            x = subtractionStartX;
             for (let j = 0; j < subtraction.length; j++) {
                 const s = subtraction[j];
                 ctx.fillText(s, x, currentY + lineHeight);
+                
+                // 存储减数位置信息
+                arrAmonRlt.push({"X": x, "Y": currentY + lineHeight, "V": s, "visible": true});
+                
                 x += gap;
             }
             
-            // 绘制横线 - 调整位置使其与图片一致
+            // 绘制横线 - 与图片一致，只在减数下方绘制
             ctx.beginPath();
-            ctx.moveTo(startX, currentY + lineHeight + gap/4);
-            ctx.lineTo(startX + dividend.length * gap, currentY + lineHeight + gap/4);
+            ctx.moveTo(subtractionStartX, currentY + lineHeight + gap/4);
+            ctx.lineTo(subtractionStartX + subtraction.length * gap, currentY + lineHeight + gap/4);
             ctx.stroke();
             
             // 绘制余数
-            x = startX;
+            x = subtractionStartX;
             const remainder = step.remainder;
-            
-            // 对齐被除数
-            padding = dividend.length - remainder.length;
-            if (padding > 0) {
-                x += padding * gap;
-            }
             
             for (let j = 0; j < remainder.length; j++) {
                 const s = remainder[j];
                 ctx.fillText(s, x, currentY + lineHeight * 2);
+                
+                // 存储余数位置信息
+                arrAmonRlt.push({"X": x, "Y": currentY + lineHeight * 2, "V": s, "visible": true});
+                
                 x += gap;
             }
             
@@ -1880,16 +2144,16 @@ function drawDivisionStruct(ctx, startX, startY, endX, fontSize) {
     
     // 保存当前线宽
     const w = ctx.lineWidth;
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 3;
     
-    // 绘制横线 - 调整位置使其与图片一致
-    ctx.moveTo(startX, startY);
+    // 绘制横线 - 完全按照math_n.js的方式
+    ctx.moveTo(startX - 1, startY);
     ctx.lineTo(endX, startY);
     
-    // 绘制左侧弧线 - 调整为与图片一致的样式
+    // 绘制左侧弧线 - 完全按照math_n.js的方式
     ctx.moveTo(startX, startY);
-    const r = fontSize * 2.5;
-    ctx.arc(startX - r, startY, r, 0, 0.5 * Math.PI);
+    const r = fontSize * 3; // 使用与math_n.js完全相同的半径
+    ctx.arc(startX - r, startY, r, 0.05 * Math.PI, 0.25 * Math.PI); // 使用与math_n.js完全相同的角度
     
     // 恢复线宽
     ctx.lineWidth = w;
