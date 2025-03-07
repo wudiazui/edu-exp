@@ -84,10 +84,13 @@ function renderDivision(ctx, result, options) {
     // 首先绘制除数
     let x = startX - gap - 5;
     let y = startY + gap/2 + fontSize;
+    let currentY = y; // Initialize currentY with y
     
     // 存储除数和被除数的位置信息，用于后续步骤对齐
     let arrChushu = [];
     let arrBeiChushu = [];
+    let arrShang = []; // 存储商的位置信息
+    let arrAmonRlt = []; // 存储计算步骤的位置信息
     
     // 绘制除数，从右向左绘制
     for (let i = divisor.length - 1; i >= 0; i--) {
@@ -146,7 +149,6 @@ function renderDivision(ctx, result, options) {
     
     // 绘制商，在除号上方，采用右对齐方式
     let quotientY = startY - gap/2;
-    let arrShang = []; // 存储商的位置信息
     
     // 处理商，只保留整数部分
     let integerQuotient = quotient;
@@ -188,9 +190,6 @@ function renderDivision(ctx, result, options) {
     
     // 绘制计算步骤
     if (steps && steps.length > 0) {
-        let currentY = y;
-        let arrAmonRlt = []; // 存储计算步骤的位置信息
-        
         // 处理每一步计算
         for (let i = 0; i < steps.length; i++) {
             const step = steps[i];
@@ -395,6 +394,78 @@ function renderDivision(ctx, result, options) {
             // 更新Y坐标
             currentY += lineHeight * 2;
         }
+    }
+    
+    // 添加自动调整画布大小的功能
+    if (options.autoResize && ctx.canvas) {
+        // 计算所需的画布宽度和高度
+        const padding = gap * 3; // 适当的内边距
+        
+        // 跟踪最左侧和最右侧的位置
+        let leftmostX = Number.MAX_VALUE;
+        let rightmostX = 0;
+        
+        // 检查除数位置
+        for (let i = 0; i < arrChushu.length; i++) {
+            leftmostX = Math.min(leftmostX, arrChushu[i].X - gap/2);
+            rightmostX = Math.max(rightmostX, arrChushu[i].X + gap/2);
+        }
+        
+        // 检查被除数位置
+        for (let i = 0; i < arrBeiChushu.length; i++) {
+            leftmostX = Math.min(leftmostX, arrBeiChushu[i].X - gap/2);
+            rightmostX = Math.max(rightmostX, arrBeiChushu[i].X + gap/2);
+        }
+        
+        // 检查商的位置
+        for (let i = 0; i < arrShang.length; i++) {
+            leftmostX = Math.min(leftmostX, arrShang[i].X - gap/2);
+            rightmostX = Math.max(rightmostX, arrShang[i].X + gap/2);
+        }
+        
+        // 检查所有中间步骤的位置
+        for (let i = 0; i < arrAmonRlt.length; i++) {
+            leftmostX = Math.min(leftmostX, arrAmonRlt[i].X - gap/2);
+            rightmostX = Math.max(rightmostX, arrAmonRlt[i].X + gap/2);
+        }
+        
+        // 如果没有找到有效的位置（可能是空数组），使用默认值
+        if (leftmostX === Number.MAX_VALUE) {
+            leftmostX = startX - gap * 5;
+        }
+        
+        if (rightmostX === 0) {
+            rightmostX = startX + dividend.length * gap + gap * 5;
+        }
+        
+        // 确保除号结构也被包含在内
+        leftmostX = Math.min(leftmostX, startX - divisor.length * gap - gap * 2);
+        
+        // 添加适当的边距
+        const requiredWidth = rightmostX - leftmostX + padding * 2;
+        
+        // 计算所需的高度，确保包含所有内容
+        // 使用currentY作为最底部的位置，并添加适当的边距
+        const requiredHeight = currentY + padding * 2;
+        
+        // 更新画布大小
+        ctx.canvas.width = requiredWidth;
+        ctx.canvas.height = requiredHeight;
+        
+        // 重新绘制内容
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        ctx.fillStyle = options.backgroundColor || '#FFFFFF';
+        ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        
+        // 重新设置字体和样式
+        ctx.font = `${options.fontSize}pt ${options.fontFamily || 'Times New Roman'}`;
+        ctx.fillStyle = options.color || '#000000';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'bottom';
+        
+        // 重新调用渲染函数，但禁用autoResize以避免无限循环
+        renderDivision(ctx, result, {...options, autoResize: false});
+        return;
     }
     
     ctx.restore();

@@ -193,15 +193,43 @@ function renderAddition(ctx, result, options) {
     
     // 调整画布大小以适应内容
     if (options.autoResize) {
-        const newWidth = Math.max(maxRight, startX + gap * 5) + 3 * gap;
-        const newHeight = y + 3 * gap;
+        // 计算所需的画布宽度
+        // 最右侧位置 + 右侧边距
+        const rightPadding = gap * 3;
+        // 最左侧位置 + 左侧边距
+        const leftPadding = gap * 3;
         
-        if (newWidth > options.width) {
-            options.width = newWidth;
+        // 确保maxLeft有有效值
+        if (maxLeft === startX - gap * 5) {
+            // 如果maxLeft没有被更新，根据加数长度计算
+            maxLeft = Math.min(startX - Math.max(addend1.length, addend2.length, sum.length) * gap, startX - gap * 5);
         }
         
-        if (newHeight > options.height) {
-            options.height = newHeight;
+        // 计算所需的宽度：从最左侧到最右侧的距离 + 边距
+        const requiredWidth = Math.max(startX - maxLeft, startX + gap * 2) + rightPadding;
+        
+        // 计算所需的高度：最后一行的Y坐标 + 底部边距
+        const bottomPadding = gap * 3;
+        const requiredHeight = y + bottomPadding;
+        
+        // 更新画布大小
+        if (ctx.canvas) {
+            ctx.canvas.width = requiredWidth;
+            ctx.canvas.height = requiredHeight;
+            
+            // 重新绘制内容
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            ctx.fillStyle = options.backgroundColor || '#FFFFFF';
+            ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            
+            // 重新设置字体和样式
+            ctx.font = `${options.fontSize}pt ${options.fontFamily || 'Times New Roman'}`;
+            ctx.fillStyle = options.color || '#000000';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'bottom';
+            
+            // 重新调用渲染函数，但禁用autoResize以避免无限循环
+            renderAddition(ctx, result, {...options, autoResize: false});
         }
     }
     

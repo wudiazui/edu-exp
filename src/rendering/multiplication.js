@@ -300,20 +300,41 @@ function renderMultiplication(ctx, result, options) {
     
     // 确保画布大小足够显示所有内容
     if (options.autoResize && ctx.canvas) {
-        const padding = gap * 6; // 增加内边距
-        const newWidth = Math.max(maxRight + padding, startX + padding);
-        const newHeight = y + lineHeight + padding;
+        const padding = gap * 3; // 适当的内边距
         
-        // 只有当画布尺寸不足时才调整
-        if (ctx.canvas.width < newWidth || ctx.canvas.height < newHeight) {
-            ctx.canvas.width = newWidth;
-            ctx.canvas.height = newHeight;
-            
-            // 重新绘制内容
-            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-            renderMultiplication(ctx, result, {...options, autoResize: false});
-            return;
+        // 确保leftMostX和rightMostX有有效值
+        if (leftMostX === Number.MAX_VALUE) {
+            leftMostX = startX - (factor1.length + factor2.length) * gap;
         }
+        
+        if (rightMostX === 0) {
+            rightMostX = startX + gap * 2;
+        }
+        
+        // 计算所需的宽度：从最左侧到最右侧的距离 + 边距
+        const requiredWidth = Math.max(rightMostX - leftMostX + padding * 2, startX + padding * 2);
+        
+        // 计算所需的高度：最后一行的Y坐标 + 底部边距
+        const requiredHeight = y + lineHeight + padding;
+        
+        // 更新画布大小
+        ctx.canvas.width = requiredWidth;
+        ctx.canvas.height = requiredHeight;
+        
+        // 重新绘制内容
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        ctx.fillStyle = options.backgroundColor || '#FFFFFF';
+        ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        
+        // 重新设置字体和样式
+        ctx.font = `${options.fontSize}pt ${options.fontFamily || 'Times New Roman'}`;
+        ctx.fillStyle = options.color || '#000000';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'bottom';
+        
+        // 重新调用渲染函数，但禁用autoResize以避免无限循环
+        renderMultiplication(ctx, result, {...options, autoResize: false});
+        return;
     }
     
     ctx.restore();

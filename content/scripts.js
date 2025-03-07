@@ -1,6 +1,8 @@
 import { claimAuditTask, getAuditTaskList, getAuditTaskLabel, replaceLatexWithImages, replacePunctuation, img_upload} from "../lib.js";
 
-import {generateVerticalArithmeticImage} from "../math.js";
+import {generateVerticalArithmeticImage} from "../src/index.js";
+
+//import {generateVerticalArithmeticImage} from "../math_new.js";
 
 
 console.log('hello from content_scripts');

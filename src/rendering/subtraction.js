@@ -248,6 +248,52 @@ function renderSubtraction(ctx, result, options) {
         }
     }
     
+    // 添加自动调整画布大小的功能
+    if (options.autoResize) {
+        // 计算所需的画布宽度和高度
+        const rightPadding = gap * 3;
+        const leftPadding = gap * 3;
+        const bottomPadding = gap * 3;
+        
+        // 计算最右侧位置（考虑公式显示）
+        let rightmostX = startX + gap * 2;
+        if (options.showFormula) {
+            rightmostX = Math.max(rightmostX, formulaX + gap * 2);
+        }
+        
+        // 计算最左侧位置
+        const leftmostX = Math.max(0, startX - (minuend.length + 2) * gap);
+        
+        // 计算所需的宽度
+        const requiredWidth = rightmostX - leftmostX + rightPadding + leftPadding;
+        
+        // 计算所需的高度
+        let requiredHeight = y + bottomPadding;
+        if (options.showFormula) {
+            requiredHeight = formulaY + bottomPadding;
+        }
+        
+        // 更新画布大小
+        if (ctx.canvas) {
+            ctx.canvas.width = requiredWidth;
+            ctx.canvas.height = requiredHeight;
+            
+            // 重新绘制内容
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            ctx.fillStyle = options.backgroundColor || '#FFFFFF';
+            ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            
+            // 重新设置字体和样式
+            ctx.font = `${options.fontSize}pt ${options.fontFamily || 'Times New Roman'}`;
+            ctx.fillStyle = options.color || '#000000';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'bottom';
+            
+            // 重新调用渲染函数，但禁用autoResize以避免无限循环
+            renderSubtraction(ctx, result, {...options, autoResize: false});
+        }
+    }
+    
     ctx.restore();
 }
 

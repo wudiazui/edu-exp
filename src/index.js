@@ -44,17 +44,11 @@ export async function generateVerticalArithmeticImage(expression) {
         color: '#000000',
         backgroundColor: '#FFFFFF',
         showSteps: true,
-        autoResize: true
+        autoResize: true,
+        // 设置初始画布大小为较小的值，让autoResize功能动态调整
+        width: 200,
+        height: 200
     };
-    
-    // 根据计算类型设置不同的画布大小
-    if (result.type === 'multiplication' || result.type === 'division') {
-        options.width = 500;
-        options.height = 500;
-    } else {
-        options.width = 400;
-        options.height = 300;
-    }
     
     // 渲染竖式计算
     const canvas = renderVerticalCalculation(result.type, result.numbers, options);

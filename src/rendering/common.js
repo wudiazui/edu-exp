@@ -29,8 +29,8 @@ function renderVerticalCalculation(type, numbers, options = {}) {
         color: '#000000',
         backgroundColor: '#FFFFFF',
         showSteps: true,
-        width: 400,  // 增加默认宽度
-        height: 400,  // 增加默认高度
+        width: 200,  // 减小默认宽度
+        height: 200,  // 减小默认高度
         autoResize: true,
         isMobile: false
     };
@@ -79,8 +79,22 @@ function renderVerticalCalculation(type, numbers, options = {}) {
     
     // 如果启用了自动调整大小，则调整Canvas大小
     if (renderOptions.autoResize && (renderOptions.width !== canvas.width || renderOptions.height !== canvas.height)) {
-        // 直接返回已经调整过大小的canvas，不需要创建新的
-        return canvas;
+        // 创建一个新的Canvas，大小与调整后的尺寸一致
+        const newCanvas = document.createElement('canvas');
+        newCanvas.width = canvas.width;
+        newCanvas.height = canvas.height;
+        
+        // 获取新Canvas的上下文
+        const newCtx = newCanvas.getContext('2d');
+        
+        // 设置背景色
+        newCtx.fillStyle = renderOptions.backgroundColor;
+        newCtx.fillRect(0, 0, newCanvas.width, newCanvas.height);
+        
+        // 将原Canvas的内容复制到新Canvas
+        newCtx.drawImage(canvas, 0, 0);
+        
+        return newCanvas;
     }
     
     return canvas;
