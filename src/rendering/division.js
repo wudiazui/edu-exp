@@ -148,17 +148,21 @@ function renderDivision(ctx, result, options) {
     let quotientY = startY - gap/2;
     let arrShang = []; // 存储商的位置信息
     
+    // 处理商，只保留整数部分
+    let integerQuotient = quotient;
+    let decimalPointIndex = quotient.indexOf('.');
+    
+    // 如果商中有小数点，只保留整数部分
+    // 这样在商为小数时，只显示整数部分，余数会在最后一步计算中显示
+    if (decimalPointIndex !== -1) {
+        integerQuotient = quotient.substring(0, decimalPointIndex);
+    }
+    
     // 计算商的起始位置，使其右对齐
     // 首先计算商的总宽度
     let quotientWidth = 0;
-    for (let i = 0; i < quotient.length; i++) {
-        if (quotient[i] === ".") {
-            quotientWidth += gap * 2/3;
-        } else if (i < quotient.length - 1 && quotient[i+1] === ".") {
-            quotientWidth += gap - gap * 2/3;
-        } else {
-            quotientWidth += gap;
-        }
+    for (let i = 0; i < integerQuotient.length; i++) {
+        quotientWidth += gap;
     }
     
     // 计算商的起始X坐标，使其右对齐
@@ -172,21 +176,14 @@ function renderDivision(ctx, result, options) {
     
     // 绘制商
     x = quotientStartX;
-    for (let i = 0; i < quotient.length; i++) {
-        const s = quotient[i];
+    for (let i = 0; i < integerQuotient.length; i++) {
+        const s = integerQuotient[i];
         ctx.fillText(s, x, quotientY);
         
         // 存储商的位置信息
         arrShang.push({"X": x, "Y": quotientY, "V": s, "visible": true});
         
-        // 处理小数点位置
-        if (s === ".") {
-            x += gap * 2/3;
-        } else if (i < quotient.length - 1 && quotient[i+1] === ".") {
-            x += gap - gap * 2/3;
-        } else {
-            x += gap;
-        }
+        x += gap;
     }
     
     // 绘制计算步骤
@@ -307,9 +304,9 @@ function renderDivision(ctx, result, options) {
             // 绘制横线 - 与图片一致，只在减数下方绘制
             ctx.beginPath();
             // 调整横线的垂直位置，使其稍微提高，并增加长度
-            ctx.moveTo(subtractionStartX - gap * 1.5, currentY + lineHeight + gap/6);
+            ctx.moveTo(subtractionStartX - gap * 0.8, currentY + lineHeight + gap/6);
             // 延长横线长度，左右各延长3个数字位置
-            ctx.lineTo(subtractionStartX + subtraction.length * gap + gap * 1.5, currentY + lineHeight + gap/6);
+            ctx.lineTo(subtractionStartX + subtraction.length * gap + gap * 0.8, currentY + lineHeight + gap/6);
             ctx.stroke();
             
             // 绘制余数
