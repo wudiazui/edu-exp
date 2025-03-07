@@ -27,6 +27,46 @@ import {
     parseExpression
 } from './rendering/common.js';
 
+/**
+ * 生成竖式计算图像
+ * 兼容旧版math.js中的generateVerticalArithmeticImage函数
+ * @param {string} expression - 计算表达式，如"123+456"
+ * @returns {Promise<Blob>} 包含竖式计算的图像Blob
+ */
+export async function generateVerticalArithmeticImage(expression) {
+    // 解析表达式
+    const result = parseExpression(expression);
+    
+    // 设置渲染选项
+    const options = {
+        fontSize: 16,
+        fontFamily: 'Times New Roman',
+        color: '#000000',
+        backgroundColor: '#FFFFFF',
+        showSteps: true,
+        autoResize: true
+    };
+    
+    // 根据计算类型设置不同的画布大小
+    if (result.type === 'multiplication' || result.type === 'division') {
+        options.width = 500;
+        options.height = 500;
+    } else {
+        options.width = 400;
+        options.height = 300;
+    }
+    
+    // 渲染竖式计算
+    const canvas = renderVerticalCalculation(result.type, result.numbers, options);
+    
+    // 转换为Blob并返回Promise
+    return new Promise((resolve) => {
+        canvas.toBlob((blob) => {
+            resolve(blob);
+        }, 'image/png');
+    });
+}
+
 // 导出所有函数，保持与原始 math_new.js 相同的接口
 export {
     // 计算操作
