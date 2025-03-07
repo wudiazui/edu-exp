@@ -203,23 +203,54 @@ function renderDivision(ctx, result, options) {
             let stepX;
             
             if (i === 0) {
-                // 第一步，位置在被除数的第一个数字下方
-                stepX = startX + extraGap;
+                // 第一步，减数的最后一位应该与被减数的第divisor.length位对齐
+                // 例如：712 ÷ 8，第一步是计算71 ÷ 8，减数是64，应该与71对齐
+                let minuendLength = divisor.length;
+                if (parseInt(dividend.substring(0, minuendLength)) < parseInt(divisor)) {
+                    // 如果被减数小于除数，则多取一位
+                    minuendLength++;
+                }
+                
+                // 减数的最后一位应该与被减数的最后一位对齐
+                // 找到被除数的最后一位的位置
+                let lastDigitIndex = minuendLength - 1;
+                if (lastDigitIndex < arrBeiChushu.length) {
+                    // 减数的最后一位应该与被减数的最后一位对齐
+                    stepX = arrBeiChushu[lastDigitIndex].X - (step.subtraction.length - 1) * gap;
+                } else {
+                    // 如果超出被除数的长度，则使用最后一位的位置
+                    stepX = arrBeiChushu[arrBeiChushu.length - 1].X - (step.subtraction.length - 1) * gap;
+                }
             } else {
-                // 后续步骤，位置根据前一步的余数确定
-                // 在math_n.js中，每一步的位置是根据被除数的位置和当前处理的位数确定的
-                // 这里我们简化处理，根据前一步的余数长度和当前步骤的位置确定
+                // 后续步骤，减数的最后一位应该与当前处理的被除数位对齐
+                // 例如：712 ÷ 8，第二步是计算72 ÷ 8，减数是72，应该与72对齐
                 
                 // 获取前一步的余数
                 const prevRemainder = steps[i-1].remainder;
                 
-                // 如果前一步的余数为0，则下一步应该右移一位
-                if (prevRemainder === "0") {
-                    stepX = arrBeiChushu[i].X;
+                // 计算当前步骤处理的被除数位的索引
+                // 如果前一步的余数为0，则当前步骤处理的是下一位
+                // 否则，当前步骤处理的是前一步余数加上下一位
+                let currentDigitIndex;
+                
+                if (i === 1) {
+                    // 第二步，索引应该是第一步处理的最后一位加1
+                    let firstStepLastDigitIndex = divisor.length - 1;
+                    if (parseInt(dividend.substring(0, divisor.length)) < parseInt(divisor)) {
+                        firstStepLastDigitIndex++;
+                    }
+                    currentDigitIndex = firstStepLastDigitIndex + 1;
                 } else {
-                    // 否则，根据余数的长度和被除数的位置确定
-                    // 在math_n.js中，这部分逻辑比较复杂，这里我们简化处理
-                    stepX = arrBeiChushu[i].X;
+                    // 后续步骤，索引应该是前一步处理的最后一位加1
+                    currentDigitIndex = divisor.length + i - 1;
+                }
+                
+                if (currentDigitIndex < arrBeiChushu.length) {
+                    // 减数的最后一位应该与当前处理的被除数位对齐
+                    stepX = arrBeiChushu[currentDigitIndex].X - (step.subtraction.length - 1) * gap;
+                } else {
+                    // 如果超出被除数的长度，则使用最后一位的位置
+                    stepX = arrBeiChushu[arrBeiChushu.length - 1].X - (step.subtraction.length - 1) * gap;
                 }
             }
             
@@ -241,8 +272,9 @@ function renderDivision(ctx, result, options) {
                     // 如果被减数小于除数，则多取一位
                     minuendLength++;
                 }
+                
                 // 减数的最后一位应该与被减数的最后一位对齐
-                // 找到被减数的最后一位的位置
+                // 找到被除数的最后一位的位置
                 let lastDigitIndex = minuendLength - 1;
                 if (lastDigitIndex < arrBeiChushu.length) {
                     // 减数的最后一位应该与被减数的最后一位对齐
@@ -320,6 +352,7 @@ function renderDivision(ctx, result, options) {
                 x = subtractionStartX + (subtraction.length - remainder.length) * gap;
             }
             
+            // 绘制余数
             for (let j = 0; j < remainder.length; j++) {
                 const s = remainder[j];
                 ctx.fillText(s, x, currentY + lineHeight * 2);
@@ -328,6 +361,35 @@ function renderDivision(ctx, result, options) {
                 arrAmonRlt.push({"X": x, "Y": currentY + lineHeight * 2, "V": s, "visible": true});
                 
                 x += gap;
+            }
+            
+            // 将剩余的数字向下补位
+            // 例如：对于712 ÷ 8，第一步计算71 ÷ 8后，余数是7，需要将剩余的2补位到7的旁边，形成72
+            if (i === 0) {
+                // 获取第一步计算后剩余的数字
+                let minuendLength = divisor.length > 1 ? divisor.length : 1;
+                if (parseInt(dividend.substring(0, minuendLength)) < parseInt(divisor)) {
+                    // 如果被减数小于除数，则多取一位
+                    minuendLength++;
+                }
+                
+                // 获取剩余的数字
+                const remainingDigits = dividend.substring(minuendLength);
+                
+                if (remainingDigits.length > 0) {
+                    // 将剩余的数字补位到余数的右侧
+                    let remainingX = x;
+                    
+                    for (let j = 0; j < remainingDigits.length; j++) {
+                        const s = remainingDigits[j];
+                        ctx.fillText(s, remainingX, currentY + lineHeight * 2);
+                        
+                        // 存储补位数字的位置信息
+                        arrAmonRlt.push({"X": remainingX, "Y": currentY + lineHeight * 2, "V": s, "visible": true});
+                        
+                        remainingX += gap;
+                    }
+                }
             }
             
             // 更新Y坐标
