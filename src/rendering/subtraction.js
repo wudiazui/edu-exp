@@ -44,22 +44,31 @@ function renderSubtraction(ctx, result, options) {
     
     // 计算起始位置
     const gap = fontSize * 0.8; // 与math_n.js中的gap对应
-    let startX;
     
-    if (dot_pos1 >= dot_pos2) {
-        startX = dot_pos1 * gap + 4 * gap;
-    } else {
-        startX = dot_pos2 * gap + 4 * gap;
-    }
+    // 计算整数部分的最大长度
+    const integerLen1 = dot_pos1;
+    const integerLen2 = dot_pos2;
+    const maxIntegerLen = Math.max(integerLen1, integerLen2);
     
-    if ((gfactor1.length - dot_pos1) >= (gfactor2.length - dot_pos2)) {
-        startX += (gfactor1.length - dot_pos1) * gap;
-    } else {
-        startX += (gfactor2.length - dot_pos2) * gap;
-    }
+    // 计算小数部分的最大长度
+    const decimalLen1 = dot_pos1 < gfactor1.length ? gfactor1.length - dot_pos1 - 1 : 0;
+    const decimalLen2 = dot_pos2 < gfactor2.length ? gfactor2.length - dot_pos2 - 1 : 0;
+    const maxDecimalLen = Math.max(decimalLen1, decimalLen2);
     
-    if (startX < 6 * gap) {
-        startX = 6 * gap;
+    // 计算差的小数点位置
+    let diffDotPos = difference.indexOf('.');
+    if (diffDotPos === -1) diffDotPos = difference.length;
+    
+    // 计算差的小数部分长度
+    const diffDecimalLen = diffDotPos < difference.length ? difference.length - diffDotPos - 1 : 0;
+    
+    // 确保有足够的空间显示所有数字
+    const totalWidth = (maxIntegerLen + maxDecimalLen + 2) * gap; // +2 for decimal point and extra space
+    
+    // 设置起始X坐标，确保小数点对齐
+    let startX = options.width * 0.7;
+    if (startX < totalWidth) {
+        startX = totalWidth;
     }
     
     let startY = options.height * 0.3;
@@ -72,190 +81,122 @@ function renderSubtraction(ctx, result, options) {
     
     ctx.beginPath();
     
-    x = startX - gap - 5;
+    // 绘制被减数（第一个数）
     y = startY + gap/2 + fontSize;
     
-    let dot_pos_x = x;
+    // 计算小数点的X坐标位置
+    const dotX = startX - (maxDecimalLen + 1) * gap;
     
-    // 绘制被减数
-    let arrFactor1 = [];
-    for (i = gfactor1.length - 1; i >= 0; i--) {
+    // 绘制第一个数的整数部分（从右向左）
+    x = dotX - gap;
+    for (i = dot_pos1 - 1; i >= 0; i--) {
         s = gfactor1[i];
         ctx.fillText(s, x, y);
+        x -= gap;
+    }
+    
+    // 如果有小数点，绘制小数点
+    if (dot_pos1 < gfactor1.length) {
+        ctx.fillText(".", dotX, y);
         
-        if (s === ".") {
-            dot_pos_x = x;
-        }
-        
-        arrFactor1.push({"X": x, "Y": y, "V": s, "visible": true});
-        
-        if (s === ".") {
-            x -= gap * 2/3;
-        } else if (i >= 1 && gfactor1[i-1] === ".") {
-            x -= gap - gap * 2/3;
-        } else {
-            x -= gap;
+        // 绘制小数部分（从左向右）
+        x = dotX + gap;
+        for (i = dot_pos1 + 1; i < gfactor1.length; i++) {
+            s = gfactor1[i];
+            ctx.fillText(s, x, y);
+            x += gap;
         }
     }
     
-    let maxLeft = x;
-    
-    // 重置x位置并增加y位置
-    x = dot_pos_x;
+    // 移动到下一行
     y += lineHeight;
     
-    let start_p;
-    if (dot_pos2 < gfactor2.length) {
-        start_p = dot_pos2;
-        
-        if (dot_pos1 >= gfactor1.length) {
-            x += gap * 2/3;
-        }
-    } else {
-        start_p = gfactor2.length - 1;
-        
-        if (dot_pos1 < gfactor1.length) {
-            x -= gap * 2/3;
-        }
-    }
-    
-    // 绘制减数
-    let arrFactor2 = [];
-    for (i = start_p; i >= 0; i--) {
+    // 绘制减数（第二个数）
+    // 绘制第二个数的整数部分（从右向左）
+    x = dotX - gap;
+    for (i = dot_pos2 - 1; i >= 0; i--) {
         s = gfactor2[i];
         ctx.fillText(s, x, y);
-        
-        arrFactor2.push({"X": x, "Y": y, "V": s, "visible": true});
-        
-        if (s === ".") {
-            x -= gap * 2/3;
-        } else if (i >= 1 && gfactor2[i-1] === ".") {
-            x -= gap - gap * 2/3;
-        } else {
-            x -= gap;
-        }
+        x -= gap;
     }
     
-    if (x < maxLeft) {
-        maxLeft = x;
-    }
-    
-    let prev_x = x;
-    
-    if (start_p === dot_pos2 && dot_pos2 < gfactor2.length - 1) {
-        if (dot_pos1 >= gfactor1.length) {
-            x = dot_pos_x + gap;
-        } else {
-            x = dot_pos_x + gap/3;
-        }
+    // 如果有小数点，绘制小数点
+    if (dot_pos2 < gfactor2.length) {
+        ctx.fillText(".", dotX, y);
         
-        for (i = start_p + 1; i < gfactor2.length; i++) {
+        // 绘制小数部分（从左向右）
+        x = dotX + gap;
+        for (i = dot_pos2 + 1; i < gfactor2.length; i++) {
             s = gfactor2[i];
             ctx.fillText(s, x, y);
-            
-            arrFactor2.push({"X": x, "Y": y, "V": s, "visible": true});
-            
-            if (s === ".") {
-                x += gap/3;
-            } else if (i < gfactor2.length - 1 && gfactor2[i+1] === ".") {
-                x += gap * 2/3;
-            } else {
-                x += gap;
-            }
+            x += gap;
         }
     }
     
-    let maxRight = x;
-    
     // 绘制减号
-    x = prev_x - gap;
+    x = dotX - (maxIntegerLen + 1) * gap;
     ctx.fillText("-", x, y);
     
     // 绘制横线
-    let line_x = x - gap/2;
-    let line_y = y - fontSize * 0.1; // 调整横线位置，让它稍微高一点
+    let line_y = y + fontSize * 0.1;
     ctx.lineWidth = 1;
-    ctx.moveTo(line_x, line_y);
+    ctx.moveTo(x - gap/2, line_y);
     
-    line_x = startX;
-    if (line_x < maxRight) {
-        line_x = maxRight;
+    // 计算横线的右端点
+    let lineEndX = dotX;
+    if (maxDecimalLen > 0) {
+        lineEndX += (maxDecimalLen + 1) * gap;
     }
     
-    ctx.lineTo(line_x, line_y);
+    ctx.lineTo(lineEndX, line_y);
     ctx.stroke();
     ctx.lineWidth = 2;
     
+    // 移动到下一行绘制差
     y += lineHeight;
     
-    // 处理小数点对齐
-    let a1 = gfactor1;
-    let a2 = gfactor2;
-    
-    if (dot_pos1 !== -1 && dot_pos2 !== -1) {
-        // 两个数都有小数点
-        let decimal1 = gfactor1.length - dot_pos1 - 1;
-        let decimal2 = gfactor2.length - dot_pos2 - 1;
-        
-        if (decimal1 < decimal2) {
-            a1 = gfactor1 + "0".repeat(decimal2 - decimal1);
-        } else if (decimal2 < decimal1) {
-            a2 = gfactor2 + "0".repeat(decimal1 - decimal2);
-        }
-    } else if (dot_pos1 !== -1) {
-        // 只有第一个数有小数点
-        a2 = gfactor2 + "." + "0".repeat(gfactor1.length - dot_pos1 - 1);
-    } else if (dot_pos2 !== -1) {
-        // 只有第二个数有小数点
-        a1 = gfactor1 + "." + "0".repeat(gfactor2.length - dot_pos2 - 1);
-    }
-    
-    // 绘制差
-    x = startX - gap - 5;
+    // 处理差的显示
     let displayDiff = difference;
     if (neg) {
         // 如果结果为负，去掉负号（因为我们已经交换了被减数和减数）
         displayDiff = difference.startsWith('-') ? difference.substring(1) : difference;
     }
     
-    for (i = displayDiff.length - 1; i >= 0; i--) {
+    // 获取差的小数点位置
+    let diffDot = displayDiff.indexOf('.');
+    if (diffDot === -1) diffDot = displayDiff.length;
+    
+    // 绘制差的整数部分（从右向左）
+    x = dotX - gap;
+    for (i = diffDot - 1; i >= 0; i--) {
         s = displayDiff[i];
         ctx.fillText(s, x, y);
+        x -= gap;
+    }
+    
+    // 如果有小数点，绘制小数点
+    if (diffDot < displayDiff.length) {
+        ctx.fillText(".", dotX, y);
         
-        if (s === ".") {
-            x -= gap * 2/3;
-        } else if (i >= 1 && displayDiff[i-1] === ".") {
-            x -= gap - gap * 2/3;
-        } else {
-            x -= gap;
+        // 绘制小数部分（从左向右）
+        x = dotX + gap;
+        for (i = diffDot + 1; i < displayDiff.length; i++) {
+            s = displayDiff[i];
+            ctx.fillText(s, x, y);
+            x += gap;
         }
     }
     
     // 如果结果为负，在最前面添加负号
     if (neg) {
-        x -= gap;
+        x = dotX - (diffDot + 1) * gap;
         ctx.fillText("-", x, y);
-    }
-    
-    // 绘制借位
-    if (options.showSteps && borrows.length > 0) {
-        ctx.font = `${fontSize * 0.7}pt ${options.fontFamily || 'Times New Roman'}`;
-        
-        for (const borrow of borrows) {
-            const pos = borrow.position;
-            if (pos >= 0) {  // 确保位置有效
-                const xPos = startX - (pos + 1) * gap - 5;
-                const yPos = startY + gap/2;
-                ctx.fillText("1", xPos, yPos);
-            }
-        }
-        ctx.font = `${fontSize}pt ${options.fontFamily || 'Times New Roman'}`;
     }
     
     // 如果需要，绘制公式形式
     if (options.showFormula) {
         const formulaY = y + lineHeight * 1.5;
-        let formulaX = maxLeft;
+        let formulaX = x - gap * 2;
         
         // 绘制公式: minuend - subtrahend = difference
         for (i = 0; i < gfactor1.length; i++) {
@@ -304,10 +245,6 @@ function renderSubtraction(ctx, result, options) {
                     formulaX += gap;
                 }
             }
-        }
-        
-        if (formulaX > maxRight) {
-            maxRight = formulaX;
         }
     }
     
