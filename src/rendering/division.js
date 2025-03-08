@@ -249,13 +249,29 @@ function renderDivision(ctx, result, options) {
                     }
                 } else {
                     // 后续步骤，索引应该是前一步处理的最后一位加1
-                    currentDigitIndex = divisor.length + i - 1;
-                    
-                    // 特殊处理：如果前一步的余数为0，需要调整当前步骤的位置
-                    if (prevRemainder === "0") {
-                        // 当余数为0时，下一步应该直接处理下一位数字
-                        // 跳过一位，因为零余数不占位
-                        currentDigitIndex += 1;
+                    // 修改这里的计算逻辑，使其更准确地定位当前处理的位置
+                    if (i === 2) {
+                        // 第三步，需要考虑第二步的余数位置
+                        let secondStepLastDigitIndex = divisor.length;
+                        if (parseInt(dividend.substring(0, divisor.length)) < parseInt(divisor)) {
+                            secondStepLastDigitIndex++;
+                        }
+                        currentDigitIndex = secondStepLastDigitIndex + 1;
+                        
+                        // 如果前一步的余数为0，需要调整
+                        if (prevRemainder === "0") {
+                            currentDigitIndex += 1;
+                        }
+                    } else {
+                        // 其他后续步骤
+                        currentDigitIndex = divisor.length + i;
+                        
+                        // 特殊处理：如果前一步的余数为0，需要调整当前步骤的位置
+                        if (prevRemainder === "0") {
+                            // 当余数为0时，下一步应该直接处理下一位数字
+                            // 跳过一位，因为零余数不占位
+                            currentDigitIndex += 1;
+                        }
                     }
                 }
                 
@@ -416,6 +432,35 @@ function renderDivision(ctx, result, options) {
                         // 更新最大右边界和底部边界
                         maxRight = Math.max(maxRight, remainingX);
                         maxBottom = Math.max(maxBottom, currentY + lineHeight * 2);
+                    }
+                }
+            } else {
+                // 为后续步骤添加补位逻辑
+                // 如果不是最后一步，且还有下一位数字需要处理，将其补位到余数的右侧
+                if (i < steps.length - 1) {
+                    // 计算当前步骤处理到的位置
+                    let currentProcessedIndex = divisor.length + i;
+                    if (parseInt(dividend.substring(0, divisor.length)) < parseInt(divisor)) {
+                        currentProcessedIndex++;
+                    }
+                    
+                    // 检查是否还有下一位数字
+                    if (currentProcessedIndex < dividend.length) {
+                        // 获取下一位数字
+                        const nextDigit = dividend[currentProcessedIndex];
+                        
+                        // 将下一位数字补位到余数的右侧
+                        // 只有当余数不为0或者下一位数字不为0时才显示
+                        if (remainder !== "0" || nextDigit !== "0") {
+                            ctx.fillText(nextDigit, x, currentY + lineHeight * 2);
+                            
+                            // 存储补位数字的位置信息
+                            arrAmonRlt.push({"X": x, "Y": currentY + lineHeight * 1.7, "V": nextDigit, "visible": true});
+                            
+                            // 更新最大右边界和底部边界
+                            maxRight = Math.max(maxRight, x + gap);
+                            maxBottom = Math.max(maxBottom, currentY + lineHeight * 2);
+                        }
                     }
                 }
             }
