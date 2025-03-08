@@ -204,70 +204,10 @@ function renderDivision(ctx, result, options) {
         for (let i = 0; i < steps.length; i++) {
             const step = steps[i];
             
-            // 确定当前步骤的位置
-            // 对于第一步，位置应该在被除数的第一个数字下方
-            // 对于后续步骤，位置应该根据前一步的余数和下一位被除数确定
+            // 获取前一步的余数（如果有）
+            const prevRemainder = i > 0 ? steps[i-1].remainder : null;
             
             // 计算当前步骤的位置
-            let stepX;
-            
-            if (i === 0) {
-                // 第一步，减数的最后一位应该与被减数的第divisor.length位对齐
-                // 例如：712 ÷ 8，第一步是计算71 ÷ 8，减数是64，应该与71对齐
-                let minuendLength = divisor.length;
-                if (parseInt(dividend.substring(0, minuendLength)) < parseInt(divisor)) {
-                    // 如果被减数小于除数，则多取一位
-                    minuendLength++;
-                }
-                
-                // 减数的最后一位应该与被减数的最后一位对齐
-                // 找到被除数的最后一位的位置
-                let lastDigitIndex = minuendLength - 1;
-                if (lastDigitIndex < arrBeiChushu.length) {
-                    // 减数的最后一位应该与被减数的最后一位对齐
-                    stepX = arrBeiChushu[lastDigitIndex].X - (step.subtraction.length - 1) * gap;
-                } else {
-                    // 如果超出被除数的长度，则使用最后一位的位置
-                    stepX = arrBeiChushu[arrBeiChushu.length - 1].X - (step.subtraction.length - 1) * gap;
-                }
-            } else {
-                // 后续步骤，减数的最后一位应该与当前处理的被除数位对齐
-                // 例如：712 ÷ 8，第二步是计算72 ÷ 8，减数是72，应该与72对齐
-                
-                // 获取前一步的余数
-                const prevRemainder = steps[i-1].remainder;
-                
-                // 计算当前步骤处理的被除数位的索引
-                let currentDigitIndex;
-                
-                if (i === 1) {
-                    // 第二步，索引应该是第一步处理的最后一位加1
-                    let firstStepLastDigitIndex = divisor.length - 1;
-                    if (parseInt(dividend.substring(0, divisor.length)) < parseInt(divisor)) {
-                        firstStepLastDigitIndex++;
-                    }
-                    currentDigitIndex = firstStepLastDigitIndex + 1;
-                } else {
-                    // 后续步骤，索引应该是前一步处理的最后一位加1
-                    currentDigitIndex = divisor.length + i - 1;
-                }
-                
-                if (currentDigitIndex < arrBeiChushu.length) {
-                    // 减数的最后一位应该与当前处理的被除数位对齐
-                    stepX = arrBeiChushu[currentDigitIndex].X - (step.subtraction.length - 1) * gap;
-                } else {
-                    // 如果超出被除数的长度，则使用最后一位的位置
-                    stepX = arrBeiChushu[arrBeiChushu.length - 1].X - (step.subtraction.length - 1) * gap;
-                }
-            }
-            
-            // 绘制减数（当前商位 * 除数）
-            const subtraction = step.subtraction;
-            
-            // 计算减数的宽度
-            let subtractionWidth = subtraction.length * gap;
-            
-            // 确定减数的起始位置，使其最后一位与被减数的最后一位对齐
             let subtractionStartX;
             
             if (i === 0) {
@@ -282,16 +222,13 @@ function renderDivision(ctx, result, options) {
                 let lastDigitIndex = minuendLength - 1;
                 if (lastDigitIndex < arrBeiChushu.length) {
                     // 减数的最后一位应该与被减数的最后一位对齐
-                    subtractionStartX = arrBeiChushu[lastDigitIndex].X - (subtraction.length - 1) * gap;
+                    subtractionStartX = arrBeiChushu[lastDigitIndex].X - (step.subtraction.length - 1) * gap;
                 } else {
                     // 如果超出被除数的长度，则使用最后一位的位置
-                    subtractionStartX = arrBeiChushu[arrBeiChushu.length - 1].X - (subtraction.length - 1) * gap;
+                    subtractionStartX = arrBeiChushu[arrBeiChushu.length - 1].X - (step.subtraction.length - 1) * gap;
                 }
             } else {
                 // 后续步骤，减数的最后一位应该与当前处理的被除数位对齐
-                
-                // 获取前一步的余数
-                const prevRemainder = steps[i-1].remainder;
                 
                 // 计算当前步骤处理的被除数位的索引
                 let currentDigitIndex;
@@ -305,31 +242,34 @@ function renderDivision(ctx, result, options) {
                     currentDigitIndex = firstStepLastDigitIndex + 1;
                     
                     // 特殊处理：如果是806÷2这样的情况，第一步余数为0，第二步直接处理第三位数字
-                    // 确保第二步的减数与被除数的第三位对齐
-                    if (prevRemainder === "0" && currentDigitIndex < arrBeiChushu.length) {
-                        // 直接使用被除数的第三位的位置
-                        subtractionStartX = arrBeiChushu[currentDigitIndex].X - (subtraction.length - 1) * gap;
-                        // 确保减数"6"与被除数的"6"对齐
-                        if (subtraction.length === 1 && currentDigitIndex < arrBeiChushu.length) {
-                            subtractionStartX = arrBeiChushu[currentDigitIndex].X;
-                        }
+                    if (prevRemainder === "0") {
+                        // 当第一步余数为0时，第二步应该直接处理下一位数字
+                        // 跳过一位，因为零余数不占位
+                        currentDigitIndex += 1;
                     }
                 } else {
                     // 后续步骤，索引应该是前一步处理的最后一位加1
                     currentDigitIndex = divisor.length + i - 1;
+                    
+                    // 特殊处理：如果前一步的余数为0，需要调整当前步骤的位置
+                    if (prevRemainder === "0") {
+                        // 当余数为0时，下一步应该直接处理下一位数字
+                        // 跳过一位，因为零余数不占位
+                        currentDigitIndex += 1;
+                    }
                 }
                 
                 if (currentDigitIndex < arrBeiChushu.length) {
                     // 减数的最后一位应该与当前处理的被除数位对齐
-                    subtractionStartX = arrBeiChushu[currentDigitIndex].X - (subtraction.length - 1) * gap;
+                    subtractionStartX = arrBeiChushu[currentDigitIndex].X - (step.subtraction.length - 1) * gap;
                     
                     // 特殊处理：如果减数只有一位数字，直接与被除数对齐
-                    if (subtraction.length === 1) {
+                    if (step.subtraction.length === 1) {
                         subtractionStartX = arrBeiChushu[currentDigitIndex].X;
                     }
                 } else {
                     // 如果超出被除数的长度，则使用最后一位的位置
-                    subtractionStartX = arrBeiChushu[arrBeiChushu.length - 1].X - (subtraction.length - 1) * gap;
+                    subtractionStartX = arrBeiChushu[arrBeiChushu.length - 1].X - (step.subtraction.length - 1) * gap;
                 }
             }
             
@@ -337,6 +277,9 @@ function renderDivision(ctx, result, options) {
             if (subtractionStartX < startX + extraGap) {
                 subtractionStartX = startX + extraGap;
             }
+            
+            // 绘制减数（当前商位 * 除数）
+            const subtraction = step.subtraction;
             
             // 绘制减数
             x = subtractionStartX;
@@ -351,7 +294,6 @@ function renderDivision(ctx, result, options) {
             }
             
             // 绘制余数
-            x = subtractionStartX;
             const remainder = step.remainder;
             
             // 确保余数的位置与减数对齐
@@ -406,7 +348,9 @@ function renderDivision(ctx, result, options) {
                 const s = remainder[j];
                 
                 // 如果余数是0且不是最后一步，不显示但保留位置
-                if (remainder === "0" && i < steps.length - 1) {
+                const isZeroRemainder = remainder === "0" && i < steps.length - 1;
+                
+                if (isZeroRemainder) {
                     // 不绘制数字，但仍然存储位置信息，标记为不可见
                     arrAmonRlt.push({"X": x, "Y": currentY + lineHeight * 1.7, "V": s, "visible": false});
                 } else {
@@ -451,7 +395,9 @@ function renderDivision(ctx, result, options) {
                         const s = remainingDigits[j];
                         
                         // 如果余数是0且当前数字是前导零，则不显示但保留位置
-                        if (remainder === "0" && s === "0" && j < firstNonZeroIndex) {
+                        const isZeroRemainder = remainder === "0";
+                        
+                        if (isZeroRemainder && s === "0" && j < firstNonZeroIndex) {
                             // 不绘制数字，但仍然存储位置信息，标记为不可见
                             arrAmonRlt.push({"X": remainingX, "Y": currentY + lineHeight * 1.7, "V": s, "visible": false});
                             
