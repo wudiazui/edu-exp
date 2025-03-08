@@ -332,41 +332,6 @@ function renderDivision(ctx, result, options) {
             
             // 绘制减数
             x = subtractionStartX;
-            
-            // 获取当前被减数的位置信息
-            // 对于第一步，被减数是被除数的前几位
-            // 对于后续步骤，被减数是前一步的余数加上当前位
-            let minuendStartX = 0;
-            let minuendLength = 0;
-            
-            if (i === 0) {
-                // 第一步，被减数是被除数的前几位
-                minuendLength = divisor.length;
-                if (parseInt(dividend.substring(0, minuendLength)) < parseInt(divisor)) {
-                    minuendLength++;
-                }
-                
-                // 获取被减数的起始位置
-                minuendStartX = arrBeiChushu[0].X;
-            } else {
-                // 后续步骤，被减数是前一步的余数加上当前位
-                // 这里简化处理，使用当前行的起始位置
-                minuendStartX = subtractionStartX;
-                
-                // 获取前一步的余数长度
-                const prevRemainder = steps[i-1].remainder;
-                minuendLength = prevRemainder.length + 1; // 余数加上当前位
-            }
-            
-            // 确保减数右对齐
-            // 如果减数比被减数短，需要右对齐
-            if (subtraction.length < minuendLength) {
-                // 计算右对齐的起始位置
-                subtractionStartX = minuendStartX + (minuendLength - subtraction.length) * gap;
-            }
-            
-            // 绘制减数
-            x = subtractionStartX;
             for (let j = 0; j < subtraction.length; j++) {
                 const s = subtraction[j];
                 ctx.fillText(s, x, currentY + lineHeight);
@@ -377,26 +342,52 @@ function renderDivision(ctx, result, options) {
                 x += gap;
             }
             
-            // 绘制横线 - 与图片一致，只在减数下方绘制
-            ctx.beginPath();
-            // 调整横线的垂直位置，使其稍微提高，并增加长度
-            ctx.moveTo(subtractionStartX - gap * 0.8, currentY + lineHeight + gap/6);
-            // 延长横线长度，左右各延长3个数字位置
-            ctx.lineTo(subtractionStartX + subtraction.length * gap + gap * 0.8, currentY + lineHeight + gap/6);
-            ctx.stroke();
-            
             // 绘制余数
             x = subtractionStartX;
             const remainder = step.remainder;
             
             // 确保余数的位置与减数对齐
             // 如果余数比减数短，需要右对齐
+            let remainderStartX = subtractionStartX;
             if (remainder.length < subtraction.length) {
                 // 计算右对齐的起始位置
-                x = subtractionStartX + (subtraction.length - remainder.length) * gap;
+                remainderStartX = subtractionStartX + (subtraction.length - remainder.length) * gap;
             }
             
+            // 计算余数的宽度（包括可能的补位数字）
+            let remainderWidth = remainder.length * gap;
+            
+            // 如果是第一步，考虑补位数字的宽度
+            let totalRemainderWidth = remainderWidth;
+            if (i === 0) {
+                // 获取第一步计算后剩余的数字
+                let minuendLength = divisor.length > 1 ? divisor.length : 1;
+                if (parseInt(dividend.substring(0, minuendLength)) < parseInt(divisor)) {
+                    // 如果被减数小于除数，则多取一位
+                    minuendLength++;
+                }
+                
+                // 获取剩余的数字
+                const remainingDigits = dividend.substring(minuendLength);
+                
+                if (remainingDigits.length > 0) {
+                    // 将剩余数字的宽度加到总宽度中
+                    totalRemainderWidth += remainingDigits.length * gap;
+                }
+            }
+            
+            // 绘制横线 - 与图片一致，只在减数下方绘制
+            // 横线宽度根据下方数字（余数+可能的补位数字）的宽度计算
+            ctx.beginPath();
+            // 调整横线的垂直位置，使其稍微提高
+            // 进一步增加横线两侧的延伸长度，从0.5改为1.0，使其更接近图片中的效果
+            ctx.moveTo(remainderStartX - gap * 1.0, currentY + lineHeight + gap/6);
+            // 横线长度根据下方数字的宽度确定，两侧都延长
+            ctx.lineTo(remainderStartX + totalRemainderWidth + gap * 1.0, currentY + lineHeight + gap/6);
+            ctx.stroke();
+            
             // 绘制余数
+            x = remainderStartX;
             for (let j = 0; j < remainder.length; j++) {
                 const s = remainder[j];
                 ctx.fillText(s, x, currentY + lineHeight * 2);
