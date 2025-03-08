@@ -232,9 +232,9 @@ function renderMultiplication(ctx, result, options) {
         
         // 检查是否只有一个部分积且与最终结果相同（考虑小数点）
         if (steps.length === 1) {
-            // 移除小数点后比较
-            let partialWithoutDot = steps[0].partial_product.replace(".", "");
-            let productWithoutDot = product.replace(".", "");
+            // 移除小数点后比较，同时移除尾部的零
+            let partialWithoutDot = steps[0].partial_product.replace(".", "").replace(/0+$/, "");
+            let productWithoutDot = product.replace(".", "").replace(/0+$/, "");
             
             if (partialWithoutDot === productWithoutDot) {
                 skipFinalResult = true;
