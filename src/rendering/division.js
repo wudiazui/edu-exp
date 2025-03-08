@@ -238,8 +238,6 @@ function renderDivision(ctx, result, options) {
                 const prevRemainder = steps[i-1].remainder;
                 
                 // 计算当前步骤处理的被除数位的索引
-                // 如果前一步的余数为0，则当前步骤处理的是下一位
-                // 否则，当前步骤处理的是前一步余数加上下一位
                 let currentDigitIndex;
                 
                 if (i === 1) {
@@ -270,12 +268,10 @@ function renderDivision(ctx, result, options) {
             let subtractionWidth = subtraction.length * gap;
             
             // 确定减数的起始位置，使其最后一位与被减数的最后一位对齐
-            // 如果是第一步，则与被除数的前几位对齐
             let subtractionStartX;
             
             if (i === 0) {
                 // 第一步，减数的最后一位应该与被减数的第divisor.length位对齐
-                // 例如：712 ÷ 8，第一步是计算71 ÷ 8，减数是64，应该与71对齐
                 let minuendLength = divisor.length;
                 if (parseInt(dividend.substring(0, minuendLength)) < parseInt(divisor)) {
                     // 如果被减数小于除数，则多取一位
@@ -283,7 +279,6 @@ function renderDivision(ctx, result, options) {
                 }
                 
                 // 减数的最后一位应该与被减数的最后一位对齐
-                // 找到被除数的最后一位的位置
                 let lastDigitIndex = minuendLength - 1;
                 if (lastDigitIndex < arrBeiChushu.length) {
                     // 减数的最后一位应该与被减数的最后一位对齐
@@ -294,14 +289,11 @@ function renderDivision(ctx, result, options) {
                 }
             } else {
                 // 后续步骤，减数的最后一位应该与当前处理的被除数位对齐
-                // 例如：712 ÷ 8，第二步是计算72 ÷ 8，减数是72，应该与72对齐
                 
                 // 获取前一步的余数
                 const prevRemainder = steps[i-1].remainder;
                 
                 // 计算当前步骤处理的被除数位的索引
-                // 如果前一步的余数为0，则当前步骤处理的是下一位
-                // 否则，当前步骤处理的是前一步余数加上下一位
                 let currentDigitIndex;
                 
                 if (i === 1) {
@@ -311,6 +303,17 @@ function renderDivision(ctx, result, options) {
                         firstStepLastDigitIndex++;
                     }
                     currentDigitIndex = firstStepLastDigitIndex + 1;
+                    
+                    // 特殊处理：如果是806÷2这样的情况，第一步余数为0，第二步直接处理第三位数字
+                    // 确保第二步的减数与被除数的第三位对齐
+                    if (prevRemainder === "0" && currentDigitIndex < arrBeiChushu.length) {
+                        // 直接使用被除数的第三位的位置
+                        subtractionStartX = arrBeiChushu[currentDigitIndex].X - (subtraction.length - 1) * gap;
+                        // 确保减数"6"与被除数的"6"对齐
+                        if (subtraction.length === 1 && currentDigitIndex < arrBeiChushu.length) {
+                            subtractionStartX = arrBeiChushu[currentDigitIndex].X;
+                        }
+                    }
                 } else {
                     // 后续步骤，索引应该是前一步处理的最后一位加1
                     currentDigitIndex = divisor.length + i - 1;
@@ -319,6 +322,11 @@ function renderDivision(ctx, result, options) {
                 if (currentDigitIndex < arrBeiChushu.length) {
                     // 减数的最后一位应该与当前处理的被除数位对齐
                     subtractionStartX = arrBeiChushu[currentDigitIndex].X - (subtraction.length - 1) * gap;
+                    
+                    // 特殊处理：如果减数只有一位数字，直接与被除数对齐
+                    if (subtraction.length === 1) {
+                        subtractionStartX = arrBeiChushu[currentDigitIndex].X;
+                    }
                 } else {
                     // 如果超出被除数的长度，则使用最后一位的位置
                     subtractionStartX = arrBeiChushu[arrBeiChushu.length - 1].X - (subtraction.length - 1) * gap;
@@ -354,6 +362,11 @@ function renderDivision(ctx, result, options) {
                 remainderStartX = subtractionStartX + (subtraction.length - remainder.length) * gap;
             }
             
+            // 特殊处理：如果减数只有一位数字且余数也只有一位数字，确保它们对齐
+            if (subtraction.length === 1 && remainder.length === 1) {
+                remainderStartX = subtractionStartX;
+            }
+            
             // 计算余数的宽度（包括可能的补位数字）
             let remainderWidth = remainder.length * gap;
             
@@ -382,6 +395,7 @@ function renderDivision(ctx, result, options) {
             // 调整横线的垂直位置，使其稍微提高
             // 进一步增加横线两侧的延伸长度，从0.5改为1.0，使其更接近图片中的效果
             ctx.moveTo(remainderStartX - gap * 1.0, currentY + lineHeight + gap/6);
+            
             // 横线长度根据下方数字的宽度确定，两侧都延长
             ctx.lineTo(remainderStartX + totalRemainderWidth + gap * 1.0, currentY + lineHeight + gap/6);
             ctx.stroke();
@@ -390,10 +404,18 @@ function renderDivision(ctx, result, options) {
             x = remainderStartX;
             for (let j = 0; j < remainder.length; j++) {
                 const s = remainder[j];
-                ctx.fillText(s, x, currentY + lineHeight * 2);
                 
-                // 存储余数位置信息
-                arrAmonRlt.push({"X": x, "Y": currentY + lineHeight * 1.7, "V": s, "visible": true});
+                // 如果余数是0且不是最后一步，不显示但保留位置
+                if (remainder === "0" && i < steps.length - 1) {
+                    // 不绘制数字，但仍然存储位置信息，标记为不可见
+                    arrAmonRlt.push({"X": x, "Y": currentY + lineHeight * 1.7, "V": s, "visible": false});
+                } else {
+                    // 正常绘制数字
+                    ctx.fillText(s, x, currentY + lineHeight * 2);
+                    
+                    // 存储余数位置信息
+                    arrAmonRlt.push({"X": x, "Y": currentY + lineHeight * 1.7, "V": s, "visible": true});
+                }
                 
                 x += gap;
                 
@@ -419,14 +441,31 @@ function renderDivision(ctx, result, options) {
                     // 将剩余的数字补位到余数的右侧
                     let remainingX = x;
                     
+                    // 找到第一个非零数字的位置
+                    let firstNonZeroIndex = remainingDigits.search(/[1-9]/);
+                    if (firstNonZeroIndex === -1) {
+                        firstNonZeroIndex = remainingDigits.length; // 如果没有非零数字，则所有数字都是零
+                    }
+                    
                     for (let j = 0; j < remainingDigits.length; j++) {
                         const s = remainingDigits[j];
-                        ctx.fillText(s, remainingX, currentY + lineHeight * 2);
                         
-                        // 存储补位数字的位置信息
-                        arrAmonRlt.push({"X": remainingX, "Y": currentY + lineHeight * 1.7, "V": s, "visible": true});
-                        
-                        remainingX += gap;
+                        // 如果余数是0且当前数字是前导零，则不显示但保留位置
+                        if (remainder === "0" && s === "0" && j < firstNonZeroIndex) {
+                            // 不绘制数字，但仍然存储位置信息，标记为不可见
+                            arrAmonRlt.push({"X": remainingX, "Y": currentY + lineHeight * 1.7, "V": s, "visible": false});
+                            
+                            // 只增加X坐标
+                            remainingX += gap;
+                        } else {
+                            // 正常绘制数字
+                            ctx.fillText(s, remainingX, currentY + lineHeight * 2);
+                            
+                            // 存储补位数字的位置信息
+                            arrAmonRlt.push({"X": remainingX, "Y": currentY + lineHeight * 1.7, "V": s, "visible": true});
+                            
+                            remainingX += gap;
+                        }
                         
                         // 更新最大右边界和底部边界
                         maxRight = Math.max(maxRight, remainingX);
