@@ -294,20 +294,26 @@ function alignTextByEquals(html) {
       lines.push(...nodeLines);
     });
     
-    // 找出每行等号的位置
-    const equalsPositions = [];
+    // 过滤掉不包含等号的行
+    const linesWithEquals = lines.filter(line => line.includes('='));
     
-    for (let i = 0; i < lines.length; i++) {
-      const equalsIndex = lines[i].indexOf('=');
-      equalsPositions.push(equalsIndex);
+    // 如果没有包含等号的行，则跳过处理
+    if (linesWithEquals.length === 0) {
+      return;
     }
     
+    // 找出每行等号的位置
+    const equalsPositions = linesWithEquals.map(line => line.indexOf('='));
+    
     // 找出等号的最大位置，用于对齐
-    const maxEqualsPosition = Math.max(...equalsPositions.filter(pos => pos > -1));
+    const maxEqualsPosition = Math.max(...equalsPositions);
+    
+    console.log('等号位置:', equalsPositions);
+    console.log('最大等号位置:', maxEqualsPosition);
     
     // 对每行进行对齐处理
-    const alignedLines = lines.map((line, index) => {
-      const equalsIndex = equalsPositions[index];
+    const alignedLines = lines.map((line, lineIndex) => {
+      const equalsIndex = line.indexOf('=');
       
       if (equalsIndex === -1) {
         // 如果行中没有等号，则不做处理
@@ -315,7 +321,10 @@ function alignTextByEquals(html) {
       }
       
       // 计算需要在行首添加的空格数
-      const spacesToAdd = maxEqualsPosition - equalsIndex;
+      // 注意：添加 lineIndex 来增加每行的空格数，确保每行比上一行多一个空格
+      const spacesToAdd = maxEqualsPosition - equalsIndex + lineIndex;
+      
+      console.log(`行 "${line}" 的等号位置: ${equalsIndex}, 需要添加空格数: ${spacesToAdd}`);
       
       // 使用HTML非断空格(&nbsp;)在行首添加空格
       const htmlSpaces = '&nbsp;'.repeat(spacesToAdd);
