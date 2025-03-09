@@ -1,5 +1,4 @@
 export function math2img(expr) {
-  console.log("math2img_expr: ", expr)
   let url = `/edushop/tiku/submit/genexprpic?expr=${encodeURIComponent(expr)}`;
 
   return fetch(url)
@@ -284,8 +283,6 @@ export async function replaceLatexWithImages(text) {
   for (const match of matches) {
     const fullMatch = match[0];
     let expression = match[1];
-    console.log(fullMatch, expression)
-    console.log(match)
     // 替换 HTML 符号为文本符号
     expression = expression
         .replace(/&lt;/g, '<')
