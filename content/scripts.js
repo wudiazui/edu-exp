@@ -237,9 +237,6 @@ function hideNotification(notificationId) {
 
 // 对文本按等号对齐的函数
 function alignTextByEquals(html) {
-  // 打印对齐前的HTML内容
-  console.log('对齐前的HTML内容:', html);
-  
   // 创建一个临时容器来解析HTML
   const temp = document.createElement('div');
   temp.innerHTML = html;
@@ -263,8 +260,6 @@ function alignTextByEquals(html) {
   
   // 从临时容器开始提取文本节点
   extractTextNodes(temp, temp);
-  
-  console.log('找到包含等号的文本节点数量:', textNodesAndParents.length);
   
   // 如果没有找到包含等号的文本节点，则直接返回原始HTML
   if (textNodesAndParents.length === 0) {
@@ -327,13 +322,9 @@ function alignTextByEquals(html) {
     // 找出最大宽度
     const maxPrefixWidth = Math.max(...equalsPrefixWidths);
     
-    console.log('等号前缀宽度:', equalsPrefixWidths);
-    console.log('最大前缀宽度:', maxPrefixWidth);
-    
     // 测量单个空格的宽度
     measureElement.textContent = ' ';
     const spaceWidth = measureElement.getBoundingClientRect().width;
-    console.log('单个空格宽度:', spaceWidth);
     
     // 测量不同类型的空格字符宽度
     const spaceChars = {
@@ -351,7 +342,6 @@ function alignTextByEquals(html) {
       measureElement.textContent = char;
       spaceWidths[name] = measureElement.getBoundingClientRect().width;
     }
-    console.log('不同空格字符宽度:', spaceWidths);
     
     // 选择最适合的空格字符（优先选择宽度较小的，以便更精确控制）
     let bestSpaceChar = ' ';
@@ -363,8 +353,6 @@ function alignTextByEquals(html) {
         bestSpaceWidth = width;
       }
     }
-    
-    console.log(`选择的空格字符: "${bestSpaceChar}", 宽度: ${bestSpaceWidth}`);
     
     // 移除测量元素
     document.body.removeChild(measureElement);
@@ -388,8 +376,6 @@ function alignTextByEquals(html) {
       // 向上取整以确保对齐
       const widthDifference = maxPrefixWidth - prefixWidth;
       const spacesToAdd = Math.ceil(widthDifference / bestSpaceWidth);
-      
-      console.log(`行 "${line}" 的等号位置: ${equalsIndex}, 前缀宽度: ${prefixWidth}, 宽度差: ${widthDifference}, 需要添加空格数: ${spacesToAdd}`);
       
       // 使用选定的Unicode空格字符添加空格
       const spaces = bestSpaceChar.repeat(spacesToAdd);
@@ -442,9 +428,7 @@ function alignTextByEquals(html) {
   });
   
   // 返回处理后的HTML
-  const result = temp.innerHTML;
-  console.log('对齐后的HTML内容:', result);
-  return result;
+  return temp.innerHTML;
 }
 
 // 监听来自 background script 的消息
@@ -755,16 +739,11 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
 
         if (selection.rangeCount > 0 && !selection.isCollapsed) {
           // 有选中的文本，只处理选中部分
-          console.log('处理选中的文本');
           const range = selection.getRangeAt(0);
           
           // 创建临时容器并复制选中内容
           const container = document.createElement('div');
           container.appendChild(range.cloneContents());
-          
-          // 打印选中的内容
-          console.log('选中的HTML内容:', container.innerHTML);
-          console.log('选中的文本内容:', container.textContent);
           
           // 处理选中的内容
           const alignedHTML = alignTextByEquals(container.innerHTML);
@@ -782,10 +761,6 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
           range.insertNode(fragment);
         } else {
           // 没有选中文本，处理整个活动元素
-          console.log('处理整个活动元素');
-          console.log('活动元素的HTML内容:', activeElement.innerHTML);
-          console.log('活动元素的文本内容:', activeElement.textContent);
-          
           processedHTML = alignTextByEquals(activeElement.innerHTML);
           activeElement.innerHTML = processedHTML;
         }
