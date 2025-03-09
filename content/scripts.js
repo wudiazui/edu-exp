@@ -302,14 +302,41 @@ function alignTextByEquals(html) {
       return;
     }
     
-    // 找出每行等号的位置
-    const equalsPositions = linesWithEquals.map(line => line.indexOf('='));
+    // 创建一个临时的不可见元素来精确测量字符宽度
+    const measureElement = document.createElement('span');
+    measureElement.style.visibility = 'hidden';
+    measureElement.style.position = 'absolute';
+    measureElement.style.whiteSpace = 'pre';
+    // 使用与父元素相同的字体样式
+    const parentStyle = window.getComputedStyle(parent);
+    measureElement.style.font = parentStyle.font;
+    document.body.appendChild(measureElement);
     
-    // 找出等号的最大位置，用于对齐
-    const maxEqualsPosition = Math.max(...equalsPositions);
+    // 计算每行等号前文本的实际宽度
+    const equalsPrefixWidths = [];
+    linesWithEquals.forEach(line => {
+      const equalsIndex = line.indexOf('=');
+      const prefix = line.substring(0, equalsIndex);
+      
+      // 测量前缀文本的宽度
+      measureElement.textContent = prefix;
+      const prefixWidth = measureElement.getBoundingClientRect().width;
+      equalsPrefixWidths.push(prefixWidth);
+    });
     
-    console.log('等号位置:', equalsPositions);
-    console.log('最大等号位置:', maxEqualsPosition);
+    // 找出最大宽度
+    const maxPrefixWidth = Math.max(...equalsPrefixWidths);
+    
+    console.log('等号前缀宽度:', equalsPrefixWidths);
+    console.log('最大前缀宽度:', maxPrefixWidth);
+    
+    // 测量单个空格的宽度
+    measureElement.textContent = ' ';
+    const spaceWidth = measureElement.getBoundingClientRect().width;
+    console.log('单个空格宽度:', spaceWidth);
+    
+    // 移除测量元素
+    document.body.removeChild(measureElement);
     
     // 对每行进行对齐处理
     const alignedLines = lines.map((line, lineIndex) => {
@@ -320,11 +347,18 @@ function alignTextByEquals(html) {
         return line;
       }
       
-      // 计算需要在行首添加的空格数
-      // 注意：添加 lineIndex 来增加每行的空格数，确保每行比上一行多一个空格
-      const spacesToAdd = maxEqualsPosition - equalsIndex + lineIndex;
+      // 获取当前行在包含等号的行中的索引
+      const equalsLineIndex = linesWithEquals.indexOf(line);
       
-      console.log(`行 "${line}" 的等号位置: ${equalsIndex}, 需要添加空格数: ${spacesToAdd}`);
+      // 获取当前行等号前缀的宽度
+      const prefixWidth = equalsPrefixWidths[equalsLineIndex];
+      
+      // 计算需要添加的空格数，使用精确的宽度计算
+      // 向上取整以确保对齐
+      const widthDifference = maxPrefixWidth - prefixWidth;
+      const spacesToAdd = Math.ceil(widthDifference / spaceWidth);
+      
+      console.log(`行 "${line}" 的等号位置: ${equalsIndex}, 前缀宽度: ${prefixWidth}, 宽度差: ${widthDifference}, 需要添加空格数: ${spacesToAdd}`);
       
       // 使用HTML非断空格(&nbsp;)在行首添加空格
       const htmlSpaces = '&nbsp;'.repeat(spacesToAdd);
