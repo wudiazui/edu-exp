@@ -335,6 +335,37 @@ function alignTextByEquals(html) {
     const spaceWidth = measureElement.getBoundingClientRect().width;
     console.log('单个空格宽度:', spaceWidth);
     
+    // 测量不同类型的空格字符宽度
+    const spaceChars = {
+      ' ': ' ',                    // 普通空格
+      'enSpace': '\u2002',         // en空格
+      'emSpace': '\u2003',         // em空格
+      'thinSpace': '\u2009',       // 窄空格
+      'hairSpace': '\u200A',       // 极窄空格
+      'noBreakSpace': '\u00A0',    // 不换行空格
+      'ideographicSpace': '\u3000' // 表意文字空格（中文全角空格）
+    };
+    
+    const spaceWidths = {};
+    for (const [name, char] of Object.entries(spaceChars)) {
+      measureElement.textContent = char;
+      spaceWidths[name] = measureElement.getBoundingClientRect().width;
+    }
+    console.log('不同空格字符宽度:', spaceWidths);
+    
+    // 选择最适合的空格字符（优先选择宽度较小的，以便更精确控制）
+    let bestSpaceChar = ' ';
+    let bestSpaceWidth = spaceWidth;
+    
+    for (const [name, width] of Object.entries(spaceWidths)) {
+      if (width > 0 && width < bestSpaceWidth) {
+        bestSpaceChar = spaceChars[name];
+        bestSpaceWidth = width;
+      }
+    }
+    
+    console.log(`选择的空格字符: "${bestSpaceChar}", 宽度: ${bestSpaceWidth}`);
+    
     // 移除测量元素
     document.body.removeChild(measureElement);
     
@@ -356,37 +387,58 @@ function alignTextByEquals(html) {
       // 计算需要添加的空格数，使用精确的宽度计算
       // 向上取整以确保对齐
       const widthDifference = maxPrefixWidth - prefixWidth;
-      const spacesToAdd = Math.ceil(widthDifference / spaceWidth);
+      const spacesToAdd = Math.ceil(widthDifference / bestSpaceWidth);
       
       console.log(`行 "${line}" 的等号位置: ${equalsIndex}, 前缀宽度: ${prefixWidth}, 宽度差: ${widthDifference}, 需要添加空格数: ${spacesToAdd}`);
       
-      // 使用HTML非断空格(&nbsp;)在行首添加空格
-      const htmlSpaces = '&nbsp;'.repeat(spacesToAdd);
+      // 使用选定的Unicode空格字符添加空格
+      const spaces = bestSpaceChar.repeat(spacesToAdd);
       
       // 返回对齐后的行（在行首添加空格）
-      return htmlSpaces + line;
+      return spaces + line;
     });
     
-    // 创建一个新的HTML片段
-    const fragment = document.createDocumentFragment();
+    // 将对齐后的文本内容设置回原始节点
+    const newText = alignedLines.join('\n');
     
-    // 添加对齐后的行，每行之间添加<br>标签
-    alignedLines.forEach((line, index) => {
-      const span = document.createElement('span');
-      span.innerHTML = line;
-      fragment.appendChild(span);
-      
-      // 如果不是最后一行，则添加<br>标签
-      if (index < alignedLines.length - 1) {
-        fragment.appendChild(document.createElement('br'));
+    // 如果只有一个文本节点，直接替换其内容
+    if (textNodes.length === 1) {
+      textNodes[0].textContent = newText;
+    } else {
+      // 如果有多个文本节点，将它们合并为一个
+      while (parent.firstChild) {
+        parent.removeChild(parent.firstChild);
       }
-    });
-    
-    // 清空父元素并添加新的内容
-    while (parent.firstChild) {
-      parent.removeChild(parent.firstChild);
+      parent.textContent = newText;
     }
-    parent.appendChild(fragment);
+    
+    // 处理换行：将文本节点中的\n替换为<br>元素
+    // 这一步需要在设置textContent后进行，因为我们需要先有纯文本内容
+    const textNode = textNodes.length === 1 ? textNodes[0] : parent.firstChild;
+    if (textNode && textNode.textContent.includes('\n')) {
+      // 创建一个文档片段来存放处理后的内容
+      const fragment = document.createDocumentFragment();
+      
+      // 按换行符分割文本
+      const lines = textNode.textContent.split('\n');
+      
+      // 添加每一行，并在行之间添加<br>元素
+      lines.forEach((line, index) => {
+        fragment.appendChild(document.createTextNode(line));
+        
+        // 如果不是最后一行，添加<br>元素
+        if (index < lines.length - 1) {
+          fragment.appendChild(document.createElement('br'));
+        }
+      });
+      
+      // 替换原始文本节点
+      if (textNodes.length === 1) {
+        parent.replaceChild(fragment, textNodes[0]);
+      } else {
+        parent.replaceChild(fragment, parent.firstChild);
+      }
+    }
   });
   
   // 返回处理后的HTML
