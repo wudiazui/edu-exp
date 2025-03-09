@@ -235,6 +235,123 @@ function hideNotification(notificationId) {
   }
 }
 
+// 对文本按等号对齐的函数
+function alignTextByEquals(html) {
+  // 打印对齐前的HTML内容
+  console.log('对齐前的HTML内容:', html);
+  
+  // 创建一个临时容器来解析HTML
+  const temp = document.createElement('div');
+  temp.innerHTML = html;
+  
+  // 提取所有文本节点和它们的父元素
+  const textNodesAndParents = [];
+  
+  function extractTextNodes(node, parent) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      // 如果是文本节点且包含等号，则记录它和它的父元素
+      if (node.textContent.includes('=')) {
+        textNodesAndParents.push({ node, parent });
+      }
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      // 如果是元素节点，则递归处理其子节点
+      for (let i = 0; i < node.childNodes.length; i++) {
+        extractTextNodes(node.childNodes[i], node);
+      }
+    }
+  }
+  
+  // 从临时容器开始提取文本节点
+  extractTextNodes(temp, temp);
+  
+  console.log('找到包含等号的文本节点数量:', textNodesAndParents.length);
+  
+  // 如果没有找到包含等号的文本节点，则直接返回原始HTML
+  if (textNodesAndParents.length === 0) {
+    return html;
+  }
+  
+  // 按父元素分组文本节点
+  const groupedByParent = {};
+  textNodesAndParents.forEach(({ node, parent }) => {
+    const parentKey = parent.outerHTML;
+    if (!groupedByParent[parentKey]) {
+      groupedByParent[parentKey] = [];
+    }
+    groupedByParent[parentKey].push(node);
+  });
+  
+  // 处理每组文本节点
+  Object.keys(groupedByParent).forEach(parentKey => {
+    const textNodes = groupedByParent[parentKey];
+    const parent = textNodes[0].parentNode;
+    
+    // 收集所有文本行
+    const lines = [];
+    textNodes.forEach(node => {
+      // 将文本按换行符分割成多行
+      const nodeLines = node.textContent.split('\n');
+      lines.push(...nodeLines);
+    });
+    
+    // 找出每行等号的位置
+    const equalsPositions = [];
+    
+    for (let i = 0; i < lines.length; i++) {
+      const equalsIndex = lines[i].indexOf('=');
+      equalsPositions.push(equalsIndex);
+    }
+    
+    // 找出等号的最大位置，用于对齐
+    const maxEqualsPosition = Math.max(...equalsPositions.filter(pos => pos > -1));
+    
+    // 对每行进行对齐处理
+    const alignedLines = lines.map((line, index) => {
+      const equalsIndex = equalsPositions[index];
+      
+      if (equalsIndex === -1) {
+        // 如果行中没有等号，则不做处理
+        return line;
+      }
+      
+      // 计算需要在行首添加的空格数
+      const spacesToAdd = maxEqualsPosition - equalsIndex;
+      
+      // 使用HTML非断空格(&nbsp;)在行首添加空格
+      const htmlSpaces = '&nbsp;'.repeat(spacesToAdd);
+      
+      // 返回对齐后的行（在行首添加空格）
+      return htmlSpaces + line;
+    });
+    
+    // 创建一个新的HTML片段
+    const fragment = document.createDocumentFragment();
+    
+    // 添加对齐后的行，每行之间添加<br>标签
+    alignedLines.forEach((line, index) => {
+      const span = document.createElement('span');
+      span.innerHTML = line;
+      fragment.appendChild(span);
+      
+      // 如果不是最后一行，则添加<br>标签
+      if (index < alignedLines.length - 1) {
+        fragment.appendChild(document.createElement('br'));
+      }
+    });
+    
+    // 清空父元素并添加新的内容
+    while (parent.firstChild) {
+      parent.removeChild(parent.firstChild);
+    }
+    parent.appendChild(fragment);
+  });
+  
+  // 返回处理后的HTML
+  const result = temp.innerHTML;
+  console.log('对齐后的HTML内容:', result);
+  return result;
+}
+
 // 监听来自 background script 的消息
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'GET_AUDIT_TASK_LABEL_RESPONSE') {
@@ -519,5 +636,83 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
         }
       }
     });
+  }
+
+  if (request.action === "align_equals") {
+    (async () => {
+      try {
+        const activeElement = document.activeElement;
+        if (!activeElement) {
+          showNotification('错误：未找到活动元素', 'error');
+          return;
+        }
+
+        // 保存滚动位置
+        const scrollTop = activeElement.scrollTop;
+        const scrollLeft = activeElement.scrollLeft;
+
+        // 显示加载中通知
+        const notificationId = showNotification('正在对齐等号...', 'info', true);
+
+        // 获取选中的文本范围
+        const selection = window.getSelection();
+        let processedHTML;
+
+        if (selection.rangeCount > 0 && !selection.isCollapsed) {
+          // 有选中的文本，只处理选中部分
+          console.log('处理选中的文本');
+          const range = selection.getRangeAt(0);
+          
+          // 创建临时容器并复制选中内容
+          const container = document.createElement('div');
+          container.appendChild(range.cloneContents());
+          
+          // 打印选中的内容
+          console.log('选中的HTML内容:', container.innerHTML);
+          console.log('选中的文本内容:', container.textContent);
+          
+          // 处理选中的内容
+          const alignedHTML = alignTextByEquals(container.innerHTML);
+          
+          // 创建文档片段来替换选中的内容
+          const temp = document.createElement('div');
+          temp.innerHTML = alignedHTML;
+          const fragment = document.createDocumentFragment();
+          while (temp.firstChild) {
+            fragment.appendChild(temp.firstChild);
+          }
+          
+          // 删除选中的内容并插入对齐后的内容
+          range.deleteContents();
+          range.insertNode(fragment);
+        } else {
+          // 没有选中文本，处理整个活动元素
+          console.log('处理整个活动元素');
+          console.log('活动元素的HTML内容:', activeElement.innerHTML);
+          console.log('活动元素的文本内容:', activeElement.textContent);
+          
+          processedHTML = alignTextByEquals(activeElement.innerHTML);
+          activeElement.innerHTML = processedHTML;
+        }
+        
+        // 触发事件更新编辑器
+        sendFixEvent(activeElement);
+        
+        // 恢复滚动位置
+        activeElement.scrollTop = scrollTop;
+        activeElement.scrollLeft = scrollLeft;
+        
+        // 重新聚焦到元素
+        activeElement.focus();
+        
+        // 隐藏加载中通知并显示成功通知
+        hideNotification(notificationId);
+        showNotification('等号对齐完成', 'success');
+      } catch (error) {
+        console.error('Error aligning equals:', error);
+        showNotification('等号对齐失败：' + error.message, 'error');
+      }
+    })();
+    return true;
   }
 });

@@ -36,6 +36,12 @@ chrome.runtime.onInstalled.addListener(() => {
       contexts: ["all"]
     });
     chrome.contextMenus.create({
+      id: "align-equals",
+      title: "等号对齐",
+      parentId: "baidu-edu-tools",
+      contexts: ["all"]
+    });
+    chrome.contextMenus.create({
       id: "copy-html",
       title: "复制HTML",
       parentId: "baidu-edu-tools",
@@ -72,6 +78,9 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === "font-format") {
     chrome.tabs.sendMessage(tab.id, { action: "font_format" });
   }
+  if (info.menuItemId === "align-equals") {
+    chrome.tabs.sendMessage(tab.id, { action: "align_equals" });
+  }
   if (info.menuItemId === "copy-html") {
     chrome.tabs.sendMessage(tab.id, { action: "copy_html" });
   }
@@ -105,6 +114,9 @@ chrome.commands.onCommand.addListener((command) => {
           break;
         case 'math-img':
           chrome.tabs.sendMessage(tab.id, { action: "math_img" });
+          break;
+        case 'align-equals':
+          chrome.tabs.sendMessage(tab.id, { action: "align_equals" });
           break;
       }
     }

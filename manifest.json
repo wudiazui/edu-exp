@@ -61,6 +61,12 @@
         "default": "Ctrl+Shift+I"
       },
       "description": "渲染竖式计算"
+    },
+    "align-equals": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+E"
+      },
+      "description": "等号对齐"
     }
   }
 }
