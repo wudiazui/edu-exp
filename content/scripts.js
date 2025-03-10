@@ -240,10 +240,10 @@ function alignTextByEquals(html) {
   // 创建一个临时容器来解析HTML
   const temp = document.createElement('div');
   temp.innerHTML = html;
-  
+
   // 提取所有文本节点和它们的父元素
   const textNodesAndParents = [];
-  
+
   function extractTextNodes(node, parent) {
     if (node.nodeType === Node.TEXT_NODE) {
       // 如果是文本节点且包含等号，则记录它和它的父元素
@@ -257,15 +257,15 @@ function alignTextByEquals(html) {
       }
     }
   }
-  
+
   // 从临时容器开始提取文本节点
   extractTextNodes(temp, temp);
-  
+
   // 如果没有找到包含等号的文本节点，则直接返回原始HTML
   if (textNodesAndParents.length === 0) {
     return html;
   }
-  
+
   // 按父元素分组文本节点
   const groupedByParent = {};
   textNodesAndParents.forEach(({ node, parent }) => {
@@ -275,12 +275,12 @@ function alignTextByEquals(html) {
     }
     groupedByParent[parentKey].push(node);
   });
-  
+
   // 处理每组文本节点
   Object.keys(groupedByParent).forEach(parentKey => {
     const textNodes = groupedByParent[parentKey];
     const parent = textNodes[0].parentNode;
-    
+
     // 收集所有文本行
     const lines = [];
     textNodes.forEach(node => {
@@ -288,15 +288,15 @@ function alignTextByEquals(html) {
       const nodeLines = node.textContent.split('\n');
       lines.push(...nodeLines);
     });
-    
+
     // 过滤掉不包含等号的行
     const linesWithEquals = lines.filter(line => line.includes('='));
-    
+
     // 如果没有包含等号的行，则跳过处理
     if (linesWithEquals.length === 0) {
       return;
     }
-    
+
     // 创建一个临时的不可见元素来精确测量字符宽度
     const measureElement = document.createElement('span');
     measureElement.style.visibility = 'hidden';
@@ -306,26 +306,26 @@ function alignTextByEquals(html) {
     const parentStyle = window.getComputedStyle(parent);
     measureElement.style.font = parentStyle.font;
     document.body.appendChild(measureElement);
-    
+
     // 计算每行等号前文本的实际宽度
     const equalsPrefixWidths = [];
     linesWithEquals.forEach(line => {
       const equalsIndex = line.indexOf('=');
       const prefix = line.substring(0, equalsIndex);
-      
+
       // 测量前缀文本的宽度
       measureElement.textContent = prefix;
       const prefixWidth = measureElement.getBoundingClientRect().width;
       equalsPrefixWidths.push(prefixWidth);
     });
-    
+
     // 找出最大宽度
     const maxPrefixWidth = Math.max(...equalsPrefixWidths);
-    
+
     // 测量单个空格的宽度
     measureElement.textContent = ' ';
     const spaceWidth = measureElement.getBoundingClientRect().width;
-    
+
     // 测量不同类型的空格字符宽度
     const spaceChars = {
       ' ': ' ',                    // 普通空格
@@ -336,57 +336,57 @@ function alignTextByEquals(html) {
       'noBreakSpace': '\u00A0',    // 不换行空格
       'ideographicSpace': '\u3000' // 表意文字空格（中文全角空格）
     };
-    
+
     const spaceWidths = {};
     for (const [name, char] of Object.entries(spaceChars)) {
       measureElement.textContent = char;
       spaceWidths[name] = measureElement.getBoundingClientRect().width;
     }
-    
+
     // 选择最适合的空格字符（优先选择宽度较小的，以便更精确控制）
     let bestSpaceChar = ' ';
     let bestSpaceWidth = spaceWidth;
-    
+
     for (const [name, width] of Object.entries(spaceWidths)) {
       if (width > 0 && width < bestSpaceWidth) {
         bestSpaceChar = spaceChars[name];
         bestSpaceWidth = width;
       }
     }
-    
+
     // 移除测量元素
     document.body.removeChild(measureElement);
-    
+
     // 对每行进行对齐处理
     const alignedLines = lines.map((line, lineIndex) => {
       const equalsIndex = line.indexOf('=');
-      
+
       if (equalsIndex === -1) {
         // 如果行中没有等号，则不做处理
         return line;
       }
-      
+
       // 获取当前行在包含等号的行中的索引
       const equalsLineIndex = linesWithEquals.indexOf(line);
-      
+
       // 获取当前行等号前缀的宽度
       const prefixWidth = equalsPrefixWidths[equalsLineIndex];
-      
+
       // 计算需要添加的空格数，使用精确的宽度计算
       // 向上取整以确保对齐
       const widthDifference = maxPrefixWidth - prefixWidth;
       const spacesToAdd = Math.ceil(widthDifference / bestSpaceWidth);
-      
+
       // 使用选定的Unicode空格字符添加空格
       const spaces = bestSpaceChar.repeat(spacesToAdd);
-      
+
       // 返回对齐后的行（在行首添加空格）
       return spaces + line;
     });
-    
+
     // 将对齐后的文本内容设置回原始节点
     const newText = alignedLines.join('\n');
-    
+
     // 如果只有一个文本节点，直接替换其内容
     if (textNodes.length === 1) {
       textNodes[0].textContent = newText;
@@ -397,27 +397,27 @@ function alignTextByEquals(html) {
       }
       parent.textContent = newText;
     }
-    
+
     // 处理换行：将文本节点中的\n替换为<br>元素
     // 这一步需要在设置textContent后进行，因为我们需要先有纯文本内容
     const textNode = textNodes.length === 1 ? textNodes[0] : parent.firstChild;
     if (textNode && textNode.textContent.includes('\n')) {
       // 创建一个文档片段来存放处理后的内容
       const fragment = document.createDocumentFragment();
-      
+
       // 按换行符分割文本
       const lines = textNode.textContent.split('\n');
-      
+
       // 添加每一行，并在行之间添加<br>元素
       lines.forEach((line, index) => {
         fragment.appendChild(document.createTextNode(line));
-        
+
         // 如果不是最后一行，添加<br>元素
         if (index < lines.length - 1) {
           fragment.appendChild(document.createElement('br'));
         }
       });
-      
+
       // 替换原始文本节点
       if (textNodes.length === 1) {
         parent.replaceChild(fragment, textNodes[0]);
@@ -426,10 +426,35 @@ function alignTextByEquals(html) {
       }
     }
   });
-  
+
   // 返回处理后的HTML
   return temp.innerHTML;
 }
+
+// 将字符转换为HTML实体的辅助函数
+function convertToHtmlEntities(str) {
+  const entities = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+    ' ': '&nbsp;',
+    '\n': '<br>',
+    '\t': '&nbsp;&nbsp;&nbsp;&nbsp;'
+  };
+  return str.split('').map(char => entities[char] || char).join('');
+}
+
+// 声明快捷键变量
+let shortcuts = [];
+
+// 加载快捷键设置
+chrome.storage.sync.get(['shortcuts'], (result) => {
+  if (result.shortcuts) {
+    shortcuts = result.shortcuts;
+  }
+});
 
 // 监听来自 background script 的消息
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -637,13 +662,13 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
 
           // 显示上传中通知
           const uploadNotificationId = showNotification('正在上传竖式计算图片...', 'info', true);
-          
+
           // Upload the image and get the response
           const uploadResponse = await img_upload(imageBlob);
-          
+
           // 隐藏上传中通知
           hideNotification(uploadNotificationId);
-          
+
           // 显示上传成功通知
           showNotification('竖式计算图片上传成功', 'success');
 
@@ -671,18 +696,18 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
         }
       } catch (error) {
         console.error('Error processing math image:', error);
-        
+
         // 如果有加载中通知，先隐藏
         if (verticalArithmeticNotificationId) {
           hideNotification(verticalArithmeticNotificationId);
           verticalArithmeticNotificationId = null;
         }
-        
+
         // 确定错误类型并显示相应的错误消息
         let errorMessage = '未知错误';
         if (error.message) {
           errorMessage = error.message;
-          
+
           // 根据错误消息判断错误类型
           if (error.message.includes('upload') || error.message.includes('网络')) {
             errorMessage = '图片上传失败: ' + error.message;
@@ -692,7 +717,7 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
             errorMessage = '渲染计算过程失败: ' + error.message;
           }
         }
-        
+
         // 显示错误通知
         showNotification('竖式计算处理失败: ' + errorMessage, 'error');
       }
@@ -740,14 +765,14 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
         if (selection.rangeCount > 0 && !selection.isCollapsed) {
           // 有选中的文本，只处理选中部分
           const range = selection.getRangeAt(0);
-          
+
           // 创建临时容器并复制选中内容
           const container = document.createElement('div');
           container.appendChild(range.cloneContents());
-          
+
           // 处理选中的内容
           const alignedHTML = alignTextByEquals(container.innerHTML);
-          
+
           // 创建文档片段来替换选中的内容
           const temp = document.createElement('div');
           temp.innerHTML = alignedHTML;
@@ -755,7 +780,7 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
           while (temp.firstChild) {
             fragment.appendChild(temp.firstChild);
           }
-          
+
           // 删除选中的内容并插入对齐后的内容
           range.deleteContents();
           range.insertNode(fragment);
@@ -764,17 +789,17 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
           processedHTML = alignTextByEquals(activeElement.innerHTML);
           activeElement.innerHTML = processedHTML;
         }
-        
+
         // 触发事件更新编辑器
         sendFixEvent(activeElement);
-        
+
         // 恢复滚动位置
         activeElement.scrollTop = scrollTop;
         activeElement.scrollLeft = scrollLeft;
-        
+
         // 重新聚焦到元素
         activeElement.focus();
-        
+
         // 隐藏加载中通知并显示成功通知
         hideNotification(notificationId);
         showNotification('等号对齐完成', 'success');
@@ -784,5 +809,95 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
       }
     })();
     return true;
+  }
+
+  // 处理字符插入消息
+  if (request.action === 'insert_character') {
+    const activeElement = document.activeElement;
+    if (activeElement && (activeElement.isContentEditable || activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+      if (activeElement.isContentEditable) {
+        // 处理可编辑div
+        const selection = window.getSelection();
+        const range = selection.getRangeAt(0);
+        // 将所有特殊字符转换为HTML实体
+        const convertedChar = convertToHtmlEntities(request.character);
+        // 创建一个临时元素来插入HTML实体
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = convertedChar;
+        const textNode = tempDiv.firstChild;
+        range.insertNode(textNode);
+        // 将光标移动到插入的字符后面
+        range.setStartAfter(textNode);
+        range.setEndAfter(textNode);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      } else {
+        // 处理input和textarea
+        const start = activeElement.selectionStart;
+        const end = activeElement.selectionEnd;
+        const text = activeElement.value;
+        const newText = text.substring(0, start) + request.character + text.substring(end);
+        activeElement.value = newText;
+        activeElement.selectionStart = activeElement.selectionEnd = start + request.character.length;
+      }
+    }
+    return true;
+  }
+
+  // 处理快捷键更新消息
+  if (request.type === 'SHORTCUTS_UPDATED') {
+    shortcuts = request.shortcuts;
+    console.log('Shortcuts updated:', shortcuts);
+    return true;
+  }
+});
+
+// 监听键盘事件
+document.addEventListener('keydown', (e) => {
+  // 构建当前按下的快捷键组合
+  const keys = [];
+  if (e.ctrlKey) keys.push('Ctrl');
+  if (e.shiftKey) keys.push('Shift');
+  if (e.altKey) keys.push('Alt');
+  if (e.key !== 'Control' && e.key !== 'Shift' && e.key !== 'Alt') {
+    keys.push(e.key.toUpperCase());
+  }
+  const pressedShortcut = keys.join('+');
+
+  // 查找匹配的快捷键
+  const matchedShortcut = shortcuts.find(s => s.keyboardShortcut === pressedShortcut);
+
+  if (matchedShortcut) {
+    e.preventDefault(); // 阻止默认行为
+
+    // 触发字符插入
+    const activeElement = document.activeElement;
+    if (activeElement && (activeElement.isContentEditable || activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+      if (activeElement.isContentEditable) {
+        // 处理可编辑div
+        const selection = window.getSelection();
+        const range = selection.getRangeAt(0);
+        // 将所有特殊字符转换为HTML实体
+        const convertedChar = convertToHtmlEntities(matchedShortcut.character);
+        // 创建一个临时元素来插入HTML实体
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = convertedChar;
+        const textNode = tempDiv.firstChild;
+        range.insertNode(textNode);
+        // 将光标移动到插入的字符后面
+        range.setStartAfter(textNode);
+        range.setEndAfter(textNode);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      } else {
+        // 处理input和textarea
+        const start = activeElement.selectionStart;
+        const end = activeElement.selectionEnd;
+        const text = activeElement.value;
+        const newText = text.substring(0, start) + matchedShortcut.character + text.substring(end);
+        activeElement.value = newText;
+        activeElement.selectionStart = activeElement.selectionEnd = start + matchedShortcut.character.length;
+      }
+    }
   }
 });

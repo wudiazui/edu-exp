@@ -71,8 +71,43 @@ chrome.runtime.onInstalled.addListener(() => {
       parentId: "baidu-edu-tools",
       contexts: ["selection"]
     });
+    
+    // 创建字符插入菜单
+    createCharacterMenus();
   });
 });
+
+// 创建字符插入菜单
+function createCharacterMenus() {
+  // 先移除已存在的菜单
+  chrome.contextMenus.remove("character-insert", () => {
+    // 创建主菜单
+    chrome.contextMenus.create({
+      id: "character-insert",
+      title: "字符插入",
+      parentId: "baidu-edu-tools",
+      contexts: ["editable"]
+    }, () => {
+      if (chrome.runtime.lastError) {
+        console.log('Menu creation error:', chrome.runtime.lastError);
+        return;
+      }
+      // 从存储中获取快捷字符并创建子菜单
+      chrome.storage.sync.get(['shortcuts'], (result) => {
+        if (result.shortcuts) {
+          result.shortcuts.forEach(shortcut => {
+            chrome.contextMenus.create({
+              id: `insert-char-${shortcut.name}`,
+              title: shortcut.name,
+              parentId: "character-insert",
+              contexts: ["editable"]
+            });
+          });
+        }
+      });
+    });
+  });
+}
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === "font-format") {
@@ -95,6 +130,20 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   }
   if (info.menuItemId === "math-img") {
     chrome.tabs.sendMessage(tab.id, { action: "math_img" });
+  }
+  if (info.menuItemId.startsWith('insert-char-')) {
+    const shortcutName = info.menuItemId.replace('insert-char-', '');
+    chrome.storage.sync.get(['shortcuts'], (result) => {
+      if (result.shortcuts) {
+        const shortcut = result.shortcuts.find(s => s.name === shortcutName);
+        if (shortcut) {
+          chrome.tabs.sendMessage(tab.id, { 
+            action: "insert_character", 
+            character: shortcut.character 
+          });
+        }
+      }
+    });
   }
 });
 
@@ -224,6 +273,29 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (['FORMAT_QUESTION', 'TOPIC_ANSWER', 'TOPIC_ANALYSIS', 'TOPIC_COMPLETE', 'OCR'].includes(request.type)) {
     formatMessage(request.type, request.data, request.host, request.uname);
     return true; // 保持消息通道开放以等待异步响应
+  }
+
+  // 添加消息监听器处理快捷键更新
+  if (request.type === 'UPDATE_SHORTCUTS') {
+    // 向所有标签页转发快捷键更新消息
+    chrome.tabs.query({}, (tabs) => {
+      tabs.forEach(tab => {
+        chrome.tabs.sendMessage(tab.id, {
+          type: 'SHORTCUTS_UPDATED',
+          shortcuts: request.shortcuts
+        });
+      });
+    });
+    // 更新右键菜单
+    createCharacterMenus();
+  }
+});
+
+// 监听存储变化
+chrome.storage.onChanged.addListener((changes, namespace) => {
+  if (namespace === 'sync' && changes.shortcuts) {
+    // shortcuts 发生变化时重建菜单
+    createCharacterMenus();
   }
 });
 
