@@ -44,11 +44,11 @@
   },
   "options_page": "options/index.html",
   "commands": {
-    "send-topic": {
+    "font-format": {
       "suggested_key": {
-        "default": "Ctrl+Shift+S"
+        "default": "Ctrl+Shift+F"
       },
-      "description": "发送题干到侧边栏"
+      "description": "字体格式化"
     },
     "format-math": {
       "suggested_key": {

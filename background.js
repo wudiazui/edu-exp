@@ -71,7 +71,7 @@ chrome.runtime.onInstalled.addListener(() => {
       parentId: "baidu-edu-tools",
       contexts: ["selection"]
     });
-    
+
     // 创建字符插入菜单
     createCharacterMenus();
   });
@@ -137,9 +137,9 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
       if (result.shortcuts) {
         const shortcut = result.shortcuts.find(s => s.name === shortcutName);
         if (shortcut) {
-          chrome.tabs.sendMessage(tab.id, { 
-            action: "insert_character", 
-            character: shortcut.character 
+          chrome.tabs.sendMessage(tab.id, {
+            action: "insert_character",
+            character: shortcut.character
           });
         }
       }
@@ -155,8 +155,8 @@ chrome.commands.onCommand.addListener((command) => {
     if (tabs[0]) {
       const tab = tabs[0];
       switch (command) {
-        case 'send-topic':
-          chrome.tabs.sendMessage(tab.id, { action: "send_topic" });
+      case 'font-format':
+        chrome.tabs.sendMessage(tab.id, { action: "font_format" });
           break;
         case 'format-math':
           chrome.tabs.sendMessage(tab.id, { action: "format_math" });
@@ -188,7 +188,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       data: request.html
     });
   }
-  
+
   // 处理认领任务响应的转发
   if (request.action === "claimAuditTaskResponse") {
     chrome.runtime.sendMessage({
@@ -203,16 +203,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     chrome.storage.local.get(['autoClaimingInterval'], (result) => {
       const interval = request.interval || (result.autoClaimingInterval * 1000) || 1000;
       autoClaimingActive = true;
-      chrome.storage.local.set({ 
+      chrome.storage.local.set({
         autoClaimingActive: true,
         autoClaimingInterval: interval / 1000  // 保存为秒
       });
-      
+
       if (autoClaimingTimer) {
         clearInterval(autoClaimingTimer);
         autoClaimingTimer = null;
       }
-      
+
       console.log('[Background] Polling interval:', interval, 'ms');
       autoClaimingTimer = setInterval(() => {
         // 获取所有标签页
@@ -228,12 +228,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           });
         });
       }, interval);
-      
+
       sendResponse({ status: "started" });
     });
     return true;  // 保持消息通道开放
   }
-  
+
   if (request.action === "stop_auto_claiming") {
     autoClaimingActive = false;
     chrome.storage.local.set({ autoClaimingActive: false });
@@ -249,7 +249,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     sendResponse({ autoClaimingActive });
     return true;
   }
-  
+
   const formatMessage = async (type, data, host, uname) => {
     try {
       let formatted;
