@@ -62,11 +62,11 @@
       },
       "description": "渲染竖式计算"
     },
-    "align-equals": {
+    "send-topic": {
       "suggested_key": {
-        "default": "Ctrl+Shift+E"
+        "default": "Ctrl+Shift+S"
       },
-      "description": "等号对齐"
+      "description": "发送题干到侧边栏"
     }
   }
 }

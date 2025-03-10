@@ -164,8 +164,8 @@ chrome.commands.onCommand.addListener((command) => {
         case 'math-img':
           chrome.tabs.sendMessage(tab.id, { action: "math_img" });
           break;
-        case 'align-equals':
-          chrome.tabs.sendMessage(tab.id, { action: "align_equals" });
+        case 'send-topic':
+          chrome.tabs.sendMessage(tab.id, { action: "send_topic" });
           break;
       }
     }
