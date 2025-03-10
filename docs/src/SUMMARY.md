@@ -10,5 +10,8 @@
   - [竖式计算](./guide/v_cal.md)
   - [公式复制](./guide/copy.md)
   - [默认字体格式化](./guide/format.md)
+  - [字符快捷插入](./guide/char_insert.md)
+  - [解方程等号对齐](./guide/equal_sign.md)
+
 
 - [常见问题](./faq.md)

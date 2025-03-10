@@ -12,10 +12,13 @@
 - [文字识别（OCR）](./guide/ocr.md)
 - [数学公式处理](./guide/math.md)
 - [竖式计算工具](./guide/v_cal.md)
+- [字符快捷插入](./guide/char_insert.md)
 
 ### 实用工具
 - [公式快捷复制](./guide/copy.md)
 - [字体格式化](./guide/format.md)
+- [解方程等号对齐](./guide/equal_sign.md)
+
 
 ## 使用示例
 
