@@ -285,16 +285,19 @@ export async function replaceLatexWithImages(text) {
     let expression = match[1];
     // 替换 HTML 符号为文本符号
     expression = expression
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&amp;/g, '&')
-        .replace(/&quot;/g, '"')
-        .replace(/&apos;/g, "'")
-        .replace(/&nbsp;/g, ' ')
-        .replace(/&copy;/g, '©')
-        .replace(/&reg;/g, '®')
-        .replace(/&euro;/g, '€')
-        .replace(/&yen;/g, '¥');
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&copy;/g, '©')
+      .replace(/&reg;/g, '®')
+      .replace(/&euro;/g, '€')
+      .replace(/&yen;/g, '¥')
+      .replace(/<\/span>/g,'')
+      .replace(/<span>/g, '')
+      .replace(/<br>/g, '');
     const imgElement = await math2img(expression);
     result = result.replace(fullMatch, imgElement.outerHTML);
   }
