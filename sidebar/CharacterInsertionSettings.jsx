@@ -18,6 +18,39 @@ const LATEX_SYMBOLS = {
     { symbol: "⊗", latex: "\\otimes" },
     { symbol: "⊙", latex: "\\odot" }
   ],
+  "比较符号": [
+    { symbol: "<", latex: "<" },
+    { symbol: ">", latex: ">" },
+    { symbol: "≤", latex: "\\leq" },
+    { symbol: "≥", latex: "\\geq" },
+    { symbol: "≪", latex: "\\ll" },
+    { symbol: "≫", latex: "\\gg" },
+    { symbol: "≲", latex: "\\lesssim" },
+    { symbol: "≳", latex: "\\gtrsim" }
+  ],
+  "括号": [
+    { symbol: "(", latex: "(" },
+    { symbol: ")", latex: ")" },
+    { symbol: "[", latex: "[" },
+    { symbol: "]", latex: "]" },
+    { symbol: "{", latex: "\\{" },
+    { symbol: "}", latex: "\\}" },
+    { symbol: "⟨", latex: "\\langle" },
+    { symbol: "⟩", latex: "\\rangle" },
+    { symbol: "⌈", latex: "\\lceil" },
+    { symbol: "⌉", latex: "\\rceil" },
+    { symbol: "⌊", latex: "\\lfloor" },
+    { symbol: "⌋", latex: "\\rfloor" }
+  ],
+  "圆圈": [
+    { symbol: "◯", latex: "\\bigcirc" },
+    { symbol: "○", latex: "\\circ" },
+    { symbol: "⊙", latex: "\\odot" },
+    { symbol: "⊕", latex: "\\oplus" },
+    { symbol: "⊗", latex: "\\otimes" },
+    { symbol: "⊖", latex: "\\ominus" },
+    { symbol: "⊘", latex: "\\oslash" }
+  ],
   "逻辑符号": [
     { symbol: "∧", latex: "\\wedge" },
     { symbol: "∨", latex: "\\vee" },
@@ -356,10 +389,16 @@ const CharacterInsertionSettings = () => {
                     <label className="label">
                       <span className="label-text">预览</span>
                     </label>
-                    <div
-                      className="p-4 bg-base-200 rounded-lg overflow-x-auto text-center"
-                      dangerouslySetInnerHTML={{ __html: latexPreview }}
-                    />
+                    <div className="flex items-center justify-center gap-4 p-4 bg-base-200 rounded-lg">
+                      <div className="text-lg font-mono">
+                        {currentShortcut.latex}
+                      </div>
+                      <div className="text-2xl">→</div>
+                      <div
+                        className="overflow-x-auto text-center"
+                        dangerouslySetInnerHTML={{ __html: latexPreview }}
+                      />
+                    </div>
                   </div>
                 )}
               </div>
