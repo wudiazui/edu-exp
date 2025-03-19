@@ -247,6 +247,30 @@ export async function user_info(host, uname) {
   }
 }
 
+
+export async function reset_fingerprint(host, uname) {
+  try {
+    const response = await fetch(`${host}/fingerprint/reset`, {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
+        'X-Pfy-Key': uname
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const responseData = await response.json();
+    return responseData;
+  } catch (error) {
+    console.error('Error reset fingerprint:', error);
+    return null;
+  }
+}
+
 export async function ocr_text(image_data, host, uname) {
   try {
     const response = await fetch(`${host}/llm/ocr`, {
@@ -313,7 +337,7 @@ export async function replaceLatexWithImagesInHtml(htmlText) {
   // Function to process text nodes containing LaTeX
   async function processTextNode(node) {
     const text = node.textContent;
-    
+
     // Convert \( and \) to $
     let processedText = text.replace(/\\\(/g, '$').replace(/\\\)/g, '$')
       .replace(/\\\[/g, '$').replace(/\\\]/g, '$');
@@ -330,7 +354,7 @@ export async function replaceLatexWithImagesInHtml(htmlText) {
     for (const match of matches) {
       const fullMatch = match[0];
       let expression = match[1];
-      
+
       // Replace HTML entities
       expression = expression
         .replace(/&lt;/g, '<')
@@ -376,7 +400,7 @@ export async function replaceLatexWithImagesInHtml(htmlText) {
       if (node.tagName === 'SCRIPT' || node.tagName === 'STYLE') {
         return;
       }
-      
+
       // Process child nodes
       const childNodes = Array.from(node.childNodes);
       for (const childNode of childNodes) {
