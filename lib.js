@@ -304,3 +304,90 @@ export async function replaceLatexWithImages(text) {
 
   return result;
 }
+
+export async function replaceLatexWithImagesInHtml(htmlText) {
+  // Create a temporary div to parse HTML
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = htmlText;
+
+  // Function to process text nodes containing LaTeX
+  async function processTextNode(node) {
+    const text = node.textContent;
+    
+    // Convert \( and \) to $
+    let processedText = text.replace(/\\\(/g, '$').replace(/\\\)/g, '$')
+      .replace(/\\\[/g, '$').replace(/\\\]/g, '$');
+
+    const regex = /\$([^$]+)\$/g;
+    const matches = [...processedText.matchAll(regex)];
+
+    if (matches.length === 0) return;
+
+    // Create a document fragment to hold processed content
+    const fragment = document.createDocumentFragment();
+    let lastIndex = 0;
+
+    for (const match of matches) {
+      const fullMatch = match[0];
+      let expression = match[1];
+      
+      // Replace HTML entities
+      expression = expression
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&')
+        .replace(/&quot;/g, '"')
+        .replace(/&apos;/g, "'")
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&copy;/g, '©')
+        .replace(/&reg;/g, '®')
+        .replace(/&euro;/g, '€')
+        .replace(/&yen;/g, '¥');
+
+      // Add text before the LaTeX
+      if (match.index > lastIndex) {
+        fragment.appendChild(document.createTextNode(processedText.slice(lastIndex, match.index)));
+      }
+
+      // Get and append the image
+      const imgElement = await math2img(expression);
+      if (imgElement) {
+        fragment.appendChild(imgElement);
+      }
+
+      lastIndex = match.index + fullMatch.length;
+    }
+
+    // Add remaining text after the last LaTeX
+    if (lastIndex < processedText.length) {
+      fragment.appendChild(document.createTextNode(processedText.slice(lastIndex)));
+    }
+
+    // Replace the original text node with the processed fragment
+    node.parentNode.replaceChild(fragment, node);
+  }
+
+  // Function to traverse the DOM tree
+  async function traverseNode(node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      await processTextNode(node);
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      // Skip script and style elements
+      if (node.tagName === 'SCRIPT' || node.tagName === 'STYLE') {
+        return;
+      }
+      
+      // Process child nodes
+      const childNodes = Array.from(node.childNodes);
+      for (const childNode of childNodes) {
+        await traverseNode(childNode);
+      }
+    }
+  }
+
+  // Process all nodes in the temporary div
+  await traverseNode(tempDiv);
+
+  // Return the processed HTML
+  return tempDiv.innerHTML;
+}

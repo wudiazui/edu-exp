@@ -1,4 +1,4 @@
-import { claimAuditTask, getAuditTaskList, getAuditTaskLabel, replaceLatexWithImages, replacePunctuation, img_upload} from "../lib.js";
+import { claimAuditTask, getAuditTaskList, getAuditTaskLabel, replaceLatexWithImages, replacePunctuation, img_upload, replaceLatexWithImagesInHtml} from "../lib.js";
 
 import {generateVerticalArithmeticImage} from "../src/index.js";
 
@@ -623,7 +623,9 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
 
         const temp = document.createElement('div');
         temp.innerHTML = activeElement.innerHTML;
-        const result = await replaceLatexWithImages(temp.innerHTML);
+        //const result = await replaceLatexWithImages(temp.innerHTML);
+        const result = await replaceLatexWithImagesInHtml(temp.innerHTML);
+
         activeElement.innerHTML = result;
         sendFixEvent(activeElement);
 
