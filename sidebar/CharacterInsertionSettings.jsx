@@ -118,7 +118,7 @@ const LATEX_SYMBOLS = {
 const CharacterInsertionSettings = () => {
   const [shortcuts, setShortcuts] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [currentShortcut, setCurrentShortcut] = useState({ name: '', character: '', keyboardShortcut: '', latex: '' });
+  const [currentShortcut, setCurrentShortcut] = useState({ name: '', character: '', keyboardShortcut: '', latex: '', wrapWithDollar: true });
   const [editingIndex, setEditingIndex] = useState(-1);
   const [mode, setMode] = useState('add');
   const [latexPreview, setLatexPreview] = useState('');
@@ -170,7 +170,9 @@ const CharacterInsertionSettings = () => {
 
     const shortcutToSave = {
       ...currentShortcut,
-      character: currentShortcut.latex ? `$${currentShortcut.latex}$` : currentShortcut.character
+      character: currentShortcut.latex 
+        ? (currentShortcut.wrapWithDollar ? `$${currentShortcut.latex}$` : currentShortcut.latex)
+        : currentShortcut.character
     };
 
     let updatedShortcuts;
@@ -196,7 +198,7 @@ const CharacterInsertionSettings = () => {
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
-    setCurrentShortcut({ name: '', character: '', keyboardShortcut: '', latex: '' });
+    setCurrentShortcut({ name: '', character: '', keyboardShortcut: '', latex: '', wrapWithDollar: true });
     setLatexPreview('');
     setEditingIndex(-1);
   };
@@ -222,7 +224,8 @@ const CharacterInsertionSettings = () => {
     setCurrentShortcut({
       ...shortcut,
       latex,
-      character: latex ? '' : shortcut.character
+      character: latex ? '' : shortcut.character,
+      wrapWithDollar: isLatex
     });
     setIsModalOpen(true);
   };
@@ -230,7 +233,7 @@ const CharacterInsertionSettings = () => {
   const handleAddNewShortcut = () => {
     setMode('add');
     setEditingIndex(-1);
-    setCurrentShortcut({ name: '', character: '', keyboardShortcut: '', latex: '' });
+    setCurrentShortcut({ name: '', character: '', keyboardShortcut: '', latex: '', wrapWithDollar: true });
     setIsModalOpen(true);
   };
 
@@ -417,6 +420,20 @@ const CharacterInsertionSettings = () => {
                 readOnly
               />
             </div>
+
+            {inputMode === 'latex' && (
+              <div className="form-control mt-4">
+                <label className="label cursor-pointer">
+                  <span className="label-text">使用 $ 包裹数学公式</span>
+                  <input
+                    type="checkbox"
+                    className="checkbox checkbox-sm"
+                    checked={currentShortcut.wrapWithDollar}
+                    onChange={(e) => setCurrentShortcut({...currentShortcut, wrapWithDollar: e.target.checked})}
+                  />
+                </label>
+              </div>
+            )}
 
             <div className="modal-action">
               <button
