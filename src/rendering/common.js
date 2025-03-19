@@ -226,6 +226,12 @@ function parseExpression(expression) {
     // 去除所有空格
     expression = expression.replace(/\s+/g, '');
     
+    // 去除等号及其后面的内容
+    expression = expression.split('=')[0];
+    
+    // 去除其他不相关的符号（只保留数字、运算符和括号）
+    expression = expression.replace(/[^0-9+\-*×/÷()]/g, '');
+    
     // 检查是否包含加号
     if (expression.includes('+')) {
         // 找到第一个不是在括号内的加号
