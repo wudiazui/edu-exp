@@ -100,12 +100,16 @@ export async function getAuditTaskList({
 export async function claimAuditTask(taskIDs, taskType = 'audittask') {
   const commitType = taskType === 'producetask' ? 'producetaskcommit' : 'audittaskcommit';
   try {
+    const requestBody = taskType === 'producetask' 
+      ? { clueIDs: taskIDs }
+      : { taskIDs };
+
     const response = await fetch(`/edushop/question/${commitType}/claim`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ taskIDs }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {

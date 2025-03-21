@@ -730,9 +730,13 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   if (request.action === "periodic_message") {
     getAuditTaskList(request.params).then((res) => {
       if (res.errno === 0 && res.data) {
-        const taskIds = res.data.list.map(task => task.taskID);
+        const taskIds = res.data.list.map(task => request.params.taskType === 'producetask' ? task.clueID : task.taskID);
         console.log('Task IDs:', taskIds);
         if (taskIds && taskIds.length > 0) {
+          const params = request.params.taskType === 'producetask'
+            ? { clueIDs: taskIds }
+            : { taskIds: taskIds };
+
           claimAuditTask(taskIds, request.params.taskType).then((res) => {
             console.log('Claim audit task response:', res);
             chrome.runtime.sendMessage({ action: 'claimAuditTaskResponse', data: res.data });
