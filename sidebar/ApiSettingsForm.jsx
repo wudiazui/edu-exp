@@ -12,6 +12,7 @@ const ApiSettingsForm = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [resetMessage, setResetMessage] = useState("");
+  const [serverType, setServerType] = useState("官方服务器");
 
   const fetchUserInfo = async () => {
     try {
@@ -66,65 +67,83 @@ const ApiSettingsForm = ({
     <div className="flex flex-col items-center">
       <div className="form-control w-full max-w-xs mt-2">
         <label className="label">
-          <span className="label-text">API 地址</span>
+          <span className="label-text">服务器类型</span>
         </label>
-        <input
-          type="text"
-          value={host}
-          onChange={handleHostChange}
-          placeholder="输入 API 地址"
-          className="input input-bordered input-sm"
-        />
+        <select 
+          className="select select-bordered select-sm"
+          value={serverType}
+          onChange={(e) => setServerType(e.target.value)}
+        >
+          <option value="官方服务器">官方服务器</option>
+          <option value="扣子">扣子</option>
+        </select>
       </div>
-      <div className="form-control w-full max-w-xs mt-2">
-        <label className="label">
-          <span className="label-text">用户名</span>
-        </label>
-        <input
-          type="text"
-          value={name}
-          onChange={handleNameChange}
-          placeholder="输入用户名"
-          className="input input-bordered input-sm"
-        />
-      </div>
-      <div className="form-control w-full max-w-xs mt-2">
-        <label className="label flex justify-between items-center">
-          <span className="label-text">过期时间</span>
-          <div className="flex gap-2">
-            <button
-              onClick={handleResetFingerprint}
-              className="btn btn-sm btn-ghost"
-              disabled={isResetting}
-            >
-              {isResetting ? (
-                <span className="loading loading-spinner loading-xs mr-1"></span>
-              ) : null}
-              重置指纹
-            </button>
-            <button
-              onClick={fetchUserInfo}
-              className="btn btn-sm btn-ghost"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <span className="loading loading-spinner loading-xs mr-1"></span>
-              ) : null}
-              刷新
-            </button>
+
+      {serverType !== "扣子" && (
+        <>
+          <div className="form-control w-full max-w-xs mt-2">
+            <label className="label">
+              <span className="label-text">API 地址</span>
+            </label>
+            <input
+              type="text"
+              value={host}
+              onChange={handleHostChange}
+              placeholder="输入 API 地址"
+              className="input input-bordered input-sm"
+            />
           </div>
-        </label>
-        <input
-          type="text"
-          value={expirationDate}
-          readOnly
-          placeholder={isLoading ? "加载中..." : "过期时间"}
-          className={`input input-bordered input-sm ${isLoading ? "opacity-70" : ""}`}
-        />
-        {resetMessage && (
-          <div className="text-sm mt-1 text-info">{resetMessage}</div>
-        )}
-      </div>
+          <div className="form-control w-full max-w-xs mt-2">
+            <label className="label">
+              <span className="label-text">用户名</span>
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={handleNameChange}
+              placeholder="输入用户名"
+              className="input input-bordered input-sm"
+            />
+          </div>
+          <div className="form-control w-full max-w-xs mt-2">
+            <label className="label flex justify-between items-center">
+              <span className="label-text">过期时间</span>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleResetFingerprint}
+                  className="btn btn-sm btn-ghost"
+                  disabled={isResetting}
+                >
+                  {isResetting ? (
+                    <span className="loading loading-spinner loading-xs mr-1"></span>
+                  ) : null}
+                  重置指纹
+                </button>
+                <button
+                  onClick={fetchUserInfo}
+                  className="btn btn-sm btn-ghost"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <span className="loading loading-spinner loading-xs mr-1"></span>
+                  ) : null}
+                  刷新
+                </button>
+              </div>
+            </label>
+            <input
+              type="text"
+              value={expirationDate}
+              readOnly
+              placeholder={isLoading ? "加载中..." : "过期时间"}
+              className={`input input-bordered input-sm ${isLoading ? "opacity-70" : ""}`}
+            />
+            {resetMessage && (
+              <div className="text-sm mt-1 text-info">{resetMessage}</div>
+            )}
+          </div>
+        </>
+      )}
 
       <CharacterInsertionSettings />
     </div>
