@@ -7,12 +7,55 @@ const ApiSettingsForm = ({
   handleHostChange,
   name,
   handleNameChange,
+  serverType,
+  setServerType,
+  isSettingsLoading
 }) => {
   const [expirationDate, setExpirationDate] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [resetMessage, setResetMessage] = useState("");
-  const [serverType, setServerType] = useState("官方服务器");
+  const [kouziAccessKey, setKouziAccessKey] = useState("");
+  const [kouziAppId, setKouziAppId] = useState("");
+  const [kouziOcrWorkflowId, setKouziOcrWorkflowId] = useState("");
+  const [kouziSolveWorkflowId, setKouziSolveWorkflowId] = useState("");
+
+  // Load saved settings from Chrome storage
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const result = await new Promise((resolve) => {
+          chrome.storage.sync.get([
+            'kouziAccessKey',
+            'kouziAppId',
+            'kouziOcrWorkflowId',
+            'kouziSolveWorkflowId'
+          ], resolve);
+        });
+        
+        console.log('Loading settings from storage:', result);
+        
+        if (result.kouziAccessKey) setKouziAccessKey(result.kouziAccessKey);
+        if (result.kouziAppId) setKouziAppId(result.kouziAppId);
+        if (result.kouziOcrWorkflowId) setKouziOcrWorkflowId(result.kouziOcrWorkflowId);
+        if (result.kouziSolveWorkflowId) setKouziSolveWorkflowId(result.kouziSolveWorkflowId);
+      } catch (error) {
+        console.error('Error loading settings:', error);
+      }
+    };
+
+    loadSettings();
+  }, []);
+
+  // Save settings to Chrome storage when they change
+  useEffect(() => {
+    chrome.storage.sync.set({
+      kouziAccessKey,
+      kouziAppId,
+      kouziOcrWorkflowId,
+      kouziSolveWorkflowId
+    });
+  }, [kouziAccessKey, kouziAppId, kouziOcrWorkflowId, kouziSolveWorkflowId]);
 
   const fetchUserInfo = async () => {
     try {
@@ -69,17 +112,74 @@ const ApiSettingsForm = ({
         <label className="label">
           <span className="label-text">服务器类型</span>
         </label>
-        <select 
-          className="select select-bordered select-sm"
-          value={serverType}
-          onChange={(e) => setServerType(e.target.value)}
-        >
-          <option value="官方服务器">官方服务器</option>
-          <option value="扣子">扣子</option>
-        </select>
+        {isSettingsLoading ? (
+          <div className="select select-bordered select-sm">
+            <span className="loading loading-spinner loading-xs"></span>
+          </div>
+        ) : (
+          <select 
+            className="select select-bordered select-sm"
+            value={serverType}
+            onChange={(e) => setServerType(e.target.value)}
+          >
+            <option value="官方服务器">官方服务器</option>
+            <option value="扣子">扣子</option>
+          </select>
+        )}
       </div>
 
-      {serverType !== "扣子" && (
+      {serverType === "扣子" ? (
+        <>
+          <div className="form-control w-full max-w-xs mt-2">
+            <label className="label">
+              <span className="label-text">扣子访问密钥</span>
+            </label>
+            <input
+              type="text"
+              value={kouziAccessKey}
+              onChange={(e) => setKouziAccessKey(e.target.value)}
+              placeholder="输入扣子访问密钥"
+              className="input input-bordered input-sm"
+            />
+          </div>
+          <div className="form-control w-full max-w-xs mt-2">
+            <label className="label">
+              <span className="label-text">扣子 App ID</span>
+            </label>
+            <input
+              type="text"
+              value={kouziAppId}
+              onChange={(e) => setKouziAppId(e.target.value)}
+              placeholder="输入扣子 App ID"
+              className="input input-bordered input-sm"
+            />
+          </div>
+          <div className="form-control w-full max-w-xs mt-2">
+            <label className="label">
+              <span className="label-text">文字识别工作流 ID</span>
+            </label>
+            <input
+              type="text"
+              value={kouziOcrWorkflowId}
+              onChange={(e) => setKouziOcrWorkflowId(e.target.value)}
+              placeholder="输入文字识别工作流 ID"
+              className="input input-bordered input-sm"
+            />
+          </div>
+          <div className="form-control w-full max-w-xs mt-2">
+            <label className="label">
+              <span className="label-text">解题工作流 ID</span>
+            </label>
+            <input
+              type="text"
+              value={kouziSolveWorkflowId}
+              onChange={(e) => setKouziSolveWorkflowId(e.target.value)}
+              placeholder="输入解题工作流 ID"
+              className="input input-bordered input-sm"
+            />
+          </div>
+        </>
+      ) : (
         <>
           <div className="form-control w-full max-w-xs mt-2">
             <label className="label">

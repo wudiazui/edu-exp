@@ -29,6 +29,8 @@ export default function Main() {
     });
 
   const [subject, setSubject] = useState("");
+  const [serverType, setServerType] = useState(null);
+  const [isSettingsLoading, setIsSettingsLoading] = useState(true);
 
   // Load feature settings from Chrome storage on component mount
   useEffect(() => {
@@ -50,6 +52,41 @@ export default function Main() {
       }
     }
   }, []);
+
+  // Load server type from storage
+  useEffect(() => {
+    const loadServerType = async () => {
+      try {
+        setIsSettingsLoading(true);
+        const result = await new Promise((resolve) => {
+          chrome.storage.sync.get(['serverType'], resolve);
+        });
+        
+        console.log('Loading serverType from storage:', result);
+        
+        if (result.serverType) {
+          console.log('Setting serverType to:', result.serverType);
+          setServerType(result.serverType);
+        } else {
+          setServerType("官方服务器");
+        }
+      } catch (error) {
+        console.error('Error loading serverType:', error);
+        setServerType("官方服务器");
+      } finally {
+        setIsSettingsLoading(false);
+      }
+    };
+
+    loadServerType();
+  }, []);
+
+  // Save serverType to storage when it changes
+  useEffect(() => {
+    if (serverType) {
+      chrome.storage.sync.set({ serverType });
+    }
+  }, [serverType]);
 
   React.useEffect(() => {
     // 监听来自 background 的消息
@@ -298,6 +335,9 @@ export default function Main() {
                   handleHostChange={handleHostChange}
                   name={name}
                   handleNameChange={handleNameChange}
+                  serverType={serverType}
+                  setServerType={setServerType}
+                  isSettingsLoading={isSettingsLoading}
                 />
               </div>
             )}
