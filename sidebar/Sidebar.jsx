@@ -374,6 +374,7 @@ export default function Main() {
               <OcrComponent
                 host={host}
                 uname={name}
+                serverType={serverType}
               />
             )}
             {activeTab === 'clue-claiming' && (
