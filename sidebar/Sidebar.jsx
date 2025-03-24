@@ -5,6 +5,7 @@ import QuestionTypeSelect from './QuestionTypeSelect'; // 引入新组件
 import CopyButton from './CopyButton'; // 引入新组件
 import OcrComponent from './OcrComponent'; // 引入新组件
 import ClueClaimingComponent from './ClueClaimingComponent'; // 引入线索认领组件
+import { CozeService } from '../coze.js';
 
 export default function Main() {
   const [question, setQuestion] = React.useState('');
@@ -31,6 +32,7 @@ export default function Main() {
   const [subject, setSubject] = useState("");
   const [serverType, setServerType] = useState(null);
   const [isSettingsLoading, setIsSettingsLoading] = useState(true);
+  const [cozeService, setCozeService] = React.useState(null);
 
   // Load feature settings from Chrome storage on component mount
   useEffect(() => {
@@ -61,9 +63,9 @@ export default function Main() {
         const result = await new Promise((resolve) => {
           chrome.storage.sync.get(['serverType'], resolve);
         });
-        
+
         console.log('Loading serverType from storage:', result);
-        
+
         if (result.serverType) {
           console.log('Setting serverType to:', result.serverType);
           setServerType(result.serverType);
@@ -117,13 +119,44 @@ export default function Main() {
   const handleFormat = async () => {
     setIsFormatting(true);
     try {
-      const response = await chrome.runtime.sendMessage(
-        { type: 'FORMAT_QUESTION', data: {'topic': question, 'discipline': subject}, host: host, uname: name }
-      );
-      if (response && response.formatted) {
-        setQuestion(response.formatted);
+      if (serverType === "扣子" && cozeService) {
+        // Get workflow ID from storage
+        const result = await new Promise((resolve) => {
+          chrome.storage.sync.get(['kouziSolveWorkflowId', 'kouziAppId'], resolve);
+        });
+
+        const workflowResult = await cozeService.executeWorkflow(result.kouziSolveWorkflowId, {
+          app_id: result.kouziAppId,
+          parameters: {
+            type: 'format',
+            topic: question,
+            discipline: subject
+          }
+        });
+
+        if (workflowResult && workflowResult.data) {
+          try {
+            const parsedData = typeof workflowResult.data === 'string'
+              ? JSON.parse(workflowResult.data)
+              : workflowResult.data;
+
+            if (parsedData && parsedData.topic) {
+              setQuestion(parsedData.topic);
+            } else {
+              console.error('Invalid workflow result format');
+            }
+          } catch (error) {
+            console.error('Error parsing workflow result:', error);
+          }
+        }
+      } else {
+        const response = await chrome.runtime.sendMessage(
+          { type: 'FORMAT_QUESTION', data: {'topic': question, 'discipline': subject}, host: host, uname: name }
+        );
+        if (response && response.formatted) {
+          setQuestion(response.formatted);
+        }
       }
-      // 处理其他响应...
     } finally {
       setIsFormatting(false);
     }
@@ -132,13 +165,44 @@ export default function Main() {
   const handleComplete = async () => {
     setIsCompleteeing(true);
     try {
-      const response = await chrome.runtime.sendMessage(
-        { type: 'TOPIC_COMPLETE', data: {'topic': question, 'discipline': subject}, host: host, uname: name }
-      );
-      if (response && response.formatted) {
-        setQuestion(response.formatted);
+      if (serverType === "扣子" && cozeService) {
+        // Get workflow ID from storage
+        const result = await new Promise((resolve) => {
+          chrome.storage.sync.get(['kouziSolveWorkflowId', 'kouziAppId'], resolve);
+        });
+
+        const workflowResult = await cozeService.executeWorkflow(result.kouziSolveWorkflowId, {
+          app_id: result.kouziAppId,
+          parameters: {
+            type: 'complete',
+            topic: question,
+            discipline: subject
+          }
+        });
+
+        if (workflowResult && workflowResult.data) {
+          try {
+            const parsedData = typeof workflowResult.data === 'string'
+              ? JSON.parse(workflowResult.data)
+              : workflowResult.data;
+
+            if (parsedData && parsedData.topic) {
+              setQuestion(parsedData.topic);
+            } else {
+              console.error('Invalid workflow result format');
+            }
+          } catch (error) {
+            console.error('Error parsing workflow result:', error);
+          }
+        }
+      } else {
+        const response = await chrome.runtime.sendMessage(
+          { type: 'TOPIC_COMPLETE', data: {'topic': question, 'discipline': subject}, host: host, uname: name }
+        );
+        if (response && response.formatted) {
+          setQuestion(response.formatted);
+        }
       }
-      // 处理其他响应...
     } finally {
       setIsCompleteeing(false);
     }
@@ -155,16 +219,76 @@ export default function Main() {
   const handleGenerateAnswer = async () => {
     setIsGeneratingAnswer(true);
     try {
-      const response = await chrome.runtime.sendMessage(
-        {
-          type: 'TOPIC_ANSWER',
-          host: host,
-          uname: name,
-          data: {'topic': question, 'discipline': subject, 'image_data': selectedImage, 'topic_type': selectedValue }
+      if (serverType === "扣子" && cozeService) {
+        // Get workflow ID from storage
+        const result = await new Promise((resolve) => {
+          chrome.storage.sync.get(['kouziSolveWorkflowId', 'kouziAppId'], resolve);
+        });
+
+        let imageFileId = null;
+        if (selectedImage) {
+          // Convert base64 to blob
+          const base64Data = selectedImage.split(',')[1];
+          const byteCharacters = atob(base64Data);
+          const byteArrays = [];
+          for (let offset = 0; offset < byteCharacters.length; offset += 1024) {
+            const slice = byteCharacters.slice(offset, offset + 1024);
+            const byteNumbers = new Array(slice.length);
+            for (let i = 0; i < slice.length; i++) {
+              byteNumbers[i] = slice.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            byteArrays.push(byteArray);
+          }
+          const blob = new Blob(byteArrays, { type: 'image/jpeg' });
+          const file = new File([blob], 'image.jpg', { type: 'image/jpeg' });
+
+          // Upload file
+          const uploadResult = await cozeService.uploadFile(file);
+          imageFileId = uploadResult.id;
         }
-      );
-      if (response && response.formatted) {
-        setAnswer(response.formatted);
+
+        const workflowResult = await cozeService.executeWorkflow(result.kouziSolveWorkflowId, {
+          app_id: result.kouziAppId,
+          parameters: {
+            type: 'answer',
+            topic: question,
+            discipline: subject,
+            topic_type: selectedValue,
+            image: imageFileId ? {
+              type: "image",
+              file_id: imageFileId
+            } : null
+          }
+        });
+
+        if (workflowResult && workflowResult.data) {
+          try {
+            const parsedData = typeof workflowResult.data === 'string'
+              ? JSON.parse(workflowResult.data)
+              : workflowResult.data;
+
+            if (parsedData && parsedData.topic) {
+               setAnswer(parsedData.topic);
+            } else {
+              console.error('Invalid workflow result format');
+            }
+          } catch (error) {
+            console.error('Error parsing workflow result:', error);
+          }
+        }
+      } else {
+        const response = await chrome.runtime.sendMessage(
+          {
+            type: 'TOPIC_ANSWER',
+            host: host,
+            uname: name,
+            data: {'topic': question, 'discipline': subject, 'image_data': selectedImage, 'topic_type': selectedValue }
+          }
+        );
+        if (response && response.formatted) {
+          setAnswer(response.formatted);
+        }
       }
     } finally {
       setIsGeneratingAnswer(false);
@@ -174,16 +298,77 @@ export default function Main() {
   const handleGenerateAnalysis = async () => {
     setIsGeneratingAnalysis(true);
     try {
-      const response = await chrome.runtime.sendMessage(
-        {
-          type: 'TOPIC_ANALYSIS',
-          host: host,
-          uname: name,
-          data: {'topic': question, 'answer': answer, 'discipline': subject, 'image_data': selectedImage, 'topic_type': selectedValue}
+      if (serverType === "扣子" && cozeService) {
+        // Get workflow ID from storage
+        const result = await new Promise((resolve) => {
+          chrome.storage.sync.get(['kouziSolveWorkflowId', 'kouziAppId'], resolve);
+        });
+
+        let imageFileId = null;
+        if (selectedImage) {
+          // Convert base64 to blob
+          const base64Data = selectedImage.split(',')[1];
+          const byteCharacters = atob(base64Data);
+          const byteArrays = [];
+          for (let offset = 0; offset < byteCharacters.length; offset += 1024) {
+            const slice = byteCharacters.slice(offset, offset + 1024);
+            const byteNumbers = new Array(slice.length);
+            for (let i = 0; i < slice.length; i++) {
+              byteNumbers[i] = slice.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            byteArrays.push(byteArray);
+          }
+          const blob = new Blob(byteArrays, { type: 'image/jpeg' });
+          const file = new File([blob], 'image.jpg', { type: 'image/jpeg' });
+
+          // Upload file
+          const uploadResult = await cozeService.uploadFile(file);
+          imageFileId = uploadResult.id;
         }
-      );
-      if (response && response.formatted) {
-        setAnalysis(response.formatted);
+
+        const workflowResult = await cozeService.executeWorkflow(result.kouziSolveWorkflowId, {
+          app_id: result.kouziAppId,
+          parameters: {
+            type: 'analysis',
+            topic: question,
+            answer: answer,
+            discipline: subject,
+            topic_type: selectedValue,
+            image: imageFileId ? {
+              type: "image",
+              file_id: imageFileId
+            } : null
+          }
+        });
+
+        if (workflowResult && workflowResult.data) {
+          try {
+            const parsedData = typeof workflowResult.data === 'string'
+              ? JSON.parse(workflowResult.data)
+              : workflowResult.data;
+
+            if (parsedData && parsedData.topic) {
+               setAnalysis(parsedData.topic);
+            } else {
+              console.error('Invalid workflow result format');
+            }
+          } catch (error) {
+            console.error('Error parsing workflow result:', error);
+          }
+        }
+      } else {
+        const response = await chrome.runtime.sendMessage(
+          {
+            type: 'TOPIC_ANALYSIS',
+            host: host,
+            uname: name,
+            data: {'topic': question, 'answer': answer, 'discipline': subject, 'image_data': selectedImage, 'topic_type': selectedValue}
+          }
+        );
+        if (response && response.formatted) {
+          setAnalysis(response.formatted);
+        }
       }
     } finally {
       setIsGeneratingAnalysis(false);
@@ -315,6 +500,17 @@ export default function Main() {
     };
   }, [features]);
 
+  // Initialize CozeService when serverType is "扣子"
+  React.useEffect(() => {
+    if (serverType === "扣子") {
+      chrome.storage.sync.get(['kouziAccessKey', 'kouziSolveWorkflowId'], (result) => {
+        if (result.kouziAccessKey && result.kouziSolveWorkflowId) {
+          setCozeService(new CozeService(result.kouziAccessKey));
+        }
+      });
+    }
+  }, [serverType]);
+
   return (<div className="container max-auto px-1 mt-2">
             <div className="tabs tabs-boxed">
               <a className={`tab ${activeTab === 'settings' ? 'tab-active' : ''}`} onClick={() => handleTabChange('settings')}>设置</a>
@@ -368,6 +564,7 @@ export default function Main() {
                 uname={name}
                 isSwapActive={isSwapActive}
                 setIsSwapActive={handleSwapToggle}
+                serverType={serverType}
               />
             )}
             {activeTab === 'ocr' && (

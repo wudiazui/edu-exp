@@ -28,6 +28,7 @@ const QuestionAnswerForm = ({
   uname,
   isSwapActive,
   setIsSwapActive,
+  serverType,
 }) => {
 
   const onPaste = (event) => {
@@ -91,6 +92,7 @@ const QuestionAnswerForm = ({
                   uname={uname}
                   isSwapActive={isSwapActive}
                   setIsSwapActive={setIsSwapActive}
+                  serverType={serverType}
                 />
                 <div className="join m-2">
                   <button
