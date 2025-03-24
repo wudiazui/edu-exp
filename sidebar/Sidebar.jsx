@@ -255,10 +255,12 @@ export default function Main() {
             topic: question,
             discipline: subject,
             topic_type: selectedValue,
-            image: imageFileId ? {
-              type: "image",
-              file_id: imageFileId
-            } : null
+            ...(imageFileId && {
+              image: {
+                type: "image",
+                file_id: imageFileId
+              }
+            })
           }
         });
 
@@ -335,10 +337,12 @@ export default function Main() {
             answer: answer,
             discipline: subject,
             topic_type: selectedValue,
-            image: imageFileId ? {
-              type: "image",
-              file_id: imageFileId
-            } : null
+            ...(imageFileId && {
+              image: {
+                type: "image",
+                file_id: imageFileId
+              }
+            })
           }
         });
 
