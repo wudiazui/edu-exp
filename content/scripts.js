@@ -856,6 +856,13 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     console.log('Shortcuts updated:', shortcuts);
     return true;
   }
+
+  if (request.action === "fill_content") {
+    console.log(`Received fill content request:`, request);
+    // TODO: Implement the actual filling logic here
+    // For now, just log the received content
+    console.log(`Type: ${request.type}, Text: ${request.text}`);
+  }
 });
 
 // 监听键盘事件

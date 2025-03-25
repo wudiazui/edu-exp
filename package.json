@@ -30,6 +30,7 @@
     "katex": "^0.16.21",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-dropzone": "^14.3.5"
+    "react-dropzone": "^14.3.5",
+    "umbrellajs": "^3.3.3"
   }
 }

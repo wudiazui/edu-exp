@@ -250,6 +250,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
+  // Handle fill answer/analysis messages
+  if (request.type === "解答" || request.type === "解析") {
+    // Forward the message to the active tab
+    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+      if (tabs[0]) {
+        chrome.tabs.sendMessage(tabs[0].id, {
+          action: "fill_content",
+          type: request.type,
+          text: request.text
+        });
+      }
+    });
+    return true;
+  }
+
   const formatMessage = async (type, data, host, uname) => {
     try {
       let formatted;
