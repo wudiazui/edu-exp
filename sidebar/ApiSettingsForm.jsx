@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { user_info, reset_fingerprint } from "../lib";
 import CharacterInsertionSettings from "./CharacterInsertionSettings";
+import OtherFunctionalSettings from "./OtherFunctionalSettings";
 
 const ApiSettingsForm = ({
   host,
@@ -250,6 +251,7 @@ const ApiSettingsForm = ({
       )}
 
       <CharacterInsertionSettings />
+      <OtherFunctionalSettings />
     </div>
   );
 };

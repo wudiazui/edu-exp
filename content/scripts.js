@@ -880,6 +880,16 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
         // 渲染数学公式
         (async () => {
           try {
+            // 先检查是否启用了自动渲染
+            const result = await new Promise(resolve => {
+              chrome.storage.sync.get(['autoRenderFormula'], resolve);
+            });
+
+            // 如果未启用自动渲染，直接返回
+            if (!result.autoRenderFormula) {
+              return;
+            }
+
             // Show loading notification
             const notificationId = showNotification('正在渲染数学公式...', 'info', true);
 
