@@ -73,7 +73,7 @@ chrome.runtime.onInstalled.addListener(() => {
     });
     chrome.contextMenus.create({
       id: "auto-fill-blank",
-      title: "[填空]答案自动填入",
+      title: "自动填入答案",
       parentId: "baidu-edu-tools",
       contexts: ["selection"]
     });
