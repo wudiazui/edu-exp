@@ -874,6 +874,31 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
           .join('');
 
         editorContainer.html(tempDiv.innerHTML);
+
+        sendFixEvent(editorContainer.first());  // 使用 .first() 获取第一个原生 DOM 元素
+
+        // 渲染数学公式
+        (async () => {
+          try {
+            // Show loading notification
+            const notificationId = showNotification('正在渲染数学公式...', 'info', true);
+
+            // Render math formulas
+            const renderedHtml = await replaceLatexWithImagesInHtml(editorContainer.html());
+            editorContainer.html(renderedHtml);
+
+            // Trigger editor events to update - get the native DOM element
+            sendFixEvent(editorContainer.first());  // 使用 .first() 获取第一个原生 DOM 元素
+
+            // Hide loading notification and show success
+            hideNotification(notificationId);
+            showNotification('数学公式渲染完成', 'success');
+          } catch (error) {
+            showNotification('数学公式渲染失败：' + error.message, 'error');
+            console.error('Math rendering error:', error);
+          }
+        })();
+
         return true;
       }
       return false;
