@@ -885,6 +885,8 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
       fillEditorContent('[id^="cankao-edit-"]');
     } else if (request.type === "analysis") {
       fillEditorContent('[id^="analyse-edit-"]');
+    } else if (request.type === "topic") {
+      fillEditorContent('[id^="stem-edit-"]');
     }
   }
 });

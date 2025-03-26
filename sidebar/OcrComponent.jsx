@@ -165,7 +165,20 @@ const OcrComponent = ({ host, uname, serverType }) => {
       <div className="mt-2">
         <div className="label flex justify-between items-center">
           <span className="label-text">结果</span>
-          <CopyButton text={recognizedText} />
+          <div className="flex gap-1 items-center">
+            <button
+              onClick={() => {
+                chrome.runtime.sendMessage({
+                  type: "topic",
+                  text: recognizedText
+                });
+              }}
+              className="btn btn-ghost btn-xs flex items-center"
+            >
+              填入
+            </button>
+            <CopyButton text={recognizedText} />
+          </div>
         </div>
         <textarea
           value={recognizedText}
