@@ -986,13 +986,93 @@ async function handleMathImg() {
 async function handleAutoFillBlank() {
   const selectedText = window.getSelection().toString().trim();
   
-  // Check for elements with class 'add-btn'
-  const addBtnElements = u('.add-btn');
-  console.log('Found add-btn elements:', addBtnElements.length > 0, 'Count:', addBtnElements.length);
-
-  if (selectedText) {
-    // TODO: Implement auto fill blank answer functionality
-    showNotification('Auto-fill blank answer feature is coming soon!', 'info');
-    console.log('Selected text for auto-fill:', selectedText);
+  if (!selectedText) {
+    showNotification('请先选择要填入的文本', 'error');
+    return;
   }
+
+  // 使用分号分割文本
+  const answers = selectedText.split('；').filter(text => text.trim());
+  
+  // 首先找到所有 c-margin-bottom-middle el-row 容器
+  const containers = u('.c-margin-bottom-middle.el-row');
+  if (!containers.length) {
+    showNotification('未找到填空答案区域', 'error');
+    return;
+  }
+
+  // 遍历每个容器并处理其中的输入框
+  for (let i = 0; i < Math.min(containers.length, answers.length); i++) {
+    const container = u(containers.nodes[i]);
+    const inputElement = container.find('.el-input__inner');
+    
+    if (inputElement.length > 0) {
+      const input = inputElement.nodes[0];
+      
+      // 设置输入值
+      input.value = answers[i].trim();
+      
+      // 触发输入事件
+      const inputEvent = new Event('input', { bubbles: true });
+      input.dispatchEvent(inputEvent);
+      
+      // 触发change事件
+      const changeEvent = new Event('change', { bubbles: true });
+      input.dispatchEvent(changeEvent);
+
+      // 添加焦点和失焦事件以确保值被正确更新
+      const focusEvent = new Event('focus', { bubbles: true });
+      const blurEvent = new Event('blur', { bubbles: true });
+      input.dispatchEvent(focusEvent);
+      input.dispatchEvent(blurEvent);
+    }
+  }
+
+  // 如果答案数量大于容器数量，需要添加新的输入框
+  const diffCount = answers.length - containers.length;
+  
+  if (diffCount > 0) {
+    const addBtn = u('.add-btn');
+    if (addBtn.length > 0) {
+      for (let i = 0; i < diffCount; i++) {
+        addBtn.nodes[0].click();
+        // 添加小延迟确保DOM更新
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      // 等待DOM更新后填入剩余答案
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // 重新获取所有容器
+      const newContainers = u('.c-margin-bottom-middle.el-row');
+      
+      // 填入剩余答案
+      for (let i = containers.length; i < answers.length; i++) {
+        if (i < newContainers.length) {
+          const container = u(newContainers.nodes[i]);
+          const inputElement = container.find('.el-input__inner');
+          
+          if (inputElement.length > 0) {
+            const input = inputElement.nodes[0];
+            
+            // 设置输入值
+            input.value = answers[i].trim();
+            
+            // 触发事件
+            const inputEvent = new Event('input', { bubbles: true });
+            const changeEvent = new Event('change', { bubbles: true });
+            const focusEvent = new Event('focus', { bubbles: true });
+            const blurEvent = new Event('blur', { bubbles: true });
+            
+            input.dispatchEvent(inputEvent);
+            input.dispatchEvent(changeEvent);
+            input.dispatchEvent(focusEvent);
+            input.dispatchEvent(blurEvent);
+          }
+        }
+      }
+    }
+  }
+
+  showNotification(`已成功填入 ${Math.min(answers.length, containers.length + diffCount)} 个答案`, 'success');
 }
