@@ -132,7 +132,7 @@ const QuestionAnswerForm = ({
                       <button
                             onClick={() => {
                               chrome.runtime.sendMessage({
-                                type: "解答",
+                                type: "answer",
                                 text: answer
                               });
                             }}
@@ -163,7 +163,7 @@ const QuestionAnswerForm = ({
                       <button
                             onClick={() => {
                               chrome.runtime.sendMessage({
-                                type: "解析",
+                                type: "analysis",
                                 text: analysis
                               });
                             }}

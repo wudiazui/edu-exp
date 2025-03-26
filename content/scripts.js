@@ -1,6 +1,7 @@
 import { claimAuditTask, getAuditTaskList, getAuditTaskLabel, replaceLatexWithImages, replacePunctuation, img_upload, replaceLatexWithImagesInHtml} from "../lib.js";
 
 import {generateVerticalArithmeticImage} from "../src/index.js";
+import u from "umbrellajs";
 
 // 添加竖式计算的通知ID变量
 let verticalArithmeticNotificationId = null;
@@ -859,9 +860,43 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
 
   if (request.action === "fill_content") {
     console.log(`Received fill content request:`, request);
-    // TODO: Implement the actual filling logic here
-    // For now, just log the received content
-    console.log(`Type: ${request.type}, Text: ${request.text}`);
+
+    if (request.type === "answer") {
+      // Find the answer editor container
+      console.log('Looking for answer container with selector [id^="answer-edit-"]');
+      const answerContainer = u('[id^="answer-edit-"]');
+      console.log('Initial container found:', answerContainer.length ? 'yes' : 'no');
+      
+      const textContainer = answerContainer.find('.w-e-text-container');
+      console.log('Text container found:', textContainer.length ? 'yes' : 'no');
+      
+      const editorContainer = textContainer.find('.w-e-text');
+      console.log('Editor container found:', editorContainer.length ? 'yes' : 'no');
+
+      if (editorContainer.length) {
+        console.log('Found editor container, proceeding with text insertion');
+        // Convert special characters to HTML entities
+        const convertedText = convertToHtmlEntities(request.text);
+        console.log('Converted text:', convertedText);
+        
+        // Create a temporary element to insert HTML entities
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = convertedText;
+        
+        // Insert the text into the answer container
+        editorContainer.html(tempDiv.innerHTML);
+        console.log('Text inserted into editor');
+        
+        // Trigger events to update the editor
+        //sendFixEvent(editorContainer);
+        console.log('Editor update events triggered');
+      } else {
+        console.warn('Could not find editor container - DOM structure may have changed');
+      }
+    } else if (request.type === "analysis") {
+      // TODO: Implement analysis logic
+      console.log("Analysis type not yet implemented");
+    }
   }
 });
 

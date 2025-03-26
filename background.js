@@ -251,7 +251,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   // Handle fill answer/analysis messages
-  if (request.type === "解答" || request.type === "解析") {
+  if (request.type === "answer" || request.type === "analysis") {
     // Forward the message to the active tab
     chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
       if (tabs[0]) {
