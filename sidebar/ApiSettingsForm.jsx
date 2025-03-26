@@ -58,6 +58,8 @@ const ApiSettingsForm = ({
   }, [kouziAccessKey, kouziAppId, kouziOcrWorkflowId, kouziSolveWorkflowId]);
 
   const fetchUserInfo = async () => {
+    if (serverType === "扣子") return;
+    
     try {
       setIsLoading(true);
       const userInfo = await user_info(host, name);
@@ -74,6 +76,8 @@ const ApiSettingsForm = ({
   };
 
   const handleResetFingerprint = async () => {
+    if (serverType === "扣子") return;
+    
     if (!host || !name) {
       setResetMessage("请先填写API地址和用户名");
       return;
@@ -99,12 +103,12 @@ const ApiSettingsForm = ({
   };
 
   useEffect(() => {
-    if (host && name) {
+    if (serverType !== "扣子" && host && name) {
       fetchUserInfo();
     } else {
       setExpirationDate("");
     }
-  }, [host, name]);
+  }, [host, name, serverType]);
 
   return (
     <div className="flex flex-col items-center">
