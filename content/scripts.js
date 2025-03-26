@@ -881,7 +881,8 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
         
         // Create a temporary element to insert HTML entities
         const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = convertedText;
+        // Wrap content with p tag
+        tempDiv.innerHTML = `<p>${convertedText}</p>`;
         
         // Insert the text into the answer container
         editorContainer.html(tempDiv.innerHTML);
@@ -913,7 +914,8 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
         
         // Create a temporary element to insert HTML entities
         const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = convertedText;
+        // Wrap content with p tag
+        tempDiv.innerHTML = `<p>${convertedText}</p>`;
         
         // Insert the text into the analysis container
         editorContainer.html(tempDiv.innerHTML);
