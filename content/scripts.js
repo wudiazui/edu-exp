@@ -865,10 +865,10 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
       const editorContainer = textContainer.find('.w-e-text');
 
       if (editorContainer.length) {
-        const convertedText = convertToHtmlEntities(request.text);
+        const convertedText = request.text;
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = `<p>${convertedText}</p>`;
-        
+
         editorContainer.html(tempDiv.innerHTML);
 
         const referenceContainer = u('[id^="cankao-edit-"]');
@@ -886,10 +886,10 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
       const editorContainer = textContainer.find('.w-e-text');
 
       if (editorContainer.length) {
-        const convertedText = convertToHtmlEntities(request.text);
+        const convertedText = request.text;
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = `<p>${convertedText}</p>`;
-        
+
         editorContainer.html(tempDiv.innerHTML);
       }
     }

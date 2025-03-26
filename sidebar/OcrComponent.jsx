@@ -105,21 +105,34 @@ const OcrComponent = ({ host, uname, serverType }) => {
             setRecognizedText('识别失败：未获取到识别结果');
           }
         } else {
-          // Original logic for official server
-          chrome.runtime.sendMessage(
-            { type: 'OCR',
-              data: { 'image_data': selectedImage },
-              host,
-              uname
-            }, (response) => {
-              if (response && response.formatted) {
-                setRecognizedText(response.formatted);
+          // Official server logic wrapped in a Promise
+          const response = await new Promise((resolve, reject) => {
+            chrome.runtime.sendMessage(
+              {
+                type: 'OCR',
+                data: { 'image_data': selectedImage },
+                host,
+                uname
+              },
+              (response) => {
+                if (chrome.runtime.lastError) {
+                  reject(chrome.runtime.lastError);
+                } else {
+                  resolve(response);
+                }
               }
-            });
+            );
+          });
+
+          if (response && response.formatted) {
+            setRecognizedText(response.formatted);
+          } else {
+            setRecognizedText('识别失败：未获取到有效的识别结果');
+          }
         }
       } catch (error) {
         console.error('Error in OCR:', error);
-        setRecognizedText('识别失败：' + error.message);
+        setRecognizedText('识别失败：' + (error.message || '未知错误'));
       } finally {
         setIsLoading(false);
       }
