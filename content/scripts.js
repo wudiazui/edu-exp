@@ -859,73 +859,38 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   }
 
   if (request.action === "fill_content") {
-    console.log(`Received fill content request:`, request);
-
     if (request.type === "answer") {
-      // Find the answer editor container
-      console.log('Looking for answer container with selector [id^="answer-edit-"]');
       const answerContainer = u('[id^="answer-edit-"]');
-      console.log('Initial container found:', answerContainer.length ? 'yes' : 'no');
-      
       const textContainer = answerContainer.find('.w-e-text-container');
-      console.log('Text container found:', textContainer.length ? 'yes' : 'no');
-      
       const editorContainer = textContainer.find('.w-e-text');
-      console.log('Editor container found:', editorContainer.length ? 'yes' : 'no');
 
       if (editorContainer.length) {
-        console.log('Found editor container, proceeding with text insertion');
-        // Convert special characters to HTML entities
         const convertedText = convertToHtmlEntities(request.text);
-        console.log('Converted text:', convertedText);
-        
-        // Create a temporary element to insert HTML entities
         const tempDiv = document.createElement('div');
-        // Wrap content with p tag
         tempDiv.innerHTML = `<p>${convertedText}</p>`;
         
-        // Insert the text into the answer container
         editorContainer.html(tempDiv.innerHTML);
-        console.log('Text inserted into editor');
-        
-        // Trigger events to update the editor
-        //sendFixEvent(editorContainer);
-        console.log('Editor update events triggered');
-      } else {
-        console.warn('Could not find editor container - DOM structure may have changed');
+
+        const referenceContainer = u('[id^="cankao-edit-"]');
+        if (referenceContainer.length) {
+          const refTextContainer = referenceContainer.find('.w-e-text-container');
+          const refEditorContainer = refTextContainer.find('.w-e-text');
+          if (refEditorContainer.length) {
+            refEditorContainer.html(tempDiv.innerHTML);
+          }
+        }
       }
     } else if (request.type === "analysis") {
-      // Find the analysis editor container
-      console.log('Looking for analysis container with selector [id^="analyse-edit-"]');
       const analysisContainer = u('[id^="analyse-edit-"]');
-      console.log('Initial container found:', analysisContainer.length ? 'yes' : 'no');
-      
       const textContainer = analysisContainer.find('.w-e-text-container');
-      console.log('Text container found:', textContainer.length ? 'yes' : 'no');
-      
       const editorContainer = textContainer.find('.w-e-text');
-      console.log('Editor container found:', editorContainer.length ? 'yes' : 'no');
 
       if (editorContainer.length) {
-        console.log('Found editor container, proceeding with text insertion');
-        // Convert special characters to HTML entities
         const convertedText = convertToHtmlEntities(request.text);
-        console.log('Converted text:', convertedText);
-        
-        // Create a temporary element to insert HTML entities
         const tempDiv = document.createElement('div');
-        // Wrap content with p tag
         tempDiv.innerHTML = `<p>${convertedText}</p>`;
         
-        // Insert the text into the analysis container
         editorContainer.html(tempDiv.innerHTML);
-        console.log('Text inserted into editor');
-        
-        // Trigger events to update the editor
-        //sendFixEvent(editorContainer);
-        console.log('Editor update events triggered');
-      } else {
-        console.warn('Could not find editor container - DOM structure may have changed');
       }
     }
   }
