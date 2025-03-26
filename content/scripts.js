@@ -859,45 +859,32 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   }
 
   if (request.action === "fill_content") {
+    // Helper function to fill editor content
+    function fillEditorContent(containerSelector) {
+      const container = u(containerSelector);
+      const textContainer = container.find('.w-e-text-container');
+      const editorContainer = textContainer.find('.w-e-text');
+
+      if (editorContainer.length) {
+        const convertedText = request.text;
+        const tempDiv = document.createElement('div');
+        // Split text by newlines and wrap each line in p tags
+        tempDiv.innerHTML = convertedText.split('\n')
+          .map(line => `<p>${line}</p>`)
+          .join('');
+
+        editorContainer.html(tempDiv.innerHTML);
+        return true;
+      }
+      return false;
+    }
+
     if (request.type === "answer") {
-      const answerContainer = u('[id^="answer-edit-"]');
-      const textContainer = answerContainer.find('.w-e-text-container');
-      const editorContainer = textContainer.find('.w-e-text');
-
-      if (editorContainer.length) {
-        const convertedText = request.text;
-        const tempDiv = document.createElement('div');
-        // Split text by newlines and wrap each line in p tags
-        tempDiv.innerHTML = convertedText.split('\n')
-          .map(line => `<p>${line}</p>`)
-          .join('');
-
-        editorContainer.html(tempDiv.innerHTML);
-
-        const referenceContainer = u('[id^="cankao-edit-"]');
-        if (referenceContainer.length) {
-          const refTextContainer = referenceContainer.find('.w-e-text-container');
-          const refEditorContainer = refTextContainer.find('.w-e-text');
-          if (refEditorContainer.length) {
-            refEditorContainer.html(tempDiv.innerHTML);
-          }
-        }
-      }
+      fillEditorContent('[id^="answer-edit-"]');
+      // Also fill reference if it exists
+      fillEditorContent('[id^="cankao-edit-"]');
     } else if (request.type === "analysis") {
-      const analysisContainer = u('[id^="analyse-edit-"]');
-      const textContainer = analysisContainer.find('.w-e-text-container');
-      const editorContainer = textContainer.find('.w-e-text');
-
-      if (editorContainer.length) {
-        const convertedText = request.text;
-        const tempDiv = document.createElement('div');
-        // Split text by newlines and wrap each line in p tags
-        tempDiv.innerHTML = convertedText.split('\n')
-          .map(line => `<p>${line}</p>`)
-          .join('');
-
-        editorContainer.html(tempDiv.innerHTML);
-      }
+      fillEditorContent('[id^="analyse-edit-"]');
     }
   }
 });
