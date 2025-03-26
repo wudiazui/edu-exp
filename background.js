@@ -71,6 +71,12 @@ chrome.runtime.onInstalled.addListener(() => {
       parentId: "baidu-edu-tools",
       contexts: ["selection"]
     });
+    chrome.contextMenus.create({
+      id: "auto-fill-blank",
+      title: "[填空]答案自动填入",
+      parentId: "baidu-edu-tools",
+      contexts: ["selection"]
+    });
 
     // 创建字符插入菜单
     createCharacterMenus();
@@ -130,6 +136,9 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   }
   if (info.menuItemId === "math-img") {
     chrome.tabs.sendMessage(tab.id, { action: "math_img" });
+  }
+  if (info.menuItemId === "auto-fill-blank") {
+    chrome.tabs.sendMessage(tab.id, { action: "auto_fill_blank" });
   }
   if (info.menuItemId.startsWith('insert-char-')) {
     const shortcutName = info.menuItemId.replace('insert-char-', '');

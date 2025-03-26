@@ -645,87 +645,13 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   }
 
   if (request.action === "math_img") {
-    (async () => {
-      try {
-        const selection = window.getSelection();
-        if (selection.rangeCount > 0) {
-          const range = selection.getRangeAt(0);
-          const selectedText = range.toString().trim();
+    handleMathImg();
+    return true;
+  }
 
-          // 显示加载中通知
-          verticalArithmeticNotificationId = showNotification('正在生成竖式计算...', 'info', true);
-
-          const imageBlob = await generateVerticalArithmeticImage(selectedText);
-
-          // 隐藏加载中通知
-          hideNotification(verticalArithmeticNotificationId);
-
-          // 显示成功通知
-          showNotification('竖式计算生成成功', 'success');
-
-          // 显示上传中通知
-          const uploadNotificationId = showNotification('正在上传竖式计算图片...', 'info', true);
-
-          // Upload the image and get the response
-          const uploadResponse = await img_upload(imageBlob);
-
-          // 隐藏上传中通知
-          hideNotification(uploadNotificationId);
-
-          // 显示上传成功通知
-          showNotification('竖式计算图片上传成功', 'success');
-
-          // Create img element with the uploaded image URL
-          const img = document.createElement('img');
-          img.src = uploadResponse.data.cdnUrl; // Assuming the response contains the URL in a 'url' field
-
-          // Find the current line's parent element (likely a <p> tag)
-          let currentBlock = range.startContainer;
-          while (currentBlock && currentBlock.nodeType !== Node.ELEMENT_NODE) {
-            currentBlock = currentBlock.parentNode;
-          }
-
-          // Create a new paragraph for the image
-          const newP = document.createElement('p');
-          newP.appendChild(img);
-
-          // Insert the new paragraph after the current block
-          if (currentBlock && currentBlock.parentNode) {
-            currentBlock.parentNode.insertBefore(newP, currentBlock.nextSibling);
-          }
-
-          // Trigger events to update the editor
-          sendFixEvent(document.activeElement);
-        }
-      } catch (error) {
-        console.error('Error processing math image:', error);
-
-        // 如果有加载中通知，先隐藏
-        if (verticalArithmeticNotificationId) {
-          hideNotification(verticalArithmeticNotificationId);
-          verticalArithmeticNotificationId = null;
-        }
-
-        // 确定错误类型并显示相应的错误消息
-        let errorMessage = '未知错误';
-        if (error.message) {
-          errorMessage = error.message;
-
-          // 根据错误消息判断错误类型
-          if (error.message.includes('upload') || error.message.includes('网络')) {
-            errorMessage = '图片上传失败: ' + error.message;
-          } else if (error.message.includes('parse') || error.message.includes('syntax')) {
-            errorMessage = '表达式格式错误: ' + error.message;
-          } else if (error.message.includes('render') || error.message.includes('canvas')) {
-            errorMessage = '渲染计算过程失败: ' + error.message;
-          }
-        }
-
-        // 显示错误通知
-        showNotification('竖式计算处理失败: ' + errorMessage, 'error');
-      }
-    })();
-    return true; // Keep message channel open for async operation
+  if (request.action === "auto_fill_blank") {
+    handleAutoFillBlank();
+    return true;
   }
 
   if (request.action === "periodic_message") {
@@ -975,3 +901,98 @@ document.addEventListener('keydown', (e) => {
     }
   }
 });
+
+async function handleMathImg() {
+  try {
+    const selection = window.getSelection();
+    if (selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      const selectedText = range.toString().trim();
+
+      // 显示加载中通知
+      verticalArithmeticNotificationId = showNotification('正在生成竖式计算...', 'info', true);
+
+      const imageBlob = await generateVerticalArithmeticImage(selectedText);
+
+      // 隐藏加载中通知
+      hideNotification(verticalArithmeticNotificationId);
+
+      // 显示成功通知
+      showNotification('竖式计算生成成功', 'success');
+
+      // 显示上传中通知
+      const uploadNotificationId = showNotification('正在上传竖式计算图片...', 'info', true);
+
+      // Upload the image and get the response
+      const uploadResponse = await img_upload(imageBlob);
+
+      // 隐藏上传中通知
+      hideNotification(uploadNotificationId);
+
+      // 显示上传成功通知
+      showNotification('竖式计算图片上传成功', 'success');
+
+      // Create img element with the uploaded image URL
+      const img = document.createElement('img');
+      img.src = uploadResponse.data.cdnUrl;
+
+      // Find the current line's parent element (likely a <p> tag)
+      let currentBlock = range.startContainer;
+      while (currentBlock && currentBlock.nodeType !== Node.ELEMENT_NODE) {
+        currentBlock = currentBlock.parentNode;
+      }
+
+      // Create a new paragraph for the image
+      const newP = document.createElement('p');
+      newP.appendChild(img);
+
+      // Insert the new paragraph after the current block
+      if (currentBlock && currentBlock.parentNode) {
+        currentBlock.parentNode.insertBefore(newP, currentBlock.nextSibling);
+      }
+
+      // Trigger events to update the editor
+      sendFixEvent(document.activeElement);
+    }
+  } catch (error) {
+    console.error('Error processing math image:', error);
+
+    // 如果有加载中通知，先隐藏
+    if (verticalArithmeticNotificationId) {
+      hideNotification(verticalArithmeticNotificationId);
+      verticalArithmeticNotificationId = null;
+    }
+
+    // 确定错误类型并显示相应的错误消息
+    let errorMessage = '未知错误';
+    if (error.message) {
+      errorMessage = error.message;
+
+      // 根据错误消息判断错误类型
+      if (error.message.includes('upload') || error.message.includes('网络')) {
+        errorMessage = '图片上传失败: ' + error.message;
+      } else if (error.message.includes('parse') || error.message.includes('syntax')) {
+        errorMessage = '表达式格式错误: ' + error.message;
+      } else if (error.message.includes('render') || error.message.includes('canvas')) {
+        errorMessage = '渲染计算过程失败: ' + error.message;
+      }
+    }
+
+    // 显示错误通知
+    showNotification('竖式计算处理失败: ' + errorMessage, 'error');
+  }
+}
+
+async function handleAutoFillBlank() {
+  const selectedText = window.getSelection().toString().trim();
+  
+  // Check for elements with class 'add-btn'
+  const addBtnElements = u('.add-btn');
+  console.log('Found add-btn elements:', addBtnElements.length > 0, 'Count:', addBtnElements.length);
+
+  if (selectedText) {
+    // TODO: Implement auto fill blank answer functionality
+    showNotification('Auto-fill blank answer feature is coming soon!', 'info');
+    console.log('Selected text for auto-fill:', selectedText);
+  }
+}
