@@ -867,7 +867,10 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
       if (editorContainer.length) {
         const convertedText = request.text;
         const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = `<p>${convertedText}</p>`;
+        // Split text by newlines and wrap each line in p tags
+        tempDiv.innerHTML = convertedText.split('\n')
+          .map(line => `<p>${line}</p>`)
+          .join('');
 
         editorContainer.html(tempDiv.innerHTML);
 
@@ -888,7 +891,10 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
       if (editorContainer.length) {
         const convertedText = request.text;
         const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = `<p>${convertedText}</p>`;
+        // Split text by newlines and wrap each line in p tags
+        tempDiv.innerHTML = convertedText.split('\n')
+          .map(line => `<p>${line}</p>`)
+          .join('');
 
         editorContainer.html(tempDiv.innerHTML);
       }
