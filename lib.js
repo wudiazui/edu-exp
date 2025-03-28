@@ -228,6 +228,29 @@ export async function topic_type_list(host, uname) {
   }
 }
 
+export async function discipline_list(host, uname) {
+  try {
+    const response = await fetch(`${host}/llm/discipline_list`, {
+      method: 'GET',
+      headers: {
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
+        'X-Pfy-Key': uname
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const responseData = await response.json();
+    return responseData;
+  } catch (error) {
+    console.error('Error getting discipline list:', error);
+    return null;
+  }
+}
+
 export async function user_info(host, uname) {
   try {
     const response = await fetch(`${host}/user/info`, {

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { topic_type_list } from '../lib'; // 导入 topic_type_list 函数
+import { topic_type_list, discipline_list } from '../lib'; // 导入 topic_type_list 函数
 
 const QuestionTypeSelect = ({
   isImageQuestion,
@@ -8,11 +8,12 @@ const QuestionTypeSelect = ({
   setSelectedValue,
   host,
   uname,
-  isSwapActive,
-  setIsSwapActive,
+  subject,
+  setSubject,
   serverType, // 新增 serverType 属性
 }) => {
   const [selectOptions, setSelectOptions] = useState([]);
+  const [disciplines, setDisciplines] = useState([]);
 
   useEffect(() => {
     const fetchOptions = async () => {
@@ -27,11 +28,37 @@ const QuestionTypeSelect = ({
         setSelectOptions(data || []);
       }
     };
+
+    const fetchDisciplines = async () => {
+      if (!host || !uname) return;
+      const data = await discipline_list(host, uname);
+      if (data && Array.isArray(data) && data.length > 0) {
+        setDisciplines(data);
+        if (!subject) {
+          setSubject(data[0].code);
+        }
+      }
+    };
+
     fetchOptions();
-  }, [host, uname, serverType]); // 添加 serverType 到依赖项
+    fetchDisciplines();
+  }, [host, uname, serverType, subject, setSubject]); // 添加 serverType 到依赖项
 
   return (
     <div className="flex w-full p-2">
+      <div className="flex items-center mr-2">
+        <select 
+          className="select select-sm select-bordered"
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+        >
+          {disciplines.map(discipline => (
+            <option key={discipline.code} value={discipline.code}>
+              {discipline.name}
+            </option>
+          ))}
+        </select>
+      </div>
       <div className="flex items-center w-full">
         <span className="label-text flex-shrink-0 mx-1">题型</span>
         <select className="select select-sm select-bordered flex-grow" value={selectedValue} onChange={(e) => setSelectedValue(e.target.value)}>
@@ -48,16 +75,6 @@ const QuestionTypeSelect = ({
             checked={isImageQuestion}
             onChange={(e) => setIsImageQuestion(e.target.checked)}
           />
-        </label>
-      </div>
-      <div className="w-1/6 flex items-center">
-        <label className="swap">
-          <input type="checkbox"
-            checked={isSwapActive}
-            onChange={(e) => setIsSwapActive(e.target.checked)}
-          />
-          <div className="swap-on">语文</div>
-          <div className="swap-off">数学</div>
         </label>
       </div>
     </div>

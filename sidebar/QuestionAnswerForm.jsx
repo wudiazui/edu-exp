@@ -26,8 +26,8 @@ const QuestionAnswerForm = ({
   setSelectedValue,
   host,
   uname,
-  isSwapActive,
-  setIsSwapActive,
+  subject,
+  setSubject,
   serverType,
 }) => {
 
@@ -90,8 +90,8 @@ const QuestionAnswerForm = ({
                   setSelectedValue={setSelectedValue}
                   host={host}
                   uname={uname}
-                  isSwapActive={isSwapActive}
-                  setIsSwapActive={setIsSwapActive}
+                  subject={subject}
+                  setSubject={setSubject}
                   serverType={serverType}
                 />
                 <div className="join m-2">

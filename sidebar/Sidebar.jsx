@@ -21,15 +21,12 @@ export default function Main() {
   const [isImageQuestion, setIsImageQuestion] = useState(false);
   const [selectedImage, setSelectedImage] = React.useState(null);
   const [selectedValue, setSelectedValue] = useState('问答');
-  const [isSwapActive, setIsSwapActive] = useState(false);
-  // Excerpt from: function Main()
-    const [features, setFeatures] = useState({
-      jieti: true,
-      ocr: true,
-      "clue-claiming": false
-    });
-
-  const [subject, setSubject] = useState("");
+  const [subject, setSubject] = useState("shuxue");
+  const [features, setFeatures] = useState({
+    jieti: true,
+    ocr: true,
+    "clue-claiming": false
+  });
   const [serverType, setServerType] = useState(null);
   const [isSettingsLoading, setIsSettingsLoading] = useState(true);
   const [cozeService, setCozeService] = React.useState(null);
@@ -430,12 +427,6 @@ export default function Main() {
     chrome.storage.sync.set({ activeTab: tab });
   };
 
-  const handleSwapToggle = (newValue) => {
-    setIsSwapActive(newValue);
-    // 更新 Chrome 存储
-    chrome.storage.sync.set({ isSwapActive: newValue });
-  };
-
   useEffect(() => {
     // 从 Chrome 存储中加载 isSwapActive
     chrome.storage.sync.get(['isSwapActive'], (result) => {
@@ -444,10 +435,6 @@ export default function Main() {
       }
     });
   }, []);
-
-  useEffect(() => {
-    setSubject(isSwapActive ? 'yuwen' : 'shuxue'); // 根据 isSwapActive 的值更新 subject
-  }, [isSwapActive]); // 监听 isSwapActive 的变化
 
 
   // Listen for changes in chrome.storage to update features in real-time
@@ -566,8 +553,8 @@ export default function Main() {
                 setSelectedValue={setSelectedValue}
                 host={host}
                 uname={name}
-                isSwapActive={isSwapActive}
-                setIsSwapActive={handleSwapToggle}
+                subject={subject}
+                setSubject={setSubject}
                 serverType={serverType}
               />
             )}
