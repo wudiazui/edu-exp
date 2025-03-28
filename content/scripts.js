@@ -270,7 +270,8 @@ function alignTextByEquals(html) {
   // 按父元素分组文本节点
   const groupedByParent = {};
   textNodesAndParents.forEach(({ node, parent }) => {
-    const parentKey = parent.outerHTML;
+    // 使用父元素的标签名和类名作为键
+    const parentKey = `${parent.tagName.toLowerCase()}-${parent.className}`;
     if (!groupedByParent[parentKey]) {
       groupedByParent[parentKey] = [];
     }
@@ -698,25 +699,26 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
         if (selection.rangeCount > 0 && !selection.isCollapsed) {
           // 有选中的文本，只处理选中部分
           const range = selection.getRangeAt(0);
-
-          // 创建临时容器并复制选中内容
-          const container = document.createElement('div');
-          container.appendChild(range.cloneContents());
-
-          // 处理选中的内容
-          const alignedHTML = alignTextByEquals(container.innerHTML);
-
-          // 创建文档片段来替换选中的内容
-          const temp = document.createElement('div');
-          temp.innerHTML = alignedHTML;
-          const fragment = document.createDocumentFragment();
-          while (temp.firstChild) {
-            fragment.appendChild(temp.firstChild);
+          
+          // 获取选中内容的父元素
+          let container = range.commonAncestorContainer;
+          while (container && container.nodeType === Node.TEXT_NODE) {
+            container = container.parentNode;
+          }
+          
+          if (!container) {
+            throw new Error('无法找到有效的容器元素');
           }
 
-          // 删除选中的内容并插入对齐后的内容
-          range.deleteContents();
-          range.insertNode(fragment);
+          // 创建临时容器并复制选中内容
+          const tempContainer = document.createElement('div');
+          tempContainer.innerHTML = container.innerHTML;
+          
+          // 处理选中的内容
+          const alignedHTML = alignTextByEquals(tempContainer.innerHTML);
+          
+          // 更新原始容器的内容
+          container.innerHTML = alignedHTML;
         } else {
           // 没有选中文本，处理整个活动元素
           processedHTML = alignTextByEquals(activeElement.innerHTML);
