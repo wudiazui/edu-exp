@@ -205,6 +205,30 @@ export async function run_llm(host, uname, item, data) {
   }
 }
 
+export async function format_latex(host, uname, text) {
+  try {
+    const response = await fetch(`${host}/llm/format_latex`, {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
+        'X-Pfy-Key': uname
+      },
+      body: JSON.stringify({ text })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const responseData = await response.json();
+    return responseData.topic;
+  } catch (error) {
+    console.error('Error formatting LaTeX:', error);
+    return null;
+  }
+}
+
 export async function topic_type_list(host, uname, discipline) {
   try {
     const queryParams = new URLSearchParams();

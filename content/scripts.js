@@ -694,50 +694,53 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
 
         // 获取选中的文本范围
         const selection = window.getSelection();
-        let processedHTML;
+        let selectedText = '';
 
         if (selection.rangeCount > 0 && !selection.isCollapsed) {
           // 有选中的文本，只处理选中部分
-          const range = selection.getRangeAt(0);
-          
-          // 获取选中内容的父元素
-          let container = range.commonAncestorContainer;
-          while (container && container.nodeType === Node.TEXT_NODE) {
-            container = container.parentNode;
-          }
-          
-          if (!container) {
-            throw new Error('无法找到有效的容器元素');
-          }
-
-          // 创建临时容器并复制选中内容
-          const tempContainer = document.createElement('div');
-          tempContainer.innerHTML = container.innerHTML;
-          
-          // 处理选中的内容
-          const alignedHTML = alignTextByEquals(tempContainer.innerHTML);
-          
-          // 更新原始容器的内容
-          container.innerHTML = alignedHTML;
+          selectedText = selection.toString().trim();
         } else {
           // 没有选中文本，处理整个活动元素
-          processedHTML = alignTextByEquals(activeElement.innerHTML);
-          activeElement.innerHTML = processedHTML;
+          selectedText = activeElement.innerText.trim();
         }
 
-        // 触发事件更新编辑器
-        sendFixEvent(activeElement);
+        if (!selectedText) {
+          throw new Error('没有找到要处理的文本');
+        }
 
-        // 恢复滚动位置
-        activeElement.scrollTop = scrollTop;
-        activeElement.scrollLeft = scrollLeft;
+        // 发送选中的文本到background.js
+        chrome.runtime.sendMessage({
+          action: 'format_latex',
+          text: selectedText
+        }, async (response) => {
+          if (response && response.formatted) {
+            // 如果有选中的文本，替换选中的文本
+            if (selection.rangeCount > 0 && !selection.isCollapsed) {
+              const range = selection.getRangeAt(0);
+              range.deleteContents();
+              range.insertNode(document.createTextNode(response.formatted));
+            } else {
+              // 如果没有选中文本，替换整个活动元素的内容
+              activeElement.innerHTML = response.formatted;
+            }
 
-        // 重新聚焦到元素
-        activeElement.focus();
+            // 触发事件更新编辑器
+            sendFixEvent(activeElement);
 
-        // 隐藏加载中通知并显示成功通知
-        hideNotification(notificationId);
-        showNotification('等号对齐完成', 'success');
+            // 恢复滚动位置
+            activeElement.scrollTop = scrollTop;
+            activeElement.scrollLeft = scrollLeft;
+
+            // 重新聚焦到元素
+            activeElement.focus();
+
+            // 隐藏加载中通知并显示成功通知
+            hideNotification(notificationId);
+            showNotification('等号对齐完成', 'success');
+          } else {
+            throw new Error('格式化失败');
+          }
+        });
       } catch (error) {
         console.error('Error aligning equals:', error);
         showNotification('等号对齐失败：' + error.message, 'error');

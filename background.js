@@ -1,4 +1,4 @@
-import {ocr_text, run_llm, getAuditTaskLabel} from "./lib.js";
+import {ocr_text, run_llm, getAuditTaskLabel, format_latex} from "./lib.js";
 
 console.log('Hello from the background script!')
 
@@ -196,6 +196,35 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       type: 'SET_QUESTION',
       data: request.html
     });
+  }
+
+  // 处理format_latex消息
+  if (request.action === "format_latex") {
+    (async () => {
+      try {
+        // 从storage获取host和name
+        const { host, name } = await new Promise(resolve => {
+          chrome.storage.sync.get(['host', 'name'], resolve);
+        });
+
+        if (!host || !name) {
+          throw new Error('未找到服务器配置');
+        }
+
+        // 调用format_latex函数处理文本
+        const formatted = await format_latex(host, name, request.text);
+        
+        if (formatted) {
+          sendResponse({ formatted });
+        } else {
+          throw new Error('格式化失败');
+        }
+      } catch (error) {
+        console.error('Error formatting LaTeX:', error);
+        sendResponse({ error: error.message });
+      }
+    })();
+    return true; // 保持消息通道开放以等待异步响应
   }
 
   // 处理认领任务响应的转发
