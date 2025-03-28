@@ -23,7 +23,7 @@ const QuestionTypeSelect = ({
       } else {
         // 其他情况下从服务器获取题型列表
         if (!host || !uname) return;
-        const data = await topic_type_list(host, uname);
+        const data = await topic_type_list(host, uname, subject);
         console.log(data);
         setSelectOptions(data || []);
       }

@@ -205,9 +205,16 @@ export async function run_llm(host, uname, item, data) {
   }
 }
 
-export async function topic_type_list(host, uname) {
+export async function topic_type_list(host, uname, discipline) {
   try {
-    const response = await fetch(`${host}/llm/topic_type_list`, {
+    const queryParams = new URLSearchParams();
+    if (discipline) {
+      queryParams.append('discipline', discipline);
+    }
+    const queryString = queryParams.toString();
+    const url = `${host}/llm/topic_type_list${queryString ? `?${queryString}` : ''}`;
+
+    const response = await fetch(url, {
       method: 'GET',
       headers: {
         'accept': 'application/json',
