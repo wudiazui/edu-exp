@@ -1,6 +1,30 @@
 import React, { useEffect, useState } from 'react';
 import { topic_type_list, discipline_list } from '../lib'; // 导入 topic_type_list 函数
 
+// 扣子服务器的固定学科和题型映射
+const KOUZI_SUBJECT_TYPES = {
+  shuxue: {
+    name: "数学",
+    types: ["问答", "单选", "填空", "计算题", "简便计算", "解方程"]
+  },
+  yuwen: {
+    name: "语文",
+    types: ["问答", "单选", "填空"]
+  },
+  yingyu: {
+    name: "英语",
+    types: ["问答", "单选", "填空"]
+  },
+  wuli: {
+    name: "物理",
+    types: ["问答", "单选", "填空", "计算题"]
+  },
+  huaxue: {
+    name: "化学",
+    types: ["问答", "单选", "填空", "计算题"]
+  }
+};
+
 const QuestionTypeSelect = ({
   isImageQuestion,
   setIsImageQuestion,
@@ -18,8 +42,13 @@ const QuestionTypeSelect = ({
   useEffect(() => {
     const fetchOptions = async () => {
       if (serverType === "扣子") {
-        // 当服务器类型为"扣子"时，使用固定的题型列表
-        setSelectOptions(["问答", "单选", "填空", "计算题", "简便计算", "解方程"]);
+        // 根据当前选择的学科设置对应的题型列表
+        const types = KOUZI_SUBJECT_TYPES[subject]?.types || [];
+        setSelectOptions(types);
+        // 如果当前选择的题型不在新的题型列表中，设置为第一个题型
+        if (!types.includes(selectedValue) && types.length > 0) {
+          setSelectedValue(types[0]);
+        }
       } else {
         // 其他情况下从服务器获取题型列表
         if (!host || !uname) return;
@@ -30,19 +59,31 @@ const QuestionTypeSelect = ({
     };
 
     const fetchDisciplines = async () => {
-      if (!host || !uname) return;
-      const data = await discipline_list(host, uname);
-      if (data && Array.isArray(data) && data.length > 0) {
-        setDisciplines(data);
+      if (serverType === "扣子") {
+        // 使用固定的学科列表
+        const kouziDisciplines = Object.entries(KOUZI_SUBJECT_TYPES).map(([code, data]) => ({
+          code,
+          name: data.name
+        }));
+        setDisciplines(kouziDisciplines);
         if (!subject) {
-          setSubject(data[0].code);
+          setSubject(kouziDisciplines[0].code);
+        }
+      } else {
+        if (!host || !uname) return;
+        const data = await discipline_list(host, uname);
+        if (data && Array.isArray(data) && data.length > 0) {
+          setDisciplines(data);
+          if (!subject) {
+            setSubject(data[0].code);
+          }
         }
       }
     };
 
     fetchOptions();
     fetchDisciplines();
-  }, [host, uname, serverType, subject, setSubject]); // 添加 serverType 到依赖项
+  }, [host, uname, serverType, subject, setSubject, selectedValue, setSelectedValue]);
 
   return (
     <div className="flex w-full p-2">
