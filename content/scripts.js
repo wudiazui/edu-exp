@@ -1,6 +1,6 @@
 import { claimAuditTask, getAuditTaskList, getAuditTaskLabel, replaceLatexWithImages, replacePunctuation, img_upload, replaceLatexWithImagesInHtml} from "../lib.js";
-
 import {generateVerticalArithmeticImage} from "../src/index.js";
+import { CozeService } from "../coze.js";
 import u from "umbrellajs";
 
 // 添加竖式计算的通知ID变量
@@ -708,39 +708,93 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
           throw new Error('没有找到要处理的文本');
         }
 
-        // 发送选中的文本到background.js
-        chrome.runtime.sendMessage({
-          action: 'format_latex',
-          text: selectedText
-        }, async (response) => {
-          if (response && response.formatted) {
-            // 如果有选中的文本，替换选中的文本
-            if (selection.rangeCount > 0 && !selection.isCollapsed) {
-              const range = selection.getRangeAt(0);
-              range.deleteContents();
-              range.insertNode(document.createTextNode(response.formatted));
-            } else {
-              // 如果没有选中文本，替换整个活动元素的内容
-              activeElement.innerHTML = response.formatted;
-            }
-
-            // 触发事件更新编辑器
-            sendFixEvent(activeElement);
-
-            // 恢复滚动位置
-            activeElement.scrollTop = scrollTop;
-            activeElement.scrollLeft = scrollLeft;
-
-            // 重新聚焦到元素
-            activeElement.focus();
-
-            // 隐藏加载中通知并显示成功通知
-            hideNotification(notificationId);
-            showNotification('等号对齐完成', 'success');
-          } else {
-            throw new Error('格式化失败');
-          }
+        // 从storage获取服务器配置
+        const { host, name, serverType, kouziAccessKey, kouziAppId, kouziEquationAlignWorkflowId } = await new Promise(resolve => {
+          chrome.storage.sync.get([
+            'host', 
+            'name', 
+            'serverType',
+            'kouziAccessKey',
+            'kouziAppId',
+            'kouziEquationAlignWorkflowId'
+          ], resolve);
         });
+
+        let formattedText;
+
+        if (serverType === "扣子") {
+          if (!kouziAccessKey || !kouziAppId || !kouziEquationAlignWorkflowId) {
+            throw new Error('未找到扣子服务器配置');
+          }
+
+          try {
+            // 使用CozeService调用扣子工作流
+            const cozeService = new CozeService(kouziAccessKey);
+            const result = await cozeService.executeWorkflow(kouziEquationAlignWorkflowId, {
+              app_id: kouziAppId,
+              parameters: {
+                text: selectedText
+              }
+            });
+
+            if (result && result.data) {
+              try {
+                const parsedData = JSON.parse(result.data);
+                if (parsedData && parsedData.text) {
+                  formattedText = parsedData.text;
+                } else {
+                  throw new Error('扣子工作流返回数据格式错误：缺少text字段');
+                }
+              } catch (parseError) {
+                console.error('Parse error:', parseError);
+                throw new Error('扣子工作流返回数据解析失败');
+              }
+            } else {
+              throw new Error('扣子工作流返回格式错误');
+            }
+          } catch (error) {
+            console.error('CozeService error:', error);
+            throw new Error(`扣子服务调用失败: ${error.message}`);
+          }
+        } else {
+          // 对于非扣子服务器，发送消息到background.js处理
+          chrome.runtime.sendMessage({
+            action: 'format_latex',
+            text: selectedText
+          }, response => {
+            if (response && response.formatted) {
+              formattedText = response.formatted;
+            } else if (response.error) {
+              throw new Error(response.error);
+            } else {
+              throw new Error('格式化失败');
+            }
+          });
+        }
+
+        // 如果有选中的文本，替换选中的文本
+        if (selection.rangeCount > 0 && !selection.isCollapsed) {
+          const range = selection.getRangeAt(0);
+          range.deleteContents();
+          range.insertNode(document.createTextNode(formattedText));
+        } else {
+          // 如果没有选中文本，替换整个活动元素的内容
+          activeElement.innerHTML = formattedText;
+        }
+
+        // 触发事件更新编辑器
+        sendFixEvent(activeElement);
+
+        // 恢复滚动位置
+        activeElement.scrollTop = scrollTop;
+        activeElement.scrollLeft = scrollLeft;
+
+        // 重新聚焦到元素
+        activeElement.focus();
+
+        // 隐藏加载中通知并显示成功通知
+        hideNotification(notificationId);
+        showNotification('等号对齐完成', 'success');
       } catch (error) {
         console.error('Error aligning equals:', error);
         showNotification('等号对齐失败：' + error.message, 'error');

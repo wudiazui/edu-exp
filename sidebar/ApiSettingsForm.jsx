@@ -20,6 +20,7 @@ const ApiSettingsForm = ({
   const [kouziAppId, setKouziAppId] = useState("");
   const [kouziOcrWorkflowId, setKouziOcrWorkflowId] = useState("");
   const [kouziSolveWorkflowId, setKouziSolveWorkflowId] = useState("");
+  const [kouziEquationAlignWorkflowId, setKouziEquationAlignWorkflowId] = useState("");
 
   // Load saved settings from Chrome storage
   useEffect(() => {
@@ -30,7 +31,8 @@ const ApiSettingsForm = ({
             'kouziAccessKey',
             'kouziAppId',
             'kouziOcrWorkflowId',
-            'kouziSolveWorkflowId'
+            'kouziSolveWorkflowId',
+            'kouziEquationAlignWorkflowId'
           ], resolve);
         });
         
@@ -40,6 +42,7 @@ const ApiSettingsForm = ({
         if (result.kouziAppId) setKouziAppId(result.kouziAppId);
         if (result.kouziOcrWorkflowId) setKouziOcrWorkflowId(result.kouziOcrWorkflowId);
         if (result.kouziSolveWorkflowId) setKouziSolveWorkflowId(result.kouziSolveWorkflowId);
+        if (result.kouziEquationAlignWorkflowId) setKouziEquationAlignWorkflowId(result.kouziEquationAlignWorkflowId);
       } catch (error) {
         console.error('Error loading settings:', error);
       }
@@ -54,9 +57,10 @@ const ApiSettingsForm = ({
       kouziAccessKey,
       kouziAppId,
       kouziOcrWorkflowId,
-      kouziSolveWorkflowId
+      kouziSolveWorkflowId,
+      kouziEquationAlignWorkflowId
     });
-  }, [kouziAccessKey, kouziAppId, kouziOcrWorkflowId, kouziSolveWorkflowId]);
+  }, [kouziAccessKey, kouziAppId, kouziOcrWorkflowId, kouziSolveWorkflowId, kouziEquationAlignWorkflowId]);
 
   const fetchUserInfo = async () => {
     if (serverType === "扣子") return;
@@ -180,6 +184,18 @@ const ApiSettingsForm = ({
               value={kouziSolveWorkflowId}
               onChange={(e) => setKouziSolveWorkflowId(e.target.value)}
               placeholder="输入解题工作流 ID"
+              className="input input-bordered input-sm"
+            />
+          </div>
+          <div className="form-control w-full max-w-xs mt-2">
+            <label className="label">
+              <span className="label-text">方程对齐工作流 ID</span>
+            </label>
+            <input
+              type="text"
+              value={kouziEquationAlignWorkflowId}
+              onChange={(e) => setKouziEquationAlignWorkflowId(e.target.value)}
+              placeholder="输入方程对齐工作流 ID"
               className="input input-bordered input-sm"
             />
           </div>

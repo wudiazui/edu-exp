@@ -30,6 +30,7 @@ export default function Main() {
   const [serverType, setServerType] = useState(null);
   const [isSettingsLoading, setIsSettingsLoading] = useState(true);
   const [cozeService, setCozeService] = React.useState(null);
+  const [kouziConfig, setKouziConfig] = React.useState(null);
 
   // Load feature settings from Chrome storage on component mount
   useEffect(() => {
@@ -216,12 +217,7 @@ export default function Main() {
   const handleGenerateAnswer = async () => {
     setIsGeneratingAnswer(true);
     try {
-      if (serverType === "扣子" && cozeService) {
-        // Get workflow ID from storage
-        const result = await new Promise((resolve) => {
-          chrome.storage.sync.get(['kouziSolveWorkflowId', 'kouziAppId'], resolve);
-        });
-
+      if (serverType === "扣子" && cozeService && kouziConfig) {
         let imageFileId = null;
         if (selectedImage) {
           // Convert base64 to blob
@@ -245,8 +241,8 @@ export default function Main() {
           imageFileId = uploadResult.id;
         }
 
-        const workflowResult = await cozeService.executeWorkflow(result.kouziSolveWorkflowId, {
-          app_id: result.kouziAppId,
+        const workflowResult = await cozeService.executeWorkflow(kouziConfig.workflowId, {
+          app_id: kouziConfig.appId,
           parameters: {
             type: 'answer',
             topic: question,
@@ -494,9 +490,16 @@ export default function Main() {
   // Initialize CozeService when serverType is "扣子"
   React.useEffect(() => {
     if (serverType === "扣子") {
-      chrome.storage.sync.get(['kouziAccessKey', 'kouziSolveWorkflowId'], (result) => {
-        if (result.kouziAccessKey && result.kouziSolveWorkflowId) {
+      chrome.storage.sync.get(['kouziAccessKey', 'kouziSolveWorkflowId', 'kouziAppId'], (result) => {
+        if (result.kouziAccessKey && result.kouziSolveWorkflowId && result.kouziAppId) {
           setCozeService(new CozeService(result.kouziAccessKey));
+          setKouziConfig({
+            workflowId: result.kouziSolveWorkflowId,
+            appId: result.kouziAppId
+          });
+        } else {
+          console.error('Missing required Kouzi configuration');
+          // Optionally show an error message to the user
         }
       });
     }

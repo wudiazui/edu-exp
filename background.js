@@ -1,4 +1,5 @@
 import {ocr_text, run_llm, getAuditTaskLabel, format_latex} from "./lib.js";
+import { CozeService } from "./coze.js";
 
 console.log('Hello from the background script!')
 
@@ -202,7 +203,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "format_latex") {
     (async () => {
       try {
-        // 从storage获取host和name
+        // 从storage获取服务器配置
         const { host, name } = await new Promise(resolve => {
           chrome.storage.sync.get(['host', 'name'], resolve);
         });
@@ -221,7 +222,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         }
       } catch (error) {
         console.error('Error formatting LaTeX:', error);
-        sendResponse({ error: error.message });
+        sendResponse({ error: error.message || '未知错误' });
       }
     })();
     return true; // 保持消息通道开放以等待异步响应
