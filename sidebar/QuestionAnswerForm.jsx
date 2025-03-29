@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import CopyButton from './CopyButton.jsx'; // 确保引入 CopyButton 组件
 import Select from './QuestionTypeSelect.jsx'; // 确保引入 Select 组件
 
@@ -30,6 +30,21 @@ const QuestionAnswerForm = ({
   setSubject,
   serverType,
 }) => {
+  const [autoRenderFormula, setAutoRenderFormula] = useState(true);
+
+  useEffect(() => {
+    // 从存储中读取设置
+    chrome.storage.sync.get(['autoRenderFormula'], (result) => {
+      setAutoRenderFormula(result.autoRenderFormula ?? true);
+    });
+  }, []);
+
+  const handleAutoRenderFormulaChange = (e) => {
+    const checked = e.target.checked;
+    setAutoRenderFormula(checked);
+    // 保存设置到存储
+    chrome.storage.sync.set({ autoRenderFormula: checked });
+  };
 
   const onPaste = (event) => {
     const items = event.clipboardData.items;
@@ -129,17 +144,27 @@ const QuestionAnswerForm = ({
                 <div className="label flex justify-between items-center">
                     <span className="label-text">解答</span>
                     <div className="flex gap-1 items-center">
-                      <button
-                            onClick={() => {
-                              chrome.runtime.sendMessage({
-                                type: "answer",
-                                text: answer
-                              });
-                            }}
-                            className="btn btn-ghost btn-xs flex items-center"
-                        >
-                            填入
-                        </button>
+                      <div className="tooltip tooltip-bottom flex items-center" data-tip="自动渲染数学公式">
+                        <input
+                          type="checkbox"
+                          className="toggle toggle-xs toggle-primary"
+                          checked={autoRenderFormula}
+                          onChange={handleAutoRenderFormulaChange}
+                        />
+                      </div>
+                      <div className="tooltip tooltip-bottom" data-tip="填入到[解答/参考答案]编辑器">
+                        <button
+                              onClick={() => {
+                                chrome.runtime.sendMessage({
+                                  type: "answer",
+                                  text: answer
+                                });
+                              }}
+                              className="btn btn-ghost btn-xs flex items-center"
+                          >
+                              填入
+                          </button>
+                      </div>
                       <button
                             onClick={() => setAnswer('')}
                           className="btn btn-ghost btn-xs flex items-center"
@@ -160,17 +185,27 @@ const QuestionAnswerForm = ({
                 <div className="label flex justify-between items-center">
                     <span className="label-text">解析</span>
                     <div className="flex gap-1 items-center">
-                      <button
-                            onClick={() => {
-                              chrome.runtime.sendMessage({
-                                type: "analysis",
-                                text: analysis
-                              });
-                            }}
-                            className="btn btn-ghost btn-xs flex items-center"
-                        >
-                            填入
-                        </button>
+                      <div className="tooltip tooltip-bottom flex items-center" data-tip="自动渲染数学公式">
+                        <input
+                          type="checkbox"
+                          className="toggle toggle-xs toggle-primary"
+                          checked={autoRenderFormula}
+                          onChange={handleAutoRenderFormulaChange}
+                        />
+                      </div>
+                      <div className="tooltip tooltip-bottom" data-tip="填入到[解析]编辑器">
+                        <button
+                              onClick={() => {
+                                chrome.runtime.sendMessage({
+                                  type: "analysis",
+                                  text: analysis
+                                });
+                              }}
+                              className="btn btn-ghost btn-xs flex items-center"
+                          >
+                              填入
+                          </button>
+                      </div>
                       <button
                             onClick={() => setAnalysis('')}
                           className="btn btn-ghost btn-xs flex items-center"
