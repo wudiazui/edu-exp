@@ -11,10 +11,6 @@ const KOUZI_SUBJECT_TYPES = {
     name: "语文",
     types: ["问答", "单选", "填空"]
   },
-  yingyu: {
-    name: "英语",
-    types: ["问答", "单选", "填空"]
-  },
   wuli: {
     name: "物理",
     types: ["问答", "单选", "填空", "计算题"]
