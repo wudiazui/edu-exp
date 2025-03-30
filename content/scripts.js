@@ -758,43 +758,49 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
           }
         } else {
           // 对于非扣子服务器，发送消息到background.js处理
-          chrome.runtime.sendMessage({
-            action: 'format_latex',
-            text: selectedText
-          }, response => {
-            if (response && response.formatted) {
-              formattedText = response.formatted;
-            } else if (response.error) {
-              throw new Error(response.error);
-            } else {
-              throw new Error('格式化失败');
-            }
+          formattedText = await new Promise((resolve, reject) => {
+            chrome.runtime.sendMessage({
+              action: 'format_latex',
+              text: selectedText
+            }, response => {
+              if (response && response.formatted) {
+                resolve(response.formatted);
+              } else if (response.error) {
+                reject(new Error(response.error));
+              } else {
+                reject(new Error('格式化失败'));
+              }
+            });
           });
         }
 
         // 如果有选中的文本，替换选中的文本
-        if (selection.rangeCount > 0 && !selection.isCollapsed) {
-          const range = selection.getRangeAt(0);
-          range.deleteContents();
-          range.insertNode(document.createTextNode(formattedText));
+        if (formattedText) {  // 添加检查确保 formattedText 有效
+          if (selection.rangeCount > 0 && !selection.isCollapsed) {
+            const range = selection.getRangeAt(0);
+            range.deleteContents();
+            range.insertNode(document.createTextNode(formattedText));
+          } else {
+            // 如果没有选中文本，替换整个活动元素的内容
+            activeElement.innerHTML = formattedText;
+          }
+
+          // 触发事件更新编辑器
+          sendFixEvent(activeElement);
+
+          // 恢复滚动位置
+          activeElement.scrollTop = scrollTop;
+          activeElement.scrollLeft = scrollLeft;
+
+          // 重新聚焦到元素
+          activeElement.focus();
+
+          // 隐藏加载中通知并显示成功通知
+          hideNotification(notificationId);
+          showNotification('等号对齐完成', 'success');
         } else {
-          // 如果没有选中文本，替换整个活动元素的内容
-          activeElement.innerHTML = formattedText;
+          throw new Error('格式化结果为空');
         }
-
-        // 触发事件更新编辑器
-        sendFixEvent(activeElement);
-
-        // 恢复滚动位置
-        activeElement.scrollTop = scrollTop;
-        activeElement.scrollLeft = scrollLeft;
-
-        // 重新聚焦到元素
-        activeElement.focus();
-
-        // 隐藏加载中通知并显示成功通知
-        hideNotification(notificationId);
-        showNotification('等号对齐完成', 'success');
       } catch (error) {
         console.error('Error aligning equals:', error);
         showNotification('等号对齐失败：' + error.message, 'error');
