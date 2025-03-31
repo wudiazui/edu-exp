@@ -15,7 +15,7 @@ export default function Main() {
   const [isCompleteeing, setIsCompleteeing] = useState(false);
   const [isGeneratingAnswer, setIsGeneratingAnswer] = useState(false);
   const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
-  const [host, setHost] = React.useState('');
+  const [host, setHost] = React.useState('https://bedu.pingfury.top');
   const [name, setName] = useState('');
   const [activeTab, setActiveTab] = useState('solving');
   const [isImageQuestion, setIsImageQuestion] = useState(false);
@@ -105,7 +105,8 @@ export default function Main() {
       if (result.host) {
         setHost(result.host);
       } else {
-        setHost('https://bedu.pingfury.top');
+        // 如果没有存储值，将默认值保存到存储中
+        chrome.storage.sync.set({ host: 'https://bedu.pingfury.top' });
       }
     });
   }, []);
