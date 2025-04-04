@@ -3,21 +3,41 @@ import { topic_type_list, discipline_list } from '../lib'; // 导入 topic_type_
 
 // 扣子服务器的固定学科和题型映射
 const KOUZI_SUBJECT_TYPES = {
-  shuxue: {
-    name: "数学",
-    types: ["问答", "单选", "填空", "计算题", "简便计算", "解方程"]
+  wuli: {
+    name: "物理",
+    types: ["问答", "单选", "填空", "计算题", "实验题", "理论推导"]
+  },
+  shengwu: {
+    name: "生物",
+    types: ["问答", "单选", "填空", "实验题"]
+  },
+  yingyu: {
+    name: "英语",
+    types: ["问答", "单选", "填空", "阅读理解", "作文", "词汇", "语法", "听力"]
   },
   yuwen: {
     name: "语文",
-    types: ["问答", "单选", "填空"]
-  },
-  wuli: {
-    name: "物理",
-    types: ["问答", "单选", "填空", "计算题"]
+    types: ["问答", "单选", "填空", "阅读理解", "作文", "默写", "词语解释"]
   },
   huaxue: {
     name: "化学",
-    types: ["问答", "单选", "填空", "计算题"]
+    types: ["问答", "单选", "填空", "计算题", "实验题", "反应方程式"]
+  },
+  shuxue: {
+    name: "数学",
+    types: ["问答", "单选", "填空", "计算题", "解方程", "简便计算"]
+  },
+  lishi: {
+    name: "历史",
+    types: ["问答", "单选", "填空", "史料分析", "时间线整理", "历史比较"]
+  },
+  zhengzhi: {
+    name: "政治",
+    types: ["问答", "单选", "多选", "填空", "简答", "论述题"]
+  },
+  dili: {
+    name: "地理",
+    types: ["问答", "单选", "填空", "阅读理解", "案例分析", "地图题"]
   }
 };
 
@@ -31,9 +51,13 @@ const QuestionTypeSelect = ({
   subject,
   setSubject,
   serverType, // 新增 serverType 属性
+  gradeLevel,    // 新增 gradeLevel prop
+  setGradeLevel, // 新增 setGradeLevel prop
 }) => {
   const [selectOptions, setSelectOptions] = useState([]);
   const [disciplines, setDisciplines] = useState([]);
+
+  const gradeLevels = ['小学', '初中', '高中', '大学'];  // 定义支持的学段
 
   useEffect(() => {
     const fetchOptions = async () => {
@@ -82,10 +106,21 @@ const QuestionTypeSelect = ({
   }, [host, uname, serverType, subject, setSubject, selectedValue, setSelectedValue]);
 
   return (
-    <div className="flex w-full p-2">
-      <div className="flex items-center mr-2">
+    <div className="flex w-full p-2 items-center justify-between">
+      <div className="flex items-center space-x-2">
         <select 
-          className="select select-sm select-bordered"
+          className="select select-sm select-bordered w-20"
+          value={gradeLevel}
+          onChange={(e) => setGradeLevel(e.target.value)}
+        >
+          {gradeLevels.map(level => (
+            <option key={level} value={level}>
+              {level}
+            </option>
+          ))}
+        </select>
+        <select 
+          className="select select-sm select-bordered w-20"
           value={subject}
           onChange={(e) => setSubject(e.target.value)}
         >
@@ -95,24 +130,22 @@ const QuestionTypeSelect = ({
             </option>
           ))}
         </select>
-      </div>
-      <div className="flex items-center w-full">
-        <span className="label-text flex-shrink-0 mx-1">题型</span>
-        <select className="select select-sm select-bordered flex-grow" value={selectedValue} onChange={(e) => setSelectedValue(e.target.value)}>
+        <select 
+          className="select select-sm select-bordered w-24"
+          value={selectedValue} 
+          onChange={(e) => setSelectedValue(e.target.value)}
+        >
           {selectOptions.map(option => (
             <option key={option} value={option}>{option}</option>
           ))}
         </select>
-      </div>
-      <div className="form-control w-3/6 flex items-center">
-        <label className="label cursor-pointer">
-          <span className="label-text mr-1">图片题</span>
+        <div className="tooltip tooltip-bottom" data-tip="切换图片题模式">
           <input type="checkbox"
-            className="checkbox"
+            className="toggle toggle-sm"
             checked={isImageQuestion}
             onChange={(e) => setIsImageQuestion(e.target.checked)}
           />
-        </label>
+        </div>
       </div>
     </div>
   );

@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import ApiSettingsForm from './ApiSettingsForm'; // 引入新组件
 import QuestionAnswerForm from './QuestionAnswerForm'; // 引入新组件
-import QuestionTypeSelect from './QuestionTypeSelect'; // 引入新组件
-import CopyButton from './CopyButton'; // 引入新组件
 import OcrComponent from './OcrComponent'; // 引入新组件
 import ClueClaimingComponent from './ClueClaimingComponent'; // 引入线索认领组件
 import { CozeService } from '../coze.js';
@@ -22,6 +20,7 @@ export default function Main() {
   const [selectedImage, setSelectedImage] = React.useState(null);
   const [selectedValue, setSelectedValue] = useState('问答');
   const [subject, setSubject] = useState("shuxue");
+  const [gradeLevel, setGradeLevel] = useState('小学');
   const [features, setFeatures] = useState({
     jieti: true,
     ocr: true,
@@ -249,6 +248,7 @@ export default function Main() {
             topic: question,
             discipline: subject,
             topic_type: selectedValue,
+            school_level: gradeLevel,
             ...(imageFileId && {
               image: {
                 type: "image",
@@ -279,7 +279,7 @@ export default function Main() {
             type: 'TOPIC_ANSWER',
             host: host,
             uname: name,
-            data: {'topic': question, 'discipline': subject, 'image_data': selectedImage, 'topic_type': selectedValue }
+            data: {'topic': question, 'discipline': subject, 'image_data': selectedImage, 'topic_type': selectedValue, 'school_level': gradeLevel }
           }
         );
         if (response && response.formatted) {
@@ -331,6 +331,7 @@ export default function Main() {
             answer: answer,
             discipline: subject,
             topic_type: selectedValue,
+            school_level: gradeLevel,
             ...(imageFileId && {
               image: {
                 type: "image",
@@ -361,7 +362,7 @@ export default function Main() {
             type: 'TOPIC_ANALYSIS',
             host: host,
             uname: name,
-            data: {'topic': question, 'answer': answer, 'discipline': subject, 'image_data': selectedImage, 'topic_type': selectedValue}
+            data: {'topic': question, 'answer': answer, 'discipline': subject, 'image_data': selectedImage, 'topic_type': selectedValue, 'school_level': gradeLevel}
           }
         );
         if (response && response.formatted) {
@@ -560,6 +561,8 @@ export default function Main() {
                 subject={subject}
                 setSubject={setSubject}
                 serverType={serverType}
+                gradeLevel={gradeLevel}
+                setGradeLevel={setGradeLevel}
               />
             )}
             {activeTab === 'ocr' && (

@@ -7,7 +7,14 @@ const OtherFunctionalSettings = () => {
   useEffect(() => {
     // 从存储中读取设置
     chrome.storage.sync.get(['autoRenderFormula'], (result) => {
-      setAutoRenderFormula(result.autoRenderFormula ?? true);
+      if (result.autoRenderFormula === undefined) {
+        // 如果存储中没有值，使用并保存默认值
+        const defaultValue = true;
+        chrome.storage.sync.set({ autoRenderFormula: defaultValue });
+        setAutoRenderFormula(defaultValue);
+      } else {
+        setAutoRenderFormula(result.autoRenderFormula);
+      }
     });
   }, []);
 

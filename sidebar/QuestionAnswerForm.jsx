@@ -29,6 +29,8 @@ const QuestionAnswerForm = ({
   subject,
   setSubject,
   serverType,
+  gradeLevel,
+  setGradeLevel,
 }) => {
   const [autoRenderFormula, setAutoRenderFormula] = useState(true);
 
@@ -108,6 +110,8 @@ const QuestionAnswerForm = ({
                   subject={subject}
                   setSubject={setSubject}
                   serverType={serverType}
+                  gradeLevel={gradeLevel}
+                  setGradeLevel={setGradeLevel}
                 />
                 <div className="join m-2">
                   <button
