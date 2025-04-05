@@ -180,7 +180,7 @@ const QuestionAnswerForm = ({
                 </div>
                 <textarea
                     value={answer}
-                    onChange={(e) => setAnswer(e.target.value)}
+                    onChange={(e) => setAnswer(e.target.value.trim())}
                     placeholder="解答"
                     className="textarea textarea-bordered textarea-lg w-full h-full min-h-40"
                 ></textarea>
@@ -221,7 +221,7 @@ const QuestionAnswerForm = ({
                 </div>
                 <textarea
                     value={analysis}
-                    onChange={(e) => setAnalysis(e.target.value)}
+                    onChange={(e) => setAnalysis(e.target.value.trim())}
                     placeholder="解析"
                     className="textarea textarea-bordered textarea-lg w-full h-full min-h-40"
                 ></textarea>

@@ -192,10 +192,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
   if (request.action === "store_topic_html") {
-    // 转发给 sidebar
+    // 转发给 sidebar，并去除前后空白行
     chrome.runtime.sendMessage({
       type: 'SET_QUESTION',
-      data: request.html
+      data: request.html.trim()
     });
   }
 

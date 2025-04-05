@@ -91,7 +91,7 @@ export default function Main() {
     // 监听来自 background 的消息
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (message.type === 'SET_QUESTION') {
-        setQuestion(message.data);
+        setQuestion(message.data.trim());
         setIsImageQuestion(false);
         setSelectedImage(null);
       }
@@ -111,7 +111,7 @@ export default function Main() {
   }, []);
 
   const handleQuestionChange = (e) => {
-    setQuestion(e.target.value);
+    setQuestion(e.target.value.trim());
   };
 
   const handleFormat = async () => {
@@ -265,7 +265,7 @@ export default function Main() {
               : workflowResult.data;
 
             if (parsedData && parsedData.topic) {
-               setAnswer(parsedData.topic);
+               setAnswer(parsedData.topic.trim());
             } else {
               console.error('Invalid workflow result format');
             }
@@ -283,7 +283,7 @@ export default function Main() {
           }
         );
         if (response && response.formatted) {
-          setAnswer(response.formatted);
+          setAnswer(response.formatted.trim());
         }
       }
     } finally {
@@ -348,7 +348,7 @@ export default function Main() {
               : workflowResult.data;
 
             if (parsedData && parsedData.topic) {
-               setAnalysis(parsedData.topic);
+               setAnalysis(parsedData.topic.trim());
             } else {
               console.error('Invalid workflow result format');
             }
@@ -366,7 +366,7 @@ export default function Main() {
           }
         );
         if (response && response.formatted) {
-          setAnalysis(response.formatted);
+          setAnalysis(response.formatted.trim());
         }
       }
     } finally {
