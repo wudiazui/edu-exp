@@ -180,14 +180,15 @@ function formatEquations(inputText) {
  * Removes empty lines from a string after converting it to plain text
  * 
  * @param {string} text - Input text
+ * @param {boolean} [shouldFormatEquations=true] - Whether to format equations in the text
  * @returns {string} Text with empty lines removed
  */
-function removeEmptyLinesFromString(text) {
+function removeEmptyLinesFromString(text, shouldFormatEquations = true) {
     const plainText = convertToPlainText(text);
     const replacedText = replaceText(plainText);
-    const formattedText = formatEquations(replacedText);
+    const processedText = shouldFormatEquations ? formatEquations(replacedText) : replacedText;
     
-    return formattedText
+    return processedText
         .split('\n')
         .filter(line => line.trim() !== '')
         .join('\n');
