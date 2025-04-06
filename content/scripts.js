@@ -3,12 +3,385 @@ import {generateVerticalArithmeticImage} from "../src/index.js";
 import { CozeService } from "../coze.js";
 import u from "umbrellajs";
 
+// 存储关键词过滤数据
+let includeKeywords = [];
+let excludeKeywords = [];
+
+// 从 Chrome 存储中加载关键词过滤数据
+chrome.storage.sync.get(['includeKeywords', 'excludeKeywords'], (result) => {
+  if (result.includeKeywords) {
+    includeKeywords = result.includeKeywords;
+  }
+  if (result.excludeKeywords) {
+    excludeKeywords = result.excludeKeywords;
+  }
+});
+
 // 添加竖式计算的通知ID变量
 let verticalArithmeticNotificationId = null;
 
 console.log('hello from content_scripts');
 // 添加一个变量来存储复制的HTML
 let copiedHTML = '';
+
+// 检查URL并添加过滤UI的函数
+function checkURLAndAddFilterUI() {
+  const currentURL = window.location.href;
+  
+  // 检查URL是否以 edu-shop-web/#/question-task/lead-pool 结尾
+  // 使用正则表达式确保精确匹配路径末尾
+  if (currentURL.match(/\/edu-shop-web\/#\/question-task\/lead-pool(?:[?#].*)?$/) || 
+      currentURL.endsWith('/edu-shop-web/#/question-task/lead-pool')) {
+    
+    // 检查是否已经添加过过滤UI
+    if (!document.getElementById('keyword-filter-container')) {
+      // 确保关键词已从存储中加载
+      chrome.storage.sync.get(['includeKeywords', 'excludeKeywords'], (result) => {
+        if (result.includeKeywords) {
+          includeKeywords = result.includeKeywords;
+        }
+        if (result.excludeKeywords) {
+          excludeKeywords = result.excludeKeywords;
+        }
+        
+        // 等待过滤框元素加载
+        const checkFilterBox = setInterval(() => {
+          const filterBox = document.querySelector('.filter-box-compo');
+          if (filterBox) {
+            clearInterval(checkFilterBox);
+            addFilterUI(filterBox);
+          }
+        }, 500);
+      });
+    }
+  } else {
+    // 如果URL不匹配，但过滤UI已存在，则移除它
+    const filterContainer = document.getElementById('keyword-filter-container');
+    if (filterContainer) {
+      filterContainer.remove();
+    }
+  }
+}
+
+// 添加过滤UI
+function addFilterUI(filterBox) {
+  // 创建容器
+  const container = document.createElement('div');
+  container.id = 'keyword-filter-container';
+  container.className = 'filter-container';
+  // 添加上下边距，使UI与周围组件有间隔
+  container.style.marginTop = '1px';
+  container.style.marginBottom = '1px';
+  container.style.paddingTop = '1px';
+  container.style.paddingBottom = '3px';
+  
+  // 创建一个flex容器来放置所有元素在同一行
+  const flexContainer = document.createElement('div');
+  flexContainer.className = 'flex-container';
+  container.appendChild(flexContainer);
+  
+  // 创建左侧输入区域容器
+  const inputsContainer = document.createElement('div');
+  inputsContainer.className = 'inputs-container';
+  flexContainer.appendChild(inputsContainer);
+  
+  // 创建包含关键词输入区域
+  const includeContainer = createInputGroup('包含关键词', 'include-keywords-input', 'include-keywords-list', includeKeywords);
+  inputsContainer.appendChild(includeContainer);
+  
+  // 创建排除关键词输入区域
+  const excludeContainer = createInputGroup('排除关键词', 'exclude-keywords-input', 'exclude-keywords-list', excludeKeywords);
+  inputsContainer.appendChild(excludeContainer);
+  
+  // 创建按钮容器
+  const buttonContainer = document.createElement('div');
+  buttonContainer.style.padding = '8px 12px';
+  flexContainer.appendChild(buttonContainer);
+  
+  // 创建搜索按钮
+  const filterBtn = document.createElement('button');
+  filterBtn.textContent = '应用过滤';
+  filterBtn.className = 'filter-button';
+  filterBtn.onclick = applyFilter;
+  buttonContainer.appendChild(filterBtn);
+  
+  // 创建重置按钮
+  const resetBtn = document.createElement('button');
+  resetBtn.textContent = '重置';
+  resetBtn.className = 'reset-button';
+  resetBtn.onclick = function() {
+    // 清空关键词
+    includeKeywords = [];
+    excludeKeywords = [];
+    
+    // 清空UI
+    document.getElementById('include-keywords-list').innerHTML = '';
+    document.getElementById('exclude-keywords-list').innerHTML = '';
+    
+    // 清空输入框
+    document.getElementById('include-keywords-input').value = '';
+    document.getElementById('exclude-keywords-input').value = '';
+    
+    // 保存到 Chrome 存储
+    saveKeywordsToStorage();
+  };
+  buttonContainer.appendChild(resetBtn);
+  
+  // 插入到过滤框后面
+  filterBox.parentNode.insertBefore(container, filterBox.nextSibling);
+  
+  // 初始化事件监听
+  initKeywordEvents();
+}
+
+// 创建输入组
+function createInputGroup(label, inputId, listId, keywordsArray) {
+  const groupContainer = document.createElement('div');
+  groupContainer.className = 'input-group';
+  
+  // 标签
+  const labelElem = document.createElement('label');
+  labelElem.textContent = label + ':';
+  labelElem.className = 'input-label';
+  labelElem.htmlFor = inputId;
+  groupContainer.appendChild(labelElem);
+  
+  // 创建关键词和输入区域的容器
+  const keywordInputContainer = document.createElement('div');
+  keywordInputContainer.style.display = 'flex';
+  keywordInputContainer.style.alignItems = 'center';
+  keywordInputContainer.style.flexWrap = 'wrap';
+  keywordInputContainer.style.gap = '4px';
+  groupContainer.appendChild(keywordInputContainer);
+  
+  // 关键词列表 - 放在输入框前面
+  const keywordsList = document.createElement('div');
+  keywordsList.id = listId;
+  keywordsList.className = 'keywords-list';
+  keywordsList.style.display = 'flex';
+  keywordsList.style.flexWrap = 'wrap';
+  keywordsList.style.gap = '4px';
+  keywordsList.style.alignItems = 'center';
+  keywordInputContainer.appendChild(keywordsList);
+  
+  // 添加已有关键词
+  keywordsArray.forEach(keyword => {
+    const keywordTag = createKeywordTag(keyword, listId);
+    keywordsList.appendChild(keywordTag);
+  });
+  
+  // 输入区域容器
+  const inputContainer = document.createElement('div');
+  inputContainer.style.display = 'flex';
+  inputContainer.style.alignItems = 'center';
+  keywordInputContainer.appendChild(inputContainer);
+  
+  // 输入框
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.id = inputId;
+  input.className = 'input-field';
+  input.placeholder = '请选择';
+  inputContainer.appendChild(input);
+  
+  // 添加按钮
+  const addBtn = document.createElement('button');
+  addBtn.textContent = '添加';
+  addBtn.className = 'add-button';
+  addBtn.dataset.target = inputId;
+  addBtn.dataset.list = listId;
+  inputContainer.appendChild(addBtn);
+  
+  return groupContainer;
+}
+
+// 创建关键词标签
+function createKeywordTag(keyword, listId) {
+  const tag = document.createElement('div');
+  tag.className = 'keyword-tag';
+  
+  // 关键词文本
+  const keywordText = document.createElement('span');
+  keywordText.className = 'keyword-text';
+  keywordText.textContent = keyword;
+  keywordText.style.fontSize = '14px'; // 稍微大一点的字体
+  tag.appendChild(keywordText);
+  
+  // 删除按钮
+  const removeBtn = document.createElement('span');
+  removeBtn.innerHTML = '&times;';
+  removeBtn.className = 'keyword-remove';
+  removeBtn.onclick = function() {
+    // 从关键词数组中移除
+    if (listId === 'include-keywords-list') {
+      const index = includeKeywords.indexOf(keyword);
+      if (index !== -1) {
+        includeKeywords.splice(index, 1);
+      }
+    } else {
+      const index = excludeKeywords.indexOf(keyword);
+      if (index !== -1) {
+        excludeKeywords.splice(index, 1);
+      }
+    }
+    
+    // 保存到 Chrome 存储
+    saveKeywordsToStorage();
+    
+    // 从DOM中移除
+    tag.remove();
+  };
+  
+  tag.appendChild(removeBtn);
+  return tag;
+}
+
+// 初始化关键词事件监听
+function initKeywordEvents() {
+  // 包含关键词输入框事件
+  const includeInput = document.getElementById('include-keywords-input');
+  const includeList = document.getElementById('include-keywords-list');
+  
+  if (includeInput) {
+    includeInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addKeyword(this.value.trim(), includeList, includeKeywords);
+        this.value = '';
+      }
+    });
+  }
+  
+  // 排除关键词输入框事件
+  const excludeInput = document.getElementById('exclude-keywords-input');
+  const excludeList = document.getElementById('exclude-keywords-list');
+  
+  if (excludeInput) {
+    excludeInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addKeyword(this.value.trim(), excludeList, excludeKeywords);
+        this.value = '';
+      }
+    });
+  }
+  
+  // 添加按钮点击事件
+  document.querySelectorAll('button[data-target]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const inputId = this.dataset.target;
+      const listId = this.dataset.list;
+      const input = document.getElementById(inputId);
+      const list = document.getElementById(listId);
+      const keywordsArray = listId === 'include-keywords-list' ? includeKeywords : excludeKeywords;
+      
+      if (input && list) {
+        addKeyword(input.value.trim(), list, keywordsArray);
+        input.value = '';
+      }
+    });
+  });
+}
+
+// 添加关键词
+function addKeyword(keyword, listElement, keywordsArray) {
+  if (keyword && !keywordsArray.includes(keyword)) {
+    keywordsArray.push(keyword);
+    const keywordTag = createKeywordTag(keyword, listElement.id);
+    listElement.appendChild(keywordTag);
+    
+    // 保存到 Chrome 存储
+    saveKeywordsToStorage();
+  }
+}
+
+// 保存关键词到 Chrome 存储
+function saveKeywordsToStorage() {
+  chrome.storage.sync.set({
+    'includeKeywords': includeKeywords,
+    'excludeKeywords': excludeKeywords
+  });
+}
+
+// 应用过滤
+function applyFilter() {
+  console.log('应用过滤，包含关键词:', includeKeywords);
+  console.log('应用过滤，排除关键词:', excludeKeywords);
+  
+  // TODO: 实现过滤逻辑
+  // 这里可以根据实际需求实现过滤逻辑
+  // 例如：查找所有问题元素，根据关键词进行过滤显示
+  
+  // 显示通知
+  showNotification(`已应用过滤：包含 ${includeKeywords.length} 个关键词，排除 ${excludeKeywords.length} 个关键词`, 'info');
+}
+
+// 页面加载和URL变化时检查
+window.addEventListener('load', checkURLAndAddFilterUI);
+window.addEventListener('hashchange', checkURLAndAddFilterUI);
+
+// 为支持现代框架（如Vue, React等）的URL变化添加监听
+
+// 1. 监听History API的变化
+let lastPathname = window.location.pathname;
+let lastSearch = window.location.search;
+let lastHash = window.location.hash;
+
+// 重写history方法以捕获路由变化
+const originalPushState = history.pushState;
+history.pushState = function() {
+  originalPushState.apply(this, arguments);
+  handleRouteChange();
+};
+
+const originalReplaceState = history.replaceState;
+history.replaceState = function() {
+  originalReplaceState.apply(this, arguments);
+  handleRouteChange();
+};
+
+// 处理popstate事件（浏览器前进/后退按钮）
+window.addEventListener('popstate', handleRouteChange);
+
+// 2. 使用MutationObserver监听DOM变化
+// 许多框架在路由变化时会修改DOM结构
+const routeObserver = new MutationObserver((mutations) => {
+  // 检查URL是否变化
+  if (window.location.pathname !== lastPathname ||
+      window.location.search !== lastSearch ||
+      window.location.hash !== lastHash) {
+    handleRouteChange();
+  }
+});
+
+// 开始观察document.body的子树变化
+document.addEventListener('DOMContentLoaded', () => {
+  routeObserver.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
+});
+
+// 3. 添加轮询机制作为后备方案
+// 某些框架可能使用自定义路由系统
+setInterval(() => {
+  if (window.location.pathname !== lastPathname ||
+      window.location.search !== lastSearch ||
+      window.location.hash !== lastHash) {
+    handleRouteChange();
+  }
+}, 1000); // 每秒检查一次
+
+// 路由变化处理函数
+function handleRouteChange() {
+  // 更新上次URL记录
+  lastPathname = window.location.pathname;
+  lastSearch = window.location.search;
+  lastHash = window.location.hash;
+  
+  // 调用检查函数
+  checkURLAndAddFilterUI();
+}
 
 let host; // 声明 host 变量
 

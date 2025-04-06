@@ -29,6 +29,9 @@
       ],
       "js": [
         "content/scripts.js"
+      ],
+      "css": [
+        "css/filter-ui.css"
       ]
     }
   ],
