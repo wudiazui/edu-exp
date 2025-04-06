@@ -102,8 +102,19 @@ function addFilterUI(filterBox) {
   const filterBtn = document.createElement('button');
   filterBtn.textContent = '应用过滤';
   filterBtn.className = 'filter-button';
-  filterBtn.onclick = applyFilter;
+  filterBtn.onclick = () => applyFilter('apply');
   buttonContainer.appendChild(filterBtn);
+  
+  // 创建关闭过滤按钮
+  const closeFilterBtn = document.createElement('button');
+  closeFilterBtn.textContent = '关闭过滤';
+  closeFilterBtn.className = 'close-filter-button';
+  closeFilterBtn.onclick = function() {
+    // 关闭过滤但保留关键词
+    filterState.active = false;
+    applyFilter();
+  };
+  buttonContainer.appendChild(closeFilterBtn);
   
   // 创建重置按钮
   const resetBtn = document.createElement('button');
@@ -114,7 +125,7 @@ function addFilterUI(filterBox) {
     includeKeywords = [];
     excludeKeywords = [];
     
-    // 清空UI
+    // 清空 UI
     document.getElementById('include-keywords-list').innerHTML = '';
     document.getElementById('exclude-keywords-list').innerHTML = '';
     
@@ -124,6 +135,9 @@ function addFilterUI(filterBox) {
     
     // 保存到 Chrome 存储
     saveKeywordsToStorage();
+    
+    // 重新应用过滤，显示所有行
+    applyFilter();
   };
   buttonContainer.appendChild(resetBtn);
   
@@ -230,6 +244,9 @@ function createKeywordTag(keyword, listId) {
     
     // 从DOM中移除
     tag.remove();
+    
+    // 重新应用过滤
+    applyFilter();
   };
   
   tag.appendChild(removeBtn);
@@ -303,22 +320,108 @@ function saveKeywordsToStorage() {
   });
 }
 
+// 过滤状态
+let filterState = {
+  enabled: false, // 是否开启过滤
+  active: false   // 是否应用过滤
+};
+
 // 应用过滤
-function applyFilter() {
+function applyFilter(state) {
   console.log('应用过滤，包含关键词:', includeKeywords);
   console.log('应用过滤，排除关键词:', excludeKeywords);
   
-  // TODO: 实现过滤逻辑
-  // 这里可以根据实际需求实现过滤逻辑
-  // 例如：查找所有问题元素，根据关键词进行过滤显示
+  // 过滤状态逻辑
+  if (state === 'apply') {
+    // 应用过滤时激活过滤功能
+    filterState.enabled = true;
+    filterState.active = true;
+    console.log('应用过滤');
+  } else if (state === undefined) {
+    // 不改变状态，只根据当前状态执行过滤
+    console.log('根据当前状态执行过滤: ' + (filterState.active ? '激活' : '未激活'));
+  }
+  
+  // 保留此检查以支持重置功能
+  if (!filterState.enabled) {
+    console.log('过滤功能未启用，跳过过滤');
+    return;
+  }
+  
+  // 使用 UmbrellaJS 找到表格主体
+  const tableBody = u('.el-table__body');
+  if (tableBody.length === 0) {
+    showNotification('未找到表格元素', 'error');
+    return;
+  }
+  
+  // 获取所有行
+  const rows = tableBody.find('tr');
+  let filteredCount = 0;
+  let totalRows = rows.length;
+  
+  // 如果过滤未激活或没有任何过滤条件，显示所有行
+  if (!filterState.active || (includeKeywords.length === 0 && excludeKeywords.length === 0)) {
+    rows.each(function(row) {
+      u(row).attr('style', '');
+    });
+    if (!filterState.active) {
+      showNotification(`过滤未激活：显示全部 ${totalRows} 行`, 'info');
+    } else {
+      showNotification(`已重置过滤：显示全部 ${totalRows} 行`, 'info');
+    }
+    return;
+  }
+  
+  // 遍历每一行
+  rows.each(function(row, index) {
+    // 使用 UmbrellaJS 找到特定列 (el-table_1_column_4)
+    const targetCell = u(row).find('.el-table_1_column_4');
+    if (targetCell.length === 0) {
+      console.log(`行 ${index}: 未找到目标列 el-table_1_column_4`);
+      return;
+    }
+    
+    // 获取文本内容 (从子元素)
+    const cellText = targetCell.text().trim();
+    console.log(`行 ${index}: 单元格文本 = "${cellText}"`);
+    
+    // 检查是否匹配包含关键词
+    const includeMatch = includeKeywords.length === 0 || 
+      includeKeywords.some(keyword => cellText.includes(keyword));
+    console.log(`行 ${index}: 包含关键词匹配 = ${includeMatch}`, 
+      includeKeywords.length > 0 ? `(关键词: ${includeKeywords.join(', ')})` : '(无包含关键词)');
+    
+    // 检查是否匹配排除关键词
+    const excludeMatch = excludeKeywords.length > 0 && 
+      excludeKeywords.some(keyword => cellText.includes(keyword));
+    console.log(`行 ${index}: 排除关键词匹配 = ${excludeMatch}`, 
+      excludeKeywords.length > 0 ? `(关键词: ${excludeKeywords.join(', ')})` : '(无排除关键词)');
+    
+    // 根据匹配结果显示或隐藏行
+    if (includeMatch && !excludeMatch) {
+      console.log(`行 ${index}: 显示此行`);
+      u(row).attr('style', '');
+      filteredCount++;
+    } else {
+      console.log(`行 ${index}: 隐藏此行`);
+      u(row).attr('style', 'display: none;');
+    }
+  });
   
   // 显示通知
-  showNotification(`已应用过滤：包含 ${includeKeywords.length} 个关键词，排除 ${excludeKeywords.length} 个关键词`, 'info');
+  showNotification(`已应用过滤：显示 ${filteredCount}/${totalRows} 行，包含 ${includeKeywords.length} 个关键词，排除 ${excludeKeywords.length} 个关键词`, 'info');
 }
 
 // 页面加载和URL变化时检查
-window.addEventListener('load', checkURLAndAddFilterUI);
-window.addEventListener('hashchange', checkURLAndAddFilterUI);
+window.addEventListener('load', () => {
+  checkURLAndAddFilterUI();
+  setupEventListeners();
+});
+window.addEventListener('hashchange', () => {
+  checkURLAndAddFilterUI();
+  setupEventListeners();
+});
 
 // 为支持现代框架（如Vue, React等）的URL变化添加监听
 
@@ -372,15 +475,101 @@ setInterval(() => {
   }
 }, 1000); // 每秒检查一次
 
+// 设置事件监听器函数
+function setupEventListeners() {
+  // 使用 MutationObserver 监听 DOM 变化，以便在动态加载的元素上添加事件监听器
+  const observer = new MutationObserver(function(mutations) {
+    // 检查是否有分页元素或表单元素被添加到 DOM
+    const paginationElements = document.querySelectorAll('.el-pagination.is-background');
+    const formItemElements = document.querySelectorAll('.el-form-item__content');
+    
+    // 为分页元素添加点击事件监听器
+    paginationElements.forEach(element => {
+      if (!element.hasAttribute('filter-listener')) {
+        element.setAttribute('filter-listener', 'true');
+        element.addEventListener('click', function(event) {
+          console.log('分页元素被点击，重新应用过滤');
+          // 给一点延迟，确保分页完成后再应用过滤
+          setTimeout(() => {
+            // 如果过滤状态为激活状态，则重新应用过滤
+            if (filterState.active) {
+              applyFilter('apply');
+            }
+          }, 300);
+        });
+      }
+    });
+    
+    // 为表单元素添加点击事件监听器
+    formItemElements.forEach(element => {
+      if (!element.hasAttribute('filter-listener')) {
+        element.setAttribute('filter-listener', 'true');
+        element.addEventListener('click', function(event) {
+          console.log('表单元素被点击，重新应用过滤');
+          // 给一点延迟，确保表单操作完成后再应用过滤
+          setTimeout(() => {
+            // 如果过滤状态为激活状态，则重新应用过滤
+            if (filterState.active) {
+              applyFilter('apply');
+            }
+          }, 300);
+        });
+      }
+    });
+  });
+  
+  // 开始观察整个文档
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
+  
+  // 立即检查现有元素
+  const paginationElements = document.querySelectorAll('.el-pagination.is-background');
+  const formItemElements = document.querySelectorAll('.el-form-item__content');
+  
+  paginationElements.forEach(element => {
+    if (!element.hasAttribute('filter-listener')) {
+      element.setAttribute('filter-listener', 'true');
+      element.addEventListener('click', function(event) {
+        console.log('分页元素被点击，重新应用过滤');
+        setTimeout(() => {
+          // 如果过滤状态为激活状态，则重新应用过滤
+          if (filterState.active) {
+            applyFilter('apply');
+          }
+        }, 300);
+      });
+    }
+  });
+  
+  formItemElements.forEach(element => {
+    if (!element.hasAttribute('filter-listener')) {
+      element.setAttribute('filter-listener', 'true');
+      element.addEventListener('click', function(event) {
+        console.log('表单元素被点击，重新应用过滤');
+        setTimeout(() => {
+          // 如果过滤状态为激活状态，则重新应用过滤
+          if (filterState.active) {
+            applyFilter('apply');
+          }
+        }, 300);
+      });
+    }
+  });
+}
+
 // 路由变化处理函数
 function handleRouteChange() {
-  // 更新上次URL记录
   lastPathname = window.location.pathname;
   lastSearch = window.location.search;
   lastHash = window.location.hash;
   
-  // 调用检查函数
+  // 检查URL并添加过滤UI
   checkURLAndAddFilterUI();
+  
+  // 设置事件监听器
+  setupEventListeners();
 }
 
 let host; // 声明 host 变量
