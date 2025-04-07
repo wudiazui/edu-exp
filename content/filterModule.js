@@ -34,7 +34,9 @@ function checkURLAndAddFilterUI() {
   // 检查URL是否以 edu-shop-web/#/question-task/lead-pool 结尾
   // 使用正则表达式确保精确匹配路径末尾
   if (currentURL.match(/\/edu-shop-web\/#\/question-task\/lead-pool(?:[?#].*)?$/) || 
-      currentURL.endsWith('/edu-shop-web/#/question-task/lead-pool')) {
+      currentURL.endsWith('/edu-shop-web/#/question-task/lead-pool') ||
+      currentURL.match(/\/edu-shop-web\/#\/question-task\/audit-pool(?:[?#].*)?$/) ||
+      currentURL.endsWith('/edu-shop-web/#/question-task/audit-pool')) {
     
     // 检查是否已经添加过过滤UI
     if (!document.getElementById('keyword-filter-container')) {
