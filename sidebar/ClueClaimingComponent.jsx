@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { loadKeywords, saveKeywords } from '../content/keywordStorageModule.js';
 
 export default function ClueClaimingComponent() {
   const [loading, setLoading] = useState(false);
@@ -14,6 +15,31 @@ export default function ClueClaimingComponent() {
   const [autoClaimingActive, setAutoClaimingActive] = useState(false);
   const [refreshInterval, setRefreshInterval] = useState(1); // Default to 1 second initially
   const [claimResponse, setClaimResponse] = useState(null); // Add new state for claim response
+  const [includeKeywords, setIncludeKeywords] = useState([]);
+  const [excludeKeywords, setExcludeKeywords] = useState([]);
+  const [newIncludeKeyword, setNewIncludeKeyword] = useState('');
+  const [newExcludeKeyword, setNewExcludeKeyword] = useState('');
+
+  // 从存储中加载关键词
+  useEffect(() => {
+    // 加载保存的关键词
+    loadKeywords().then(({ includeKeywords, excludeKeywords }) => {
+      setIncludeKeywords(includeKeywords || []);
+      setExcludeKeywords(excludeKeywords || []);
+    }).catch(error => {
+      console.error('加载关键词出错:', error);
+    });
+  }, []);
+
+  // 当关键词更新时保存到存储
+  useEffect(() => {
+    // 关键词有变化时自动保存
+    const saveTimer = setTimeout(() => {
+      saveKeywords(includeKeywords, excludeKeywords);
+    }, 300); // 防抖动，避免频繁保存
+    
+    return () => clearTimeout(saveTimer);
+  }, [includeKeywords, excludeKeywords]);
 
   // 加载审核任务数据
   useEffect(() => {
@@ -73,11 +99,21 @@ export default function ClueClaimingComponent() {
   // 监听storage变化，保持与background.js同步
   useEffect(() => {
     const handleStorageChange = (changes) => {
+      // 处理本地存储变化（自动认领设置）
       if (changes.autoClaimingInterval) {
         setRefreshInterval(parseFloat(changes.autoClaimingInterval.newValue));
       }
       if (changes.autoClaimingActive) {
         setAutoClaimingActive(changes.autoClaimingActive.newValue);
+      }
+      
+      // 处理同步存储变化（关键词）
+      // 使用 keywordStorageModule 中定义的键名
+      if (changes['clue_include_keywords']) {
+        setIncludeKeywords(changes['clue_include_keywords'].newValue || []);
+      }
+      if (changes['clue_exclude_keywords']) {
+        setExcludeKeywords(changes['clue_exclude_keywords'].newValue || []);
       }
     };
     chrome.storage.onChanged.addListener(handleStorageChange);
@@ -92,8 +128,10 @@ export default function ClueClaimingComponent() {
       selectedGrade,
       selectedSubject,
       selectedType,
+      includeKeywords,
+      excludeKeywords
     });
-  }, [selectedGrade, selectedSubject, selectedType]);
+  }, [selectedGrade, selectedSubject, selectedType, includeKeywords, excludeKeywords]);
 
   // Load selectedTaskType from localStorage on mount
   useEffect(() => {
@@ -214,6 +252,110 @@ export default function ClueClaimingComponent() {
           </div>
         </div>
 
+        {/* 关键词过滤UI */}
+        <div className="flex flex-col gap-3 mt-2 border border-gray-200 rounded-md p-3 bg-gray-50">
+          {/* 包含关键词 */}
+          <div className="flex flex-col gap-2">
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-medium">包含关键词:</span>
+              <div className="flex items-center">
+                <input
+                  type="text"
+                  className="input input-bordered input-sm w-36 mr-1"
+                  placeholder="请输入关键词"
+                  value={newIncludeKeyword}
+                  onChange={(e) => setNewIncludeKeyword(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && newIncludeKeyword.trim()) {
+                      setIncludeKeywords([...includeKeywords, newIncludeKeyword.trim()]);
+                      setNewIncludeKeyword('');
+                    }
+                  }}
+                />
+                <button 
+                  className="btn btn-sm btn-primary btn-outline"
+                  onClick={() => {
+                    if (newIncludeKeyword.trim()) {
+                      setIncludeKeywords([...includeKeywords, newIncludeKeyword.trim()]);
+                      setNewIncludeKeyword('');
+                    }
+                  }}
+                >
+                  添加
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex flex-wrap gap-2 min-h-[28px]">
+              {includeKeywords.map((keyword, index) => (
+                <div key={index} className="flex items-center bg-blue-50 border border-blue-200 rounded-full px-3 py-1">
+                  <span className="text-sm text-blue-700">{keyword}</span>
+                  <button 
+                    className="ml-1.5 text-blue-400 hover:text-red-500 font-bold"
+                    onClick={() => {
+                      const newKeywords = [...includeKeywords];
+                      newKeywords.splice(index, 1);
+                      setIncludeKeywords(newKeywords);
+                    }}
+                  >
+                    <span className="text-sm">×</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 排除关键词 */}
+          <div className="flex flex-col gap-2 pt-2 border-t border-gray-200">
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-medium">排除关键词:</span>
+              <div className="flex items-center">
+                <input
+                  type="text"
+                  className="input input-bordered input-sm w-36 mr-1"
+                  placeholder="请输入关键词"
+                  value={newExcludeKeyword}
+                  onChange={(e) => setNewExcludeKeyword(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && newExcludeKeyword.trim()) {
+                      setExcludeKeywords([...excludeKeywords, newExcludeKeyword.trim()]);
+                      setNewExcludeKeyword('');
+                    }
+                  }}
+                />
+                <button 
+                  className="btn btn-sm btn-primary btn-outline"
+                  onClick={() => {
+                    if (newExcludeKeyword.trim()) {
+                      setExcludeKeywords([...excludeKeywords, newExcludeKeyword.trim()]);
+                      setNewExcludeKeyword('');
+                    }
+                  }}
+                >
+                  添加
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex flex-wrap gap-2 min-h-[28px]">
+              {excludeKeywords.map((keyword, index) => (
+                <div key={index} className="flex items-center bg-red-50 border border-red-200 rounded-full px-3 py-1">
+                  <span className="text-sm text-red-700">{keyword}</span>
+                  <button 
+                    className="ml-1.5 text-red-400 hover:text-red-600 font-bold"
+                    onClick={() => {
+                      const newKeywords = [...excludeKeywords];
+                      newKeywords.splice(index, 1);
+                      setExcludeKeywords(newKeywords);
+                    }}
+                  >
+                    <span className="text-sm">×</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
 
         <div className="flex items-center gap-2 mt-2">
           <label className="text-sm">刷新间隔(秒):</label>
