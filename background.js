@@ -263,6 +263,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               message: "自动认领中",
               timestamp: new Date().toISOString(),
               params: request.params,
+              includeKeywords: request.includeKeywords || [], // 传递包含关键词列表
+              excludeKeywords: request.excludeKeywords || []  // 传递排除关键词列表
             });
           });
         });

@@ -172,6 +172,8 @@ export default function ClueClaimingComponent() {
     chrome.runtime.sendMessage({
       action: "start_auto_claiming",
       interval: interval * 1000,  // 转换为毫秒
+      includeKeywords: includeKeywords, // 添加包含关键词列表
+      excludeKeywords: excludeKeywords, // 添加排除关键词列表
       params: {
         pn: 1,
         rn: 20,
@@ -184,7 +186,7 @@ export default function ClueClaimingComponent() {
     }, (response) => {
       if (response && response.status === "started") {
         setAutoClaimingActive(true);
-        console.log("自动认领已开始");
+        console.log("自动认领已开始", { includeKeywords, excludeKeywords }); // 添加日志输出关键词列表
       }
     });
   };
