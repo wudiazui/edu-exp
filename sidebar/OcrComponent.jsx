@@ -8,6 +8,7 @@ const OcrComponent = ({ host, uname, serverType }) => {
   const [recognizedText, setRecognizedText] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
   const [cozeService, setCozeService] = React.useState(null);
+  const [imagePreviewSize, setImagePreviewSize] = React.useState({ width: 300, height: 'auto' });
 
   // Initialize CozeService when serverType is "扣子"
   React.useEffect(() => {
@@ -26,22 +27,74 @@ const OcrComponent = ({ host, uname, serverType }) => {
       const reader = new FileReader();
       reader.onloadend = () => {
         setSelectedImage(reader.result);
+        // Create an image to get dimensions
+        const img = new Image();
+        img.onload = () => {
+          // Calculate appropriate preview size (max width 300px)
+          const maxWidth = 300;
+          const ratio = img.width > maxWidth ? maxWidth / img.width : 1;
+          setImagePreviewSize({
+            width: Math.floor(img.width * ratio),
+            height: Math.floor(img.height * ratio)
+          });
+        };
+        img.src = reader.result;
       };
       reader.readAsDataURL(file);
     }
   };
 
   const onPaste = (event) => {
-    const items = event.clipboardData.items;
+    const items = event.clipboardData?.items;
+    if (!items) return;
+    
     for (let i = 0; i < items.length; i++) {
       if (items[i].type.startsWith('image/')) {
         const file = items[i].getAsFile();
         const reader = new FileReader();
         reader.onloadend = () => {
           setSelectedImage(reader.result);
+          // Create an image to get dimensions
+          const img = new Image();
+          img.onload = () => {
+            // Calculate appropriate preview size (max width 300px)
+            const maxWidth = 300;
+            const ratio = img.width > maxWidth ? maxWidth / img.width : 1;
+            setImagePreviewSize({
+              width: Math.floor(img.width * ratio),
+              height: Math.floor(img.height * ratio)
+            });
+          };
+          img.src = reader.result;
         };
         reader.readAsDataURL(file);
+        event.preventDefault();
+        break;
       }
+    }
+  };
+  
+  // Handle file input change
+  const handleFileInputChange = (event) => {
+    const file = event.target.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSelectedImage(reader.result);
+        // Create an image to get dimensions
+        const img = new Image();
+        img.onload = () => {
+          // Calculate appropriate preview size (max width 300px)
+          const maxWidth = 300;
+          const ratio = img.width > maxWidth ? maxWidth / img.width : 1;
+          setImagePreviewSize({
+            width: Math.floor(img.width * ratio),
+            height: Math.floor(img.height * ratio)
+          });
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -143,28 +196,78 @@ const OcrComponent = ({ host, uname, serverType }) => {
 
   return (
     <div className="container max-auto w-full">
-      <div className="mt-4 w-full">
-        <input type="text" onPaste={onPaste} placeholder="粘贴图片" className="input input-bordered w-full" />
-      </div>
-      <div className="mt-2 w-full p-2 rounded-lg border">
-        {selectedImage ? (
-          <img src={selectedImage} alt="Selected" className="img object-cover" />
-        ) : (
-          <div className="skeleton w-full h-48"></div>
-        )}
-      </div>
-      <div className="mt-2">
-        <button className="btn btn-wide w-full" onClick={handleRecognition} disabled={isLoading}>
+      <div className="flex flex-col gap-2">
+        <div
+          className="border-2 border-dashed border-gray-300 rounded-lg p-3 text-center cursor-pointer"
+          onPaste={onPaste}
+          onClick={() => document.getElementById('imageInput').click()}
+          tabIndex="0"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              document.getElementById('imageInput').click();
+            }
+          }}
+        >
+          <input
+            type="text"
+            className="input input-bordered input-sm w-full mb-2"
+            placeholder="可以直接粘贴图片"
+            onPaste={onPaste}
+          />
+          <input
+            type="file"
+            id="imageInput"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileInputChange}
+          />
+          {selectedImage ? (
+            <div className="flex flex-col items-center">
+              <img
+                src={selectedImage}
+                alt="Selected"
+                style={{
+                  width: `${imagePreviewSize.width}px`,
+                  height: imagePreviewSize.height === 'auto' ? 'auto' : `${imagePreviewSize.height}px`,
+                  maxHeight: '180px',
+                  objectFit: 'contain'
+                }}
+              />
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedImage(null);
+                }}
+                className="btn btn-xs btn-error mt-2 text-xs"
+              >
+                删除图片
+              </button>
+            </div>
+          ) : (
+            <div className="text-gray-500 py-3">
+              <p>点击选择或直接粘贴图片</p>
+              <p className="text-xs mt-1">支持截图直接粘贴</p>
+            </div>
+          )}
+        </div>
+        <button
+          onClick={handleRecognition}
+          disabled={!selectedImage || isLoading}
+          className={`btn btn-primary btn-sm w-full ${isLoading ? 'opacity-90' : ''}`}
+        >
           {isLoading ? (
-            <span className="loading loading-spinner"></span>
+            <>
+              <span className="loading loading-spinner loading-xs mr-2"></span>
+              <span>识别中...</span>
+            </>
           ) : (
             "识别文字"
           )}
         </button>
       </div>
       <div className="mt-2">
-        <div className="label flex justify-between items-center">
-          <span className="label-text">结果</span>
+        <div className="label flex justify-between items-center py-1">
+          <span className="label-text text-sm font-medium">结果</span>
           <div className="flex gap-1 items-center">
             <button
               onClick={() => {
@@ -173,7 +276,7 @@ const OcrComponent = ({ host, uname, serverType }) => {
                   text: recognizedText
                 });
               }}
-              className="btn btn-ghost btn-xs flex items-center"
+              className="btn btn-ghost btn-xs btn-sm flex items-center text-xs"
             >
               填入
             </button>
@@ -184,7 +287,7 @@ const OcrComponent = ({ host, uname, serverType }) => {
           value={recognizedText}
           onChange={(e) => setRecognizedText(e.target.value)}
           placeholder="识别后的文字内容"
-          className="textarea textarea-bordered textarea-lg w-full h-full min-h-40"
+          className="textarea textarea-bordered textarea-md w-full h-full min-h-32"
         >
         </textarea>
       </div>
