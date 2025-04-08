@@ -78,6 +78,12 @@ chrome.runtime.onInstalled.addListener(() => {
       parentId: "baidu-edu-tools",
       contexts: ["selection"]
     });
+    chrome.contextMenus.create({
+      id: "topic-split",
+      title: "题目切割",
+      parentId: "baidu-edu-tools",
+      contexts: ["all"]
+    });
 
     // 创建字符插入菜单
     createCharacterMenus();
@@ -141,6 +147,9 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === "auto-fill-blank") {
     chrome.tabs.sendMessage(tab.id, { action: "auto_fill_blank" });
   }
+  if (info.menuItemId === "topic-split") {
+    chrome.tabs.sendMessage(tab.id, { action: "topic_split" });
+  }
   if (info.menuItemId.startsWith('insert-char-')) {
     const shortcutName = info.menuItemId.replace('insert-char-', '');
     chrome.storage.sync.get(['shortcuts'], (result) => {
@@ -197,6 +206,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       type: 'SET_QUESTION',
       data: request.html.trim()
     });
+  }
+  
+  // 处理题目切割消息，转发图片数据到侧边栏
+  if (request.type === 'TOPIC_SPLIT' && request.data) {
+    // 如果有图片数据，将其直接转发到TopicSplitComponent
+    if (typeof request.data === 'object' && request.data.image_data) {
+      chrome.runtime.sendMessage({
+        type: 'TOPIC_SPLIT_IMAGE',
+        data: request.data.image_data
+      });
+    } else {
+      // 如果是文本数据，使用原有的topic_split处理
+      formatMessage('TOPIC_SPLIT', request.data, request.host, request.uname);
+    }
   }
 
   // 处理format_latex消息

@@ -19,6 +19,24 @@ const TopicSplitComponent = ({ host, uname, serverType }) => {
       });
     }
   }, [serverType]);
+  
+  // 监听来自 background 的 TOPIC_SPLIT_IMAGE 消息
+  React.useEffect(() => {
+    const messageListener = (message) => {
+      if (message.type === 'TOPIC_SPLIT_IMAGE' && message.data) {
+        // 直接设置图片数据
+        setSelectedImage(message.data);
+      }
+    };
+    
+    // 添加消息监听器
+    chrome.runtime.onMessage.addListener(messageListener);
+    
+    // 组件卸载时移除监听器
+    return () => {
+      chrome.runtime.onMessage.removeListener(messageListener);
+    };
+  }, []);
 
 
 

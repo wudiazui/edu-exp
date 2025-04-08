@@ -553,6 +553,78 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     return true;
   }
 
+  if (request.action === "topic_split") {
+    // 使用umbrellajs查找class="doc-clip-img"的元素
+    const docClipImgElements = u('.doc-clip-img');
+    
+    if (docClipImgElements.length > 0) {
+      // 显示处理中通知
+      const notificationId = showNotification('正在处理题目内容...', 'info');
+      
+      // 创建临时容器并复制内容
+      const temp = document.createElement('div');
+      // 使用正确的方式获取元素内容 - first()返回DOM元素，不是umbrella实例
+      const firstElement = docClipImgElements.nodes[0];
+      temp.innerHTML = firstElement ? firstElement.innerHTML : '';
+      
+      // 查找所有图片元素，特别是处理blob URL
+      const processActiveElement = async () => {
+        try {
+          // 查找所有图片元素
+          const images = temp.querySelectorAll('img');
+          let blobImage = null;
+          
+          // 查找第一个有效的blob URL图片
+          for (const img of images) {
+            const src = img.getAttribute('src');
+            if (src && src.startsWith('blob:')) {
+              try {
+                // 获取blob数据
+                const response = await fetch(src);
+                const blob = await response.blob();
+                
+                // 转换为base64
+                const reader = new FileReader();
+                const base64Data = await new Promise((resolve) => {
+                  reader.onloadend = () => resolve(reader.result);
+                  reader.readAsDataURL(blob);
+                });
+                
+                blobImage = base64Data;
+                break; // 找到第一个有效的blob图片就停止
+              } catch (error) {
+                console.error('Error processing blob URL:', error);
+              }
+            }
+          }
+          
+          if (blobImage) {
+            // 发送到 background script，指定类型为 TOPIC_SPLIT
+            chrome.runtime.sendMessage({
+              type: 'TOPIC_SPLIT',
+              data: { 'image_data': blobImage }
+            });
+            
+            hideNotification(notificationId);
+            showNotification('已发送图片到题目切割标签页', 'success');
+          } else {
+            hideNotification(notificationId);
+            showNotification('未找到可处理的图片', 'error');
+          }
+        } catch (error) {
+          console.error('Error in topic_split:', error);
+          showNotification('处理题目内容失败: ' + error.message, 'error');
+        }
+      };
+      
+      // 执行异步处理
+      processActiveElement();
+    } else {
+      showNotification('请先选择一个文本区域', 'error');
+    }
+    return true;
+  }
+
   if (request.action === "periodic_message") {
     getAuditTaskList(request.params).then((res) => {
       if (res.errno === 0 && res.data) {
