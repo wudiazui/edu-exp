@@ -245,25 +245,41 @@ const TopicSplitComponent = ({ host, uname, serverType }) => {
             setSplitResult('切割失败：未获取到切割结果');
           }
         } else {
-          // 使用 topic_split 函数处理图片切割，但先将 Base64 转换为 blob
-          try {
-            const result = await topic_split({ 'image_data': selectedImage }, host, uname);
-            
-            if (result) {
-              // 处理新的响应格式，包含 text 和 list 字段
-              // 将结果转换为 JSON 字符串以便在文本区域中显示
-              const formattedResult = JSON.stringify({
-                text: result.text || '',
-                list: result.list || []
-              }, null, 2);
-              setSplitResult(formattedResult);
-            } else {
-              setSplitResult('切割失败：未获取到切割结果');
-            }
-          } catch (error) {
-            console.error('Error in topic split:', error);
-            setSplitResult('切割失败：' + (error.message || '未知错误'));
+        // 使用 chrome.runtime.sendMessage 发送请求到 background.js
+        try {
+          // 发送消息到 background.js
+          const result = await new Promise((resolve, reject) => {
+            chrome.runtime.sendMessage({
+              type: 'TOPIC_SPLIT',
+              data: { 'image_data': selectedImage },
+              host,
+              uname
+            }, response => {
+              if (chrome.runtime.lastError) {
+                reject(new Error(chrome.runtime.lastError.message));
+              } else if (response.error) {
+                reject(new Error(response.error));
+              } else {
+                resolve(response.formatted);
+              }
+            });
+          });
+          
+          if (result) {
+            // 处理新的响应格式，包含 text 和 list 字段
+            // 将结果转换为 JSON 字符串以便在文本区域中显示
+            const formattedResult = JSON.stringify({
+              text: result.text || '',
+              list: result.list || []
+            }, null, 2);
+            setSplitResult(formattedResult);
+          } else {
+            setSplitResult('切割失败：未获取到切割结果');
           }
+        } catch (error) {
+          console.error('Error in topic split:', error);
+          setSplitResult('切割失败：' + (error.message || '未知错误'));
+        }  
         }
       } catch (error) {
         console.error('Error in topic split:', error);
@@ -335,15 +351,15 @@ const TopicSplitComponent = ({ host, uname, serverType }) => {
         <button
           onClick={handleSplitTopic}
           disabled={!selectedImage || isLoading}
-          className={`btn btn-primary btn-sm w-full ${isLoading ? 'loading' : ''}`}
+          className={`btn btn-primary btn-sm w-full ${isLoading ? 'opacity-90' : ''}`}
         >
           {isLoading ? (
             <>
-              <span className="loading loading-spinner loading-xs mr-1"></span>
-              <span className="text-xs">处理中...</span>
+              <span className="loading loading-spinner loading-xs mr-2"></span>
+              <span>处理中...</span>
             </>
           ) : (
-            <span className="text-sm">切割题目</span>
+            "切割题目"
           )}
         </button>
       </div>
