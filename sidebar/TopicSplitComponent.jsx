@@ -3,11 +3,51 @@ import CopyButton from './CopyButton.jsx';
 import { CozeService } from '../coze.js';
 import { topic_split } from '../lib.js';
 
+// 图片压缩和转换函数
+async function compressAndConvertToBase64(file, quality = 0.7, maxWidth = 1200) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        // 计算新的尺寸，保持宽高比
+        let width = img.width;
+        let height = img.height;
+        if (width > maxWidth) {
+          const ratio = maxWidth / width;
+          width = maxWidth;
+          height = Math.floor(height * ratio);
+        }
+
+        // 创建 canvas 并绘制调整大小后的图片
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // 将 canvas 转换为压缩后的 base64 字符串
+        const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+        resolve(compressedBase64);
+      };
+      img.onerror = (error) => {
+        reject(error);
+      };
+    };
+    reader.onerror = (error) => {
+      reject(error);
+    };
+  });
+}
+
 const TopicSplitComponent = ({ host, uname, serverType }) => {
   const [selectedImage, setSelectedImage] = React.useState(null);
   const [splitResult, setSplitResult] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
   const [cozeService, setCozeService] = React.useState(null);
+  const [imagePreviewSize, setImagePreviewSize] = React.useState({ width: 300, height: 'auto' });
 
   // Initialize CozeService when serverType is "扣子"
   React.useEffect(() => {
@@ -24,8 +64,32 @@ const TopicSplitComponent = ({ host, uname, serverType }) => {
   React.useEffect(() => {
     const messageListener = (message) => {
       if (message.type === 'TOPIC_SPLIT_IMAGE' && message.data) {
+        // 记录接收到的图片数据大小和类型
+        console.log('TopicSplitComponent received image data size:', message.data.length, 'bytes');
+        console.log('Received image type:', message.data.substring(0, message.data.indexOf(';')));
+        
         // 直接设置图片数据
         setSelectedImage(message.data);
+        
+        // 创建图像对象获取尺寸信息
+        const img = new Image();
+        img.onload = () => {
+          console.log('Received image original dimensions:', img.width, 'x', img.height, 'pixels');
+          
+          // 计算预览尺寸
+          const maxWidth = 300;
+          const ratio = img.width > maxWidth ? maxWidth / img.width : 1;
+          const previewWidth = Math.floor(img.width * ratio);
+          const previewHeight = Math.floor(img.height * ratio);
+          
+          console.log('Received image preview dimensions:', previewWidth, 'x', previewHeight, 'pixels');
+          
+          setImagePreviewSize({
+            width: previewWidth,
+            height: previewHeight
+          });
+        };
+        img.src = message.data;
       }
     };
     
@@ -41,16 +105,78 @@ const TopicSplitComponent = ({ host, uname, serverType }) => {
 
 
   const onPaste = (event) => {
-    const items = event.clipboardData.items;
+    const items = event.clipboardData?.items;
+    if (!items) return;
+    
     for (let i = 0; i < items.length; i++) {
       if (items[i].type.startsWith('image/')) {
         const file = items[i].getAsFile();
         const reader = new FileReader();
         reader.onloadend = () => {
+          // 记录粘贴的图片数据大小
+          console.log('Pasted image data size:', reader.result.length, 'bytes');
+          console.log('Pasted image type:', reader.result.substring(0, reader.result.indexOf(';')));
+          
           setSelectedImage(reader.result);
+          // Create an image to get dimensions
+          const img = new Image();
+          img.onload = () => {
+            // Calculate appropriate preview size (max width 300px)
+            const maxWidth = 300;
+            const ratio = img.width > maxWidth ? maxWidth / img.width : 1;
+            const previewWidth = Math.floor(img.width * ratio);
+            const previewHeight = Math.floor(img.height * ratio);
+            
+            // 记录图片原始尺寸和预览尺寸
+            console.log('Pasted image original dimensions:', img.width, 'x', img.height, 'pixels');
+            console.log('Pasted image preview dimensions:', previewWidth, 'x', previewHeight, 'pixels');
+            
+            setImagePreviewSize({
+              width: previewWidth,
+              height: previewHeight
+            });
+          };
+          img.src = reader.result;
         };
         reader.readAsDataURL(file);
+        event.preventDefault();
+        break;
       }
+    }
+  };
+  
+  // Handle file input change
+  const handleFileInputChange = (event) => {
+    const file = event.target.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        // 记录上传的图片数据大小
+        console.log('Uploaded image data size:', reader.result.length, 'bytes');
+        console.log('Uploaded image type:', reader.result.substring(0, reader.result.indexOf(';')));
+        
+        setSelectedImage(reader.result);
+        // Create an image to get dimensions
+        const img = new Image();
+        img.onload = () => {
+          // Calculate appropriate preview size (max width 300px)
+          const maxWidth = 300;
+          const ratio = img.width > maxWidth ? maxWidth / img.width : 1;
+          const previewWidth = Math.floor(img.width * ratio);
+          const previewHeight = Math.floor(img.height * ratio);
+          
+          // 记录图片原始尺寸和预览尺寸
+          console.log('Uploaded image original dimensions:', img.width, 'x', img.height, 'pixels');
+          console.log('Uploaded image preview dimensions:', previewWidth, 'x', previewHeight, 'pixels');
+          
+          setImagePreviewSize({
+            width: previewWidth,
+            height: previewHeight
+          });
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -119,7 +245,7 @@ const TopicSplitComponent = ({ host, uname, serverType }) => {
             setSplitResult('切割失败：未获取到切割结果');
           }
         } else {
-          // 直接使用 topic_split 函数处理图片切割
+          // 使用 topic_split 函数处理图片切割，但先将 Base64 转换为 blob
           try {
             const result = await topic_split({ 'image_data': selectedImage }, host, uname);
             
@@ -152,22 +278,72 @@ const TopicSplitComponent = ({ host, uname, serverType }) => {
 
   return (
     <div className="container max-auto w-full">
-      <div className="mt-4 w-full">
-        <input type="text" onPaste={onPaste} placeholder="粘贴图片" className="input input-bordered w-full" />
-      </div>
-      <div className="mt-2 w-full p-2 rounded-lg border">
-        {selectedImage ? (
-          <img src={selectedImage} alt="Selected" className="img object-cover" />
-        ) : (
-          <div className="skeleton w-full h-48"></div>
-        )}
-      </div>
-      <div className="mt-2">
-        <button className="btn btn-wide w-full" onClick={handleSplitTopic} disabled={isLoading}>
-          {isLoading ? (
-            <span className="loading loading-spinner"></span>
+      <div className="flex flex-col gap-2">
+        <div
+          className="border-2 border-dashed border-gray-300 rounded-lg p-3 text-center cursor-pointer"
+          onPaste={onPaste}
+          onClick={() => document.getElementById('imageInput').click()}
+          tabIndex="0"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              document.getElementById('imageInput').click();
+            }
+          }}
+        >
+          <input
+            type="text"
+            className="input input-bordered input-sm w-full mb-2"
+            placeholder="可以直接粘贴图片"
+            onPaste={onPaste}
+          />
+          <input
+            type="file"
+            id="imageInput"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileInputChange}
+          />
+          {selectedImage ? (
+            <div className="flex flex-col items-center">
+              <img
+                src={selectedImage}
+                alt="Selected"
+                style={{
+                  width: `${imagePreviewSize.width}px`,
+                  height: imagePreviewSize.height === 'auto' ? 'auto' : `${imagePreviewSize.height}px`,
+                  maxHeight: '180px',
+                  objectFit: 'contain'
+                }}
+              />
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedImage(null);
+                }}
+                className="btn btn-xs btn-error mt-2 text-xs"
+              >
+                删除图片
+              </button>
+            </div>
           ) : (
-            "切割题目"
+            <div className="text-gray-500 py-3">
+              <p>点击选择或直接粘贴图片</p>
+              <p className="text-xs mt-1">支持截图直接粘贴</p>
+            </div>
+          )}
+        </div>
+        <button
+          onClick={handleSplitTopic}
+          disabled={!selectedImage || isLoading}
+          className={`btn btn-primary btn-sm w-full ${isLoading ? 'loading' : ''}`}
+        >
+          {isLoading ? (
+            <>
+              <span className="loading loading-spinner loading-xs mr-1"></span>
+              <span className="text-xs">处理中...</span>
+            </>
+          ) : (
+            <span className="text-sm">切割题目</span>
           )}
         </button>
       </div>
@@ -197,7 +373,7 @@ const TopicSplitComponent = ({ host, uname, serverType }) => {
                               console.error('Error sending list item:', error);
                             }
                           }}
-                          className="btn btn-ghost btn-xs flex items-center"
+                          className="btn btn-ghost btn-xs btn-sm flex items-center text-xs"
                         >
                           填入
                         </button>
@@ -219,24 +395,22 @@ const TopicSplitComponent = ({ host, uname, serverType }) => {
                           console.error('Error updating list item:', e);
                         }
                       }}
-                      className="textarea textarea-bordered w-full"
+                      className="textarea textarea-bordered textarea-sm w-full"
                       rows="2"
                     ></textarea>
                   </div>
                 ));
               } else {
                 return (
-                  <div className="text-center py-4 text-gray-500">
-                    <p>暂无题目列表数据</p>
-
+                  <div className="text-center py-3 text-gray-500">
+                    <p className="text-sm">暂无题目列表数据</p>
                   </div>
                 );
               }
             } catch (e) {
               return (
-                <div className="text-center py-4 text-gray-500">
-                  <p>暂无题目列表数据</p>
-
+                <div className="text-center py-3 text-gray-500">
+                  <p className="text-sm">暂无题目列表数据</p>
                 </div>
               );
             }
@@ -245,8 +419,8 @@ const TopicSplitComponent = ({ host, uname, serverType }) => {
         </div>
       </div>
       <div className="mt-2">
-        <div className="label flex justify-between items-center">
-          <span className="label-text">结果</span>
+        <div className="label flex justify-between items-center py-1">
+          <span className="label-text text-sm font-medium">结果</span>
           <div className="flex gap-1 items-center">
             <button
               onClick={() => {
@@ -267,7 +441,7 @@ const TopicSplitComponent = ({ host, uname, serverType }) => {
                   });
                 }
               }}
-              className="btn btn-ghost btn-xs flex items-center"
+              className="btn btn-ghost btn-xs btn-sm flex items-center text-xs"
             >
               填入
             </button>
@@ -300,7 +474,7 @@ const TopicSplitComponent = ({ host, uname, serverType }) => {
             }
           }}
           placeholder="题目切割后的内容"
-          className="textarea textarea-bordered textarea-lg w-full h-full min-h-40"
+          className="textarea textarea-bordered textarea-md w-full h-full min-h-32"
         >
         </textarea>
       </div>

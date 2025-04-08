@@ -573,6 +573,7 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
           // 查找所有图片元素
           const images = temp.querySelectorAll('img');
           let blobImage = null;
+          let originalSize = 0;
           
           // 查找第一个有效的blob URL图片
           for (const img of images) {
@@ -582,13 +583,13 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
                 // 获取blob数据
                 const response = await fetch(src);
                 const blob = await response.blob();
+                originalSize = blob.size;
+                console.log('Original blob size:', originalSize, 'bytes');
                 
-                // 转换为base64
-                const reader = new FileReader();
-                const base64Data = await new Promise((resolve) => {
-                  reader.onloadend = () => resolve(reader.result);
-                  reader.readAsDataURL(blob);
-                });
+                // 压缩图片并转换为base64
+                const base64Data = await compressAndConvertToBase64(blob);
+                console.log('Compressed image size:', base64Data.length, 'bytes');
+                console.log('Compression ratio:', (base64Data.length / originalSize).toFixed(2));
                 
                 blobImage = base64Data;
                 break; // 找到第一个有效的blob图片就停止
@@ -598,7 +599,68 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
             }
           }
           
+          // 压缩图片并转换为base64的函数
+          async function compressAndConvertToBase64(blob, quality = 0.7, maxWidth = 1200) {
+            return new Promise((resolve, reject) => {
+              const img = new Image();
+              img.onload = () => {
+                // 计算新的尺寸，保持宽高比
+                let width = img.width;
+                let height = img.height;
+                if (width > maxWidth) {
+                  const ratio = maxWidth / width;
+                  width = maxWidth;
+                  height = Math.floor(height * ratio);
+                }
+                
+                // 创建canvas并绘制调整大小后的图片
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // 将canvas转换为压缩后的base64字符串
+                const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+                resolve(compressedBase64);
+              };
+              img.onerror = reject;
+              
+              // 从blob创建一个临时URL
+              const url = URL.createObjectURL(blob);
+              img.src = url;
+              
+              // 使用后释放URL
+              img.onload = function() {
+                URL.revokeObjectURL(url);
+                
+                // 计算新的尺寸，保持宽高比
+                let width = img.width;
+                let height = img.height;
+                if (width > maxWidth) {
+                  const ratio = maxWidth / width;
+                  width = maxWidth;
+                  height = Math.floor(height * ratio);
+                }
+                
+                // 创建canvas并绘制调整大小后的图片
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // 将canvas转换为压缩后的base64字符串
+                const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+                resolve(compressedBase64);
+              };
+            });
+          }
+          
           if (blobImage) {
+            // 记录 blobImage 的大小
+            console.log('blobImage size:', blobImage.length, 'bytes');
+            
             // 发送到 background script，指定类型为 TOPIC_SPLIT
             chrome.runtime.sendMessage({
               type: 'TOPIC_SPLIT',
