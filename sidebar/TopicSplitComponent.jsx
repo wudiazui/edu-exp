@@ -172,11 +172,8 @@ const TopicSplitComponent = ({ host, uname, serverType }) => {
                             try {
                               // 发送当前题目项到浏览器
                               chrome.runtime.sendMessage({
-                                type: "topic",
-                                text: {
-                                  text: item,
-                                  list: []
-                                }
+                                type: "documentassistant",
+                                text: item
                               });
                             } catch (error) {
                               console.error('Error sending list item:', error);
@@ -238,20 +235,17 @@ const TopicSplitComponent = ({ host, uname, serverType }) => {
                 try {
                   // 解析当前的 splitResult JSON 字符串
                   const parsedResult = JSON.parse(splitResult);
-                  // 发送完整的 JSON 对象（包含 text 和 list）
+                  // 只发送text字段内容
                   chrome.runtime.sendMessage({
-                    type: "topic",
-                    text: parsedResult
+                    type: "documentassistant",
+                    text: parsedResult.text || ''
                   });
                 } catch (error) {
                   console.error('Error parsing split result:', error);
-                  // 如果解析失败，则将当前文本包装为标准格式
+                  // 如果解析失败，则直接发送当前文本
                   chrome.runtime.sendMessage({
-                    type: "topic",
-                    text: {
-                      text: splitResult,
-                      list: []
-                    }
+                    type: "documentassistant",
+                    text: splitResult
                   });
                 }
               }}
