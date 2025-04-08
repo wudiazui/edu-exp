@@ -353,6 +353,32 @@ export async function ocr_text(image_data, host, uname) {
   }
 }
 
+export async function topic_split(text_data, host, uname) {
+  try {
+    const response = await fetch(`${host}/llm/topic_split`, {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
+        'X-Pfy-Key': uname
+      },
+      body: JSON.stringify(text_data)
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    // Return the full data object instead of just topics
+    // This allows the component to access both text and list fields
+    return data;
+  } catch (error) {
+    console.error('Error topic split:', error);
+    return null;
+  }
+}
+
 export async function replaceLatexWithImages(text) {
   // Convert \( and \) to $
   text = text.replace(/\\\(/g, '$').replace(/\\\)/g, '$')

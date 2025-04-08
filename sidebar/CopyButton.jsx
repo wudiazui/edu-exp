@@ -3,14 +3,28 @@ import React from 'react';
 const CopyButton = ({ text }) => {
     const handleCopy = () => {
         if (text) {
-            navigator.clipboard.writeText(text)
-                .then(() => {
-                    // 可以添加一个提示复制成功
-                    console.log('Copied to clipboard');
-                })
-                .catch(err => {
-                    console.error('Failed to copy:', err);
-                });
+            try {
+                // 尝试解析 JSON
+                const parsedText = JSON.parse(text);
+                // 如果是 JSON 格式并且有 text 字段，只复制 text 内容
+                const contentToCopy = parsedText.text || text;
+                navigator.clipboard.writeText(contentToCopy)
+                    .then(() => {
+                        console.log('Copied text content to clipboard');
+                    })
+                    .catch(err => {
+                        console.error('Failed to copy:', err);
+                    });
+            } catch (e) {
+                // 如果不是 JSON 格式，直接复制原文本
+                navigator.clipboard.writeText(text)
+                    .then(() => {
+                        console.log('Copied to clipboard');
+                    })
+                    .catch(err => {
+                        console.error('Failed to copy:', err);
+                    });
+            }
         }
     };
 

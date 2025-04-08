@@ -1,4 +1,4 @@
-import {ocr_text, run_llm, getAuditTaskLabel, format_latex} from "./lib.js";
+import {ocr_text, run_llm, getAuditTaskLabel, format_latex, topic_split} from "./lib.js";
 import { CozeService } from "./coze.js";
 
 console.log('Hello from the background script!')
@@ -319,6 +319,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         formatted = await run_llm(host, uname, 'topic_complete', data)
       } else if (type === 'OCR') {
         formatted = await ocr_text(data, host, uname);
+      } else if (type === 'TOPIC_SPLIT') {
+        formatted = await topic_split(data, host, uname);
       }
       sendResponse({ formatted });
     } catch (error) {
@@ -326,7 +328,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
   };
 
-  if (['FORMAT_QUESTION', 'TOPIC_ANSWER', 'TOPIC_ANALYSIS', 'TOPIC_COMPLETE', 'OCR'].includes(request.type)) {
+  if (['FORMAT_QUESTION', 'TOPIC_ANSWER', 'TOPIC_ANALYSIS', 'TOPIC_COMPLETE', 'OCR', 'TOPIC_SPLIT'].includes(request.type)) {
     formatMessage(request.type, request.data, request.host, request.uname);
     return true; // 保持消息通道开放以等待异步响应
   }

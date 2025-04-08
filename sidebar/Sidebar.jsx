@@ -3,6 +3,7 @@ import ApiSettingsForm from './ApiSettingsForm'; // 引入新组件
 import QuestionAnswerForm from './QuestionAnswerForm'; // 引入新组件
 import OcrComponent from './OcrComponent'; // 引入新组件
 import ClueClaimingComponent from './ClueClaimingComponent'; // 引入线索认领组件
+import TopicSplitComponent from './TopicSplitComponent'; // 引入题目切割组件
 import { CozeService } from '../coze.js';
 
 export default function Main() {
@@ -24,7 +25,8 @@ export default function Main() {
   const [features, setFeatures] = useState({
     jieti: true,
     ocr: true,
-    "clue-claiming": false
+    "clue-claiming": false,
+    "topic_split": true
   });
   const [serverType, setServerType] = useState(null);
   const [isSettingsLoading, setIsSettingsLoading] = useState(true);
@@ -508,7 +510,8 @@ export default function Main() {
   }, [serverType]);
 
   return (<div className="container max-auto px-1 mt-2">
-            <div className="tabs tabs-boxed">
+            <div className="overflow-x-auto pb-1">
+              <div className="tabs tabs-boxed inline-flex whitespace-nowrap min-w-full">
               <a className={`tab ${activeTab === 'settings' ? 'tab-active' : ''}`} onClick={() => handleTabChange('settings')}>设置</a>
               {features.jieti && (
                 <a className={`tab ${activeTab === 'solving' ? 'tab-active' : ''}`} onClick={() => handleTabChange('solving')}>解题</a>
@@ -516,9 +519,13 @@ export default function Main() {
               {features.ocr && (
                 <a className={`tab ${activeTab === 'ocr' ? 'tab-active' : ''}`} onClick={() => handleTabChange('ocr')}>文字识别</a>
               )}
+              {features.topic_split && (
+                <a className={`tab ${activeTab === 'topic_split' ? 'tab-active' : ''}`} onClick={() => handleTabChange('topic_split')}>题目切割</a>
+              )}
               {features["clue-claiming"] && (
                 <a className={`tab ${activeTab === 'clue-claiming' ? 'tab-active' : ''}`} onClick={() => handleTabChange('clue-claiming')}>线索认领</a>
               )}
+              </div>
             </div>
             {activeTab === 'settings' && (
               <div className="w-full mt-2">
@@ -574,6 +581,13 @@ export default function Main() {
             )}
             {activeTab === 'clue-claiming' && (
               <ClueClaimingComponent />
+            )}
+            {activeTab === 'topic_split' && (
+              <TopicSplitComponent
+                host={host}
+                uname={name}
+                serverType={serverType}
+              />
             )}
           </div>)
 }
