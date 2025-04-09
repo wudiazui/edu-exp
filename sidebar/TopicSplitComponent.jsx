@@ -345,28 +345,15 @@ const TopicSplitComponent = ({ host, uname, serverType }) => {
     <div className="container max-auto w-full">
       <div className="flex flex-col gap-2">
         <div
-          className="border-2 border-dashed border-gray-300 rounded-lg p-3 text-center cursor-pointer"
+          className="border-2 border-dashed border-gray-300 rounded-lg p-3 text-center"
           onPaste={onPaste}
-          onClick={() => document.getElementById('imageInput').click()}
           tabIndex="0"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              document.getElementById('imageInput').click();
-            }
-          }}
         >
           <input
             type="text"
             className="input input-bordered input-sm w-full mb-2"
             placeholder="可以直接粘贴图片"
             onPaste={onPaste}
-          />
-          <input
-            type="file"
-            id="imageInput"
-            accept="image/*"
-            className="hidden"
-            onChange={handleFileInputChange}
           />
           {selectedImage ? (
             <div className="flex flex-col items-center">
@@ -392,7 +379,7 @@ const TopicSplitComponent = ({ host, uname, serverType }) => {
             </div>
           ) : (
             <div className="text-gray-500 py-3">
-              <p>点击选择或直接粘贴图片</p>
+              <p>直接粘贴图片</p>
               <p className="text-xs mt-1">支持截图直接粘贴</p>
             </div>
           )}
