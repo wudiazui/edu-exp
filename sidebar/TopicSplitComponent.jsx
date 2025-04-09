@@ -4,41 +4,40 @@ import { CozeService } from '../coze.js';
 import { topic_split } from '../lib.js';
 
 // 图片压缩和转换函数
-async function compressAndConvertToBase64(file, quality = 0.7, maxWidth = 1200) {
+async function compressAndConvertToBase64(blob, quality = 0.7, maxWidth = 1200) {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (event) => {
-      const img = new Image();
-      img.src = event.target.result;
-      img.onload = () => {
-        // 计算新的尺寸，保持宽高比
-        let width = img.width;
-        let height = img.height;
-        if (width > maxWidth) {
-          const ratio = maxWidth / width;
-          width = maxWidth;
-          height = Math.floor(height * ratio);
-        }
-
-        // 创建 canvas 并绘制调整大小后的图片
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-
-        // 将 canvas 转换为压缩后的 base64 字符串
-        const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
-        resolve(compressedBase64);
-      };
-      img.onerror = (error) => {
-        reject(error);
-      };
+    const img = new Image();
+    
+    // 从blob创建一个临时URL
+    const url = URL.createObjectURL(blob);
+    img.src = url;
+    
+    // 使用后释放URL
+    img.onload = function() {
+      URL.revokeObjectURL(url);
+      
+      // 计算新的尺寸，保持宽高比
+      let width = img.width;
+      let height = img.height;
+      if (width > maxWidth) {
+        const ratio = maxWidth / width;
+        width = maxWidth;
+        height = Math.floor(height * ratio);
+      }
+      
+      // 创建canvas并绘制调整大小后的图片
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      // 将canvas转换为压缩后的base64字符串
+      const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+      resolve(compressedBase64);
     };
-    reader.onerror = (error) => {
-      reject(error);
-    };
+    
+    img.onerror = reject;
   });
 }
 
@@ -184,9 +183,59 @@ const TopicSplitComponent = ({ host, uname, serverType }) => {
     if (selectedImage) {
       setIsLoading(true);
       try {
+        // 检查图片大小并在需要时进行压缩
+        let processedImage = selectedImage;
+        
+        // 计算base64图片大小（近似值，以字节为单位）
+        const base64Data = selectedImage.split(',')[1];
+        const sizeInBytes = Math.ceil((base64Data.length * 3) / 4);
+        const sizeInMB = sizeInBytes / (1024 * 1024);
+        
+        console.log(`原始图片大小: ${sizeInMB.toFixed(2)}MB`);
+        
+        // 如果图片大于1MB，执行压缩
+        if (sizeInMB > 1) {
+          console.log('图片大于1MB，执行压缩...');
+          
+          try {
+            // 从base64转换为Blob
+            const byteCharacters = atob(base64Data);
+            const byteArrays = [];
+            for (let offset = 0; offset < byteCharacters.length; offset += 1024) {
+              const slice = byteCharacters.slice(offset, offset + 1024);
+              const byteNumbers = new Array(slice.length);
+              for (let i = 0; i < slice.length; i++) {
+                byteNumbers[i] = slice.charCodeAt(i);
+              }
+              const byteArray = new Uint8Array(byteNumbers);
+              byteArrays.push(byteArray);
+            }
+            const blob = new Blob(byteArrays, { type: 'image/jpeg' });
+            
+            // 直接使用blob进行压缩，不需要创建File对象
+            processedImage = await compressAndConvertToBase64(blob, 0.6); // 降低质量参数以0.6，增强压缩效果
+            
+            // 计算压缩后的大小
+            const compressedBase64Data = processedImage.split(',')[1];
+            const compressedSizeInBytes = Math.ceil((compressedBase64Data.length * 3) / 4);
+            const compressedSizeInMB = compressedSizeInBytes / (1024 * 1024);
+            console.log(`压缩后图片大小: ${compressedSizeInMB.toFixed(2)}MB`);
+            
+            // 如果压缩后反而更大，则使用原始图片
+            if (compressedSizeInMB >= sizeInMB) {
+              console.log('压缩后图片反而更大，使用原始图片');
+              processedImage = selectedImage;
+            }
+          } catch (error) {
+            console.error('图片压缩失败:', error);
+            // 如果压缩失败，使用原始图片
+            processedImage = selectedImage;
+          }
+        }
+        
         if (serverType === "扣子" && cozeService) {
           // Convert base64 to blob
-          const base64Data = selectedImage.split(',')[1];
+          const base64Data = processedImage.split(',')[1];
           const byteCharacters = atob(base64Data);
           const byteArrays = [];
           for (let offset = 0; offset < byteCharacters.length; offset += 1024) {
@@ -245,27 +294,27 @@ const TopicSplitComponent = ({ host, uname, serverType }) => {
             setSplitResult('切割失败：未获取到切割结果');
           }
         } else {
-        // 使用 chrome.runtime.sendMessage 发送请求到 background.js
-        try {
-          // 发送消息到 background.js
-          const result = await new Promise((resolve, reject) => {
-            chrome.runtime.sendMessage({
-              type: 'TOPIC_SPLIT',
-              data: { 'image_data': selectedImage },
-              host,
-              uname
-            }, response => {
-              if (chrome.runtime.lastError) {
-                reject(new Error(chrome.runtime.lastError.message));
-              } else if (response.error) {
-                reject(new Error(response.error));
-              } else {
-                resolve(response.formatted);
-              }
+          // 使用 chrome.runtime.sendMessage 发送请求到 background.js
+          try {
+            // 发送消息到 background.js
+            const result = await new Promise((resolve, reject) => {
+              chrome.runtime.sendMessage({
+                type: 'TOPIC_SPLIT',
+                data: { 'image_data': processedImage },
+                host,
+                uname
+              }, response => {
+                if (chrome.runtime.lastError) {
+                  reject(new Error(chrome.runtime.lastError.message));
+                } else if (response.error) {
+                  reject(new Error(response.error));
+                } else {
+                  resolve(response.formatted);
+                }
+              });
             });
-          });
-          
-          if (result) {
+            
+            if (result) {
             // 处理新的响应格式，包含 text 和 list 字段
             // 将结果转换为 JSON 字符串以便在文本区域中显示
             const formattedResult = JSON.stringify({
@@ -273,13 +322,13 @@ const TopicSplitComponent = ({ host, uname, serverType }) => {
               list: result.list || []
             }, null, 2);
             setSplitResult(formattedResult);
-          } else {
-            setSplitResult('切割失败：未获取到切割结果');
-          }
-        } catch (error) {
-          console.error('Error in topic split:', error);
-          setSplitResult('切割失败：' + (error.message || '未知错误'));
-        }  
+            } else {
+              setSplitResult('切割失败：未获取到切割结果');
+            }
+          } catch (error) {
+            console.error('Error in topic split:', error);
+            setSplitResult('切割失败：' + (error.message || '未知错误'));
+          }  
         }
       } catch (error) {
         console.error('Error in topic split:', error);

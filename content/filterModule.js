@@ -378,19 +378,19 @@ function applyFilter(state) {
     const cellText = targetCell.text().trim();
     console.log(`行 ${index}: 单元格文本 = "${cellText}"`);
     
-    // 检查是否匹配包含关键词
+    // 检查是否匹配包含关键词 - 如果包含关键词列表为空，则所有行都匹配；否则至少包含一个关键词
     const includeMatch = includeKeywords.length === 0 || 
       includeKeywords.some(keyword => cellText.includes(keyword));
     console.log(`行 ${index}: 包含关键词匹配 = ${includeMatch}`, 
       includeKeywords.length > 0 ? `(关键词: ${includeKeywords.join(', ')})` : '(无包含关键词)');
     
-    // 检查是否匹配排除关键词
+    // 检查是否匹配排除关键词 - 如果包含任何排除关键词，则该行应被排除
     const excludeMatch = excludeKeywords.length > 0 && 
       excludeKeywords.some(keyword => cellText.includes(keyword));
     console.log(`行 ${index}: 排除关键词匹配 = ${excludeMatch}`, 
       excludeKeywords.length > 0 ? `(关键词: ${excludeKeywords.join(', ')})` : '(无排除关键词)');
     
-    // 根据匹配结果显示或隐藏行
+    // 根据匹配结果显示或隐藏行 - 行必须同时满足：1.匹配包含条件 2.不匹配任何排除条件
     if (includeMatch && !excludeMatch) {
       console.log(`行 ${index}: 显示此行`);
       u(row).attr('style', '');
