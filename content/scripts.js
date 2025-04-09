@@ -929,7 +929,17 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
           })
           .join('');
 
-        editorContainer.html(tempDiv.innerHTML);
+        // 检查是否为追加模式，默认为替换模式
+        const isAppend = request.append === true;
+        
+        if (isAppend) {
+          // 追加模式：保留原有内容，添加新内容
+          const currentContent = editorContainer.html();
+          editorContainer.html(currentContent + tempDiv.innerHTML);
+        } else {
+          // 替换模式：直接替换全部内容
+          editorContainer.html(tempDiv.innerHTML);
+        }
 
         sendFixEvent(editorContainer.first());  // 使用 .first() 获取第一个原生 DOM 元素
 

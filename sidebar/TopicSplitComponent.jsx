@@ -47,6 +47,7 @@ const TopicSplitComponent = ({ host, uname, serverType }) => {
   const [isLoading, setIsLoading] = React.useState(false);
   const [cozeService, setCozeService] = React.useState(null);
   const [imagePreviewSize, setImagePreviewSize] = React.useState({ width: 300, height: 'auto' });
+  const [appendMode, setAppendMode] = React.useState(true); // 默认为追加模式
 
   // Initialize CozeService when serverType is "扣子"
   React.useEffect(() => {
@@ -413,13 +414,22 @@ const TopicSplitComponent = ({ host, uname, serverType }) => {
                     <div className="font-medium mb-1 flex justify-between items-center">
                       <span>题目 {index + 1}</span>
                       <div className="flex gap-1 items-center">
+                        <div className="flex items-center mr-1" title={appendMode ? "追加模式" : "替换模式"}>
+                          <input 
+                            type="checkbox" 
+                            className="toggle toggle-xs toggle-success" 
+                            checked={appendMode}
+                            onChange={() => setAppendMode(!appendMode)}
+                          />
+                        </div>
                         <button
                           onClick={() => {
                             try {
-                              // 发送当前题目项到浏览器
+                              // 发送当前题目项到浏览器，添加append参数
                               chrome.runtime.sendMessage({
                                 type: "documentassistant",
-                                text: item
+                                text: item,
+                                append: appendMode // 根据开关状态决定是追加还是替换
                               });
                             } catch (error) {
                               console.error('Error sending list item:', error);
@@ -474,22 +484,32 @@ const TopicSplitComponent = ({ host, uname, serverType }) => {
         <div className="label flex justify-between items-center py-1">
           <span className="label-text text-sm font-medium">结果</span>
           <div className="flex gap-1 items-center">
+            <div className="flex items-center mr-1" title={appendMode ? "追加模式" : "替换模式"}>
+              <input 
+                type="checkbox" 
+                className="toggle toggle-xs toggle-success" 
+                checked={appendMode}
+                onChange={() => setAppendMode(!appendMode)}
+              />
+            </div>
             <button
               onClick={() => {
                 try {
                   // 解析当前的 splitResult JSON 字符串
                   const parsedResult = JSON.parse(splitResult);
-                  // 只发送text字段内容
+                  // 只发送text字段内容，添加append参数
                   chrome.runtime.sendMessage({
                     type: "documentassistant",
-                    text: parsedResult.text || ''
+                    text: parsedResult.text || '',
+                    append: appendMode // 根据开关状态决定是追加还是替换
                   });
                 } catch (error) {
                   console.error('Error parsing split result:', error);
                   // 如果解析失败，则直接发送当前文本
                   chrome.runtime.sendMessage({
                     type: "documentassistant",
-                    text: splitResult
+                    text: splitResult,
+                    append: appendMode // 根据开关状态决定是追加还是替换
                   });
                 }
               }}
@@ -513,16 +533,28 @@ const TopicSplitComponent = ({ host, uname, serverType }) => {
           })()}
           onChange={(e) => {
             try {
-              // 尝试解析当前的 splitResult
-              const currentData = JSON.parse(splitResult);
-              // 更新 text 字段，保留 list 字段
-              setSplitResult(JSON.stringify({
-                ...currentData,
-                text: e.target.value
-              }, null, 2));
+              // 检查 splitResult 是否为空字符串
+              if (!splitResult.trim()) {
+                // 如果为空，创建一个新的包含 text 字段的 JSON 对象
+                setSplitResult(JSON.stringify({
+                  text: e.target.value,
+                  list: []
+                }, null, 2));
+              } else {
+                // 尝试解析当前的 splitResult
+                const currentData = JSON.parse(splitResult);
+                // 更新 text 字段，保留 list 字段
+                setSplitResult(JSON.stringify({
+                  ...currentData,
+                  text: e.target.value
+                }, null, 2));
+              }
             } catch (e) {
-              // 如果解析失败，直接设置值
-              setSplitResult(e.target.value);
+              // 如果解析失败，创建一个新的有效 JSON 对象
+              setSplitResult(JSON.stringify({
+                text: e.target.value,
+                list: []
+              }, null, 2));
             }
           }}
           placeholder="题目切割后的内容"

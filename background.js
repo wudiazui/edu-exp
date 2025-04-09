@@ -322,7 +322,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         chrome.tabs.sendMessage(tabs[0].id, {
           action: "fill_content",
           type: request.type,
-          text: request.text
+          text: request.text,
+          append: request.append // 中继 append 参数
         });
       }
     });
