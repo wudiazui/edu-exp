@@ -688,51 +688,45 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   }
 
   if (request.action === "periodic_message") {
-    getAuditTaskList(request.params).then((res) => {
-      if (res.errno === 0 && res.data) {
-        // TODO: 完善关键词过滤功能，需要进一步测试和优化
-        // 获取包含和排除关键词列表
-        const includeKeywords = request.includeKeywords || [];
-        const excludeKeywords = request.excludeKeywords || [];
-        console.log('关键词过滤:', { includeKeywords, excludeKeywords });
+    // 导入工具函数
+    import('./utils.js').then(({ filterByKeywords }) => {
+      getAuditTaskList(request.params).then((res) => {
+        if (res.errno === 0 && res.data) {
+          // 获取包含和排除关键词列表
+          const includeKeywords = request.includeKeywords || [];
+          const excludeKeywords = request.excludeKeywords || [];
+          console.log('关键词过滤:', { includeKeywords, excludeKeywords });
         
-        // TODO: 考虑添加更复杂的匹配逻辑，如支持正则表达式或部分匹配
-        // 过滤任务列表
-        const filteredTasks = res.data.list.filter(task => {
-          // 只匹配 task.brief 的内容
-          const textToCheck = task.brief || '';
-          
-          // 检查包含关键词
-          const includeMatch = includeKeywords.length === 0 || 
-            includeKeywords.some(keyword => textToCheck.includes(keyword));
-          
-          // 检查排除关键词
-          const excludeMatch = excludeKeywords.length > 0 && 
-            excludeKeywords.some(keyword => textToCheck.includes(keyword));
-          
-          // 只有满足包含条件且不满足排除条件的任务才会被保留
-          return includeMatch && !excludeMatch;
-        });
-        
-        // TODO: 添加更详细的日志，记录哪些关键词匹配了哪些任务
-        console.log(`过滤后的任务: ${filteredTasks.length}/${res.data.list.length}`);
-        
-        const taskIds = filteredTasks.map(task => request.params.taskType === 'producetask' ? task.clueID : task.taskID);
-        console.log('Task IDs:', taskIds);
-        
-        if (taskIds.length > 0) {
-          const params = request.params.taskType === 'producetask' 
-            ? { clueIDs: taskIds }
-            : { taskIds: taskIds };
-
-          claimAuditTask(taskIds, request.params.taskType).then((res) => {
-            console.log('Claim audit task response:', res);
-            chrome.runtime.sendMessage({ action: 'claimAuditTaskResponse', data: res.data });
-          }).catch((error) => {
-            console.error('Error claiming audit task:', error);
+          // 使用工具函数实现关键词过滤
+          // 过滤任务列表
+          const filteredTasks = res.data.list.filter(task => {
+            // 只匹配 task.brief 的内容
+            const textToCheck = task.brief || '';
+            
+            // 使用filterByKeywords函数检查文本是否满足关键词条件
+            return filterByKeywords(textToCheck, includeKeywords, excludeKeywords);
           });
+        
+          // TODO: 添加更详细的日志，记录哪些关键词匹配了哪些任务
+          console.log(`过滤后的任务: ${filteredTasks.length}/${res.data.list.length}`);
+          
+          const taskIds = filteredTasks.map(task => request.params.taskType === 'producetask' ? task.clueID : task.taskID);
+          console.log('Task IDs:', taskIds);
+          
+          if (taskIds.length > 0) {
+            const params = request.params.taskType === 'producetask' 
+              ? { clueIDs: taskIds }
+              : { taskIds: taskIds };
+
+            claimAuditTask(taskIds, request.params.taskType).then((res) => {
+              console.log('Claim audit task response:', res);
+              chrome.runtime.sendMessage({ action: 'claimAuditTaskResponse', data: res.data });
+            }).catch((error) => {
+              console.error('Error claiming audit task:', error);
+            });
+          }
         }
-      }
+      });
     });
   }
 
