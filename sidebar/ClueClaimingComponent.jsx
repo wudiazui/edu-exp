@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { loadKeywords, saveKeywords } from '../content/keywordStorageModule.js';
 
 export default function ClueClaimingComponent() {
@@ -17,6 +17,8 @@ export default function ClueClaimingComponent() {
   const [claimResponse, setClaimResponse] = useState(null); // Add new state for claim response
   const [includeKeywords, setIncludeKeywords] = useState([]);
   const [excludeKeywords, setExcludeKeywords] = useState([]);
+  const [claimLimit, setClaimLimit] = useState(10); // Default claim limit
+  const [successfulClaims, setSuccessfulClaims] = useState(0); // Counter for successful claims
   const [newIncludeKeyword, setNewIncludeKeyword] = useState('');
   const [newExcludeKeyword, setNewExcludeKeyword] = useState('');
 
@@ -147,11 +149,37 @@ export default function ClueClaimingComponent() {
     localStorage.setItem('selectedTaskType', value);
   };
 
+  // Define stopAutoClaiming with useCallback to avoid dependency issues
+  const stopAutoClaiming = useCallback(() => {
+    chrome.runtime.sendMessage({
+      action: "stop_auto_claiming"
+    }, (response) => {
+      if (response && response.status === "stopped") {
+        setAutoClaimingActive(false);
+        console.log("自动认领已停止");
+      }
+    });
+  }, []);
+
   // Add message listener for claim response
   useEffect(() => {
     const messageListener = (request, sender, sendResponse) => {
-      if (request.type === 'CLAIM_AUDIT_TASK_RESPONSE') {
+      // Check for both possible message formats
+      if (request.type === 'CLAIM_AUDIT_TASK_RESPONSE' || request.action === 'claimAuditTaskResponse') {
         setClaimResponse(request.data);
+        
+        // Update successful claims counter
+        if (request.data && request.data.total) {
+          const newClaimCount = successfulClaims + request.data.total;
+          setSuccessfulClaims(newClaimCount);
+          
+          // Check if we've reached the claim limit
+          if (newClaimCount >= claimLimit && autoClaimingActive) {
+            console.log(`已达到认领上限(${newClaimCount}/${claimLimit})，停止自动认领`);
+            stopAutoClaiming();
+          }
+        }
+        
         // Reset the response after 3 seconds
         setTimeout(() => {
           setClaimResponse(null);
@@ -163,9 +191,12 @@ export default function ClueClaimingComponent() {
     return () => {
       chrome.runtime.onMessage.removeListener(messageListener);
     };
-  }, []);
+  }, [successfulClaims, claimLimit, autoClaimingActive, stopAutoClaiming]);
 
   const startAutoClaiming = async (interval = refreshInterval) => {
+    // Reset successful claims counter when starting
+    setSuccessfulClaims(0);
+    
     const stepData = selectedGrade;
     const subjectData = selectedSubject;
     const clueTypeData = selectedType;
@@ -191,16 +222,7 @@ export default function ClueClaimingComponent() {
     });
   };
 
-  const stopAutoClaiming = () => {
-    chrome.runtime.sendMessage({
-      action: "stop_auto_claiming"
-    }, (response) => {
-      if (response && response.status === "stopped") {
-        setAutoClaimingActive(false);
-        console.log("自动认领已停止");
-      }
-    });
-  };
+
 
   return (
     <div className="w-full mt-2">
@@ -359,27 +381,46 @@ export default function ClueClaimingComponent() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 mt-2">
-          <label className="text-sm">刷新间隔(秒):</label>
-          <input
-            type="number"
-            className="input input-bordered input-sm w-32"
-            value={refreshInterval}
-            onChange={(e) => {
-              const value = parseFloat(e.target.value);
-              if (value >= 0.5) { // 最小0.5秒
-                setRefreshInterval(value);
-                chrome.storage.local.set({ autoClaimingInterval: value });
-                if (autoClaimingActive) {
-                  // 如果正在运行，则重新启动以应用新间隔
-                  stopAutoClaiming();
-                  setTimeout(() => startAutoClaiming(value), 100); // 短暂延迟确保停止完成
+        <div className="flex flex-col gap-2 mt-2">
+          <div className="flex items-center gap-2">
+            <label className="text-sm">刷新间隔(秒):</label>
+            <input
+              type="number"
+              className="input input-bordered input-sm w-32"
+              value={refreshInterval}
+              onChange={(e) => {
+                const value = parseFloat(e.target.value);
+                if (value >= 0.5) { // 最小0.5秒
+                  setRefreshInterval(value);
+                  chrome.storage.local.set({ autoClaimingInterval: value });
+                  if (autoClaimingActive) {
+                    // 如果正在运行，则重新启动以应用新间隔
+                    stopAutoClaiming();
+                    setTimeout(() => startAutoClaiming(value), 100); // 短暂延迟确保停止完成
+                  }
                 }
-              }
-            }}
-            min="0.5"
-            step="0.1"
-          />
+              }}
+              min="0.5"
+              step="0.1"
+            />
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <label className="text-sm">认领题目数量:</label>
+            <input
+              type="number"
+              className="input input-bordered input-sm w-32"
+              value={claimLimit}
+              onChange={(e) => {
+                const value = parseInt(e.target.value);
+                if (value > 0) {
+                  setClaimLimit(value);
+                }
+              }}
+              min="1"
+              step="1"
+            />
+          </div>
         </div>
 
         <div className="flex gap-2">
@@ -394,7 +435,7 @@ export default function ClueClaimingComponent() {
 
         {autoClaimingActive && (
           <div className="text-center text-sm text-primary">
-            线索自动认领进行中...
+            线索自动认领进行中... {successfulClaims > 0 ? `(已认领: ${successfulClaims}/${claimLimit})` : ''}
           </div>
         )}
       </div>
@@ -403,7 +444,7 @@ export default function ClueClaimingComponent() {
         {claimResponse && (
           <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 rounded shadow-sm">
             <p className="text-sm">
-                {claimResponse?.total} 个认领成功，{claimResponse?.errList?.length} 个认领失败`
+                {claimResponse?.total} 个认领成功，{claimResponse?.errList?.length} 个认领失败
             </p>
           </div>
         )}
