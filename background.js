@@ -80,6 +80,12 @@ chrome.runtime.onInstalled.addListener(() => {
       contexts: ["selection"]
     });
     chrome.contextMenus.create({
+      id: "auto-fill-options",
+      title: "自动填入选项",
+      parentId: "baidu-edu-tools",
+      contexts: ["selection"]
+    });
+    chrome.contextMenus.create({
       id: "topic-split",
       title: "题目切割",
       parentId: "baidu-edu-tools",
@@ -147,6 +153,9 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   }
   if (info.menuItemId === "auto-fill-blank") {
     chrome.tabs.sendMessage(tab.id, { action: "auto_fill_blank" });
+  }
+  if (info.menuItemId === "auto-fill-options") {
+    chrome.tabs.sendMessage(tab.id, { action: "auto_fill_options" });
   }
   if (info.menuItemId === "topic-split") {
     chrome.tabs.sendMessage(tab.id, { action: "topic_split" });

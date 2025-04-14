@@ -553,6 +553,11 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     return true;
   }
 
+  if (request.action === "auto_fill_options") {
+    handleAutoFillOptions();
+    return true;
+  }
+
   if (request.action === "topic_split") {
     // 使用umbrellajs查找class="doc-clip-img"的元素
     const docClipImgElements = u('.doc-clip-img');
@@ -1232,4 +1237,134 @@ async function handleAutoFillBlank() {
   }
 
   showNotification(`已成功填入 ${Math.min(answers.length, containers.length + diffCount)} 个答案`, 'success');
+}
+
+/**
+ * 处理自动填入选项功能
+ * 根据选中的文本，自动选择对应的选项
+ */
+async function handleAutoFillOptions() {
+  const selectedText = window.getSelection().toString().trim();
+  
+  if (!selectedText) {
+    showNotification('请先选择要填入的文本', 'error');
+    return;
+  }
+
+  // 按照换行符分割文本，获取选项列表
+  const options = selectedText.split('\n')
+    .filter(text => text.trim())
+    // 使用正则表达式移除选项前的标识符（如A.、B.、1.、(1)等）
+    .map(text => text.trim().replace(/^\s*(?:[A-Za-z0-9]+[.、)\]\s]*|\([A-Za-z0-9]+[.、)\]\s]*|（[A-Za-z0-9]+[.、)\]\s]*|[\(\[【「『]?[A-Za-z0-9]+[.、)\]】」』\s]*)/u, '').trim());
+  
+  if (options.length === 0) {
+    showNotification('未找到有效的选项内容', 'error');
+    return;
+  }
+  
+  try {
+    // 按照指定的DOM路径查找按钮
+    // 1. 找到 class=el-main 的div
+    const mainDiv = u('.el-main');
+    if (!mainDiv.length) {
+      showNotification('未找到主内容区域(.el-main)', 'error');
+      return;
+    }
+    
+    // 2. 找到 class=c-margin-bottom-large 的div
+    const largeMarginDivs = mainDiv.find('.c-margin-bottom-large');
+    if (largeMarginDivs.length < 5) {
+      showNotification(`未找到足够的内容区块(.c-margin-bottom-large), 当前数量: ${largeMarginDivs.length}`, 'error');
+      return;
+    }
+    
+    const targetLargeDiv = u(largeMarginDivs.nodes[4]); // 第四个div
+    
+    // 3. 找到 class=c-margin-bottom-middle el-row 的第一个div
+    const middleMarginDivs = targetLargeDiv.find('.c-margin-bottom-middle.el-row');
+    if (!middleMarginDivs.length) {
+      showNotification('未找到选项区域(.c-margin-bottom-middle.el-row)', 'error');
+      return;
+    }
+    const targetMiddleDiv = u(middleMarginDivs.nodes[0]); // 第一个div
+    
+    // 4. 找到 class=el-button el-button--primary el-button--small 的button
+    const addButton = targetMiddleDiv.find('.el-button.el-button--primary.el-button--small');
+    if (!addButton.length) {
+      // 尝试查找其他可能的按钮选择器
+      const allButtons = targetMiddleDiv.find('button');
+      
+      showNotification('未找到添加按钮', 'error');
+      return;
+    }
+    
+    // 先点击所有按钮，然后再插入文本
+    
+    // 定义一个函数来递归点击按钮，确保按钮点击完成后再执行插入操作
+    function clickButtonsSequentially(index, callback) {
+      if (index >= options.length) {
+        callback();
+        return;
+      }
+      
+      // 模拟点击按钮
+      addButton.nodes[0].click();
+      
+      // 等待一小段时间再点击下一个按钮，确保DOM有时间更新
+      setTimeout(() => {
+        clickButtonsSequentially(index + 1, callback);
+      }, 100); // 每次点击间隔100ms
+    }
+    
+    // 开始递归点击按钮
+    showNotification(`正在添加 ${options.length} 个选项...`, 'info');
+    clickButtonsSequentially(0, () => {
+      // 所有按钮点击完成后执行的回调函数
+      
+      // 等待一小段时间，等DOM完全更新后再查找新的编辑器
+      setTimeout(() => {
+      // 在targetLargeDiv中查找.w-e-text-container元素
+      const textContainers = targetLargeDiv.find('.w-e-text-container');
+      
+      if (textContainers.length === 0) {
+        showNotification('未找到文本输入容器，请检查页面结构', 'error');
+        return;
+      }
+      
+      // 在每个.w-e-text-container中查找.w-e-text元素
+      const textElements = [];
+      textContainers.each((container) => {
+        const textEl = u(container).find('.w-e-text');
+        if (textEl.length) {
+          textElements.push(textEl.nodes[0]);
+        }
+      });
+
+      
+      if (textElements.length === 0) {
+        showNotification('未找到文本输入框，请检查页面结构', 'error');
+        return;
+      }
+      
+      // 将选项内容插入到对应的编辑器中
+      let insertCount = 0;
+      for (let i = 0; i < Math.min(options.length, textElements.length); i++) {
+        const textElement = textElements[i];
+        const optionText = options[i].trim();
+        
+        // 将选项内容设置到编辑器中
+        textElement.innerHTML = optionText;
+
+        insertCount++;
+      }
+      
+      showNotification(`已成功填入 ${insertCount} 个选项内容`, 'success');
+    }, 500); // 等待500毫秒给DOM更新的时间
+    });
+    
+    
+  } catch (error) {
+    console.error('自动填入选项时出错:', error);
+    showNotification(`自动填入选项失败: ${error.message}`, 'error');
+  }
 }
