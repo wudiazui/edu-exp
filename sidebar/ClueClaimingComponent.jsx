@@ -173,6 +173,14 @@ export default function ClueClaimingComponent() {
           const newClaimCount = successfulClaims + request.data.total;
           setSuccessfulClaims(newClaimCount);
           
+          // 将更新后的认领计数发送到background脚本，用于下次认领时的限制
+          if (autoClaimingActive) {
+            chrome.runtime.sendMessage({
+              action: "update_claim_count",
+              successfulClaims: newClaimCount
+            });
+          }
+          
           // Check if we've reached the claim limit
           if (newClaimCount >= claimLimit && autoClaimingActive) {
             console.log(`已达到认领上限(${newClaimCount}/${claimLimit})，停止自动认领`);
@@ -205,6 +213,8 @@ export default function ClueClaimingComponent() {
       interval: interval * 1000,  // 转换为毫秒
       includeKeywords: includeKeywords, // 添加包含关键词列表
       excludeKeywords: excludeKeywords, // 添加排除关键词列表
+      claimLimit: claimLimit, // 添加认领数量限制
+      successfulClaims: 0, // 初始已认领数量为0
       params: {
         pn: 1,
         rn: 20,

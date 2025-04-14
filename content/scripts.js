@@ -710,15 +710,36 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
           // TODO: 添加更详细的日志，记录哪些关键词匹配了哪些任务
           console.log(`过滤后的任务: ${filteredTasks.length}/${res.data.list.length}`);
           
-          const taskIds = filteredTasks.map(task => request.params.taskType === 'producetask' ? task.clueID : task.taskID);
-          console.log('Task IDs:', taskIds);
+          // 获取认领数量限制和已认领数量
+          const claimLimit = request.claimLimit || 10;
+          const successfulClaims = request.successfulClaims || 0;
+          console.log('认领数量限制:', claimLimit, '已认领数量:', successfulClaims);
           
-          if (taskIds.length > 0) {
+          // 计算还需要认领的数量
+          const remainingClaimsNeeded = Math.max(0, claimLimit - successfulClaims);
+          console.log('还需要认领的数量:', remainingClaimsNeeded);
+          
+          // 如果已经达到认领上限，不再认领
+          if (remainingClaimsNeeded <= 0) {
+            console.log('已达到认领上限，不再认领');
+            return;
+          }
+          
+          // 只认领不超过remainingClaimsNeeded个题目
+          let taskIdsToUse = [];
+          // 无论任务数量多少，都限制为不超过remainingClaimsNeeded个
+          const tasksToUse = filteredTasks.slice(0, remainingClaimsNeeded);
+          taskIdsToUse = tasksToUse.map(task => request.params.taskType === 'producetask' ? task.clueID : task.taskID);
+          console.log(`将认领${taskIdsToUse.length}个题目，剩余需认领数量: ${remainingClaimsNeeded}个`);
+          
+          console.log('将要认领的Task IDs:', taskIdsToUse);
+          
+          if (taskIdsToUse.length > 0) {
             const params = request.params.taskType === 'producetask' 
-              ? { clueIDs: taskIds }
-              : { taskIds: taskIds };
+              ? { clueIDs: taskIdsToUse }
+              : { taskIds: taskIdsToUse };
 
-            claimAuditTask(taskIds, request.params.taskType).then((res) => {
+            claimAuditTask(taskIdsToUse, request.params.taskType).then((res) => {
               console.log('Claim audit task response:', res);
               chrome.runtime.sendMessage({ action: 'claimAuditTaskResponse', data: res.data });
             }).catch((error) => {

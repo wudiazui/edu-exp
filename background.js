@@ -23,6 +23,7 @@ let storedHTML = '';
 // 添加全局变量声明
 let autoClaimingTimer = null;
 let autoClaimingActive = false;
+let currentSuccessfulClaims = 0; // 添加已成功认领的计数
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
@@ -265,6 +266,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     chrome.storage.local.get(['autoClaimingInterval'], (result) => {
       const interval = request.interval || (result.autoClaimingInterval * 1000) || 1000;
       autoClaimingActive = true;
+      // 初始化已认领计数
+      currentSuccessfulClaims = request.successfulClaims || 0;
+      // 获取认领数量限制
+      const claimLimit = request.claimLimit || 10;
+      
       chrome.storage.local.set({
         autoClaimingActive: true,
         autoClaimingInterval: interval / 1000  // 保存为秒
@@ -287,7 +293,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               timestamp: new Date().toISOString(),
               params: request.params,
               includeKeywords: request.includeKeywords || [], // 传递包含关键词列表
-              excludeKeywords: request.excludeKeywords || []  // 传递排除关键词列表
+              excludeKeywords: request.excludeKeywords || [],  // 传递排除关键词列表
+              claimLimit: request.claimLimit || 10, // 传递认领数量限制，默认为10
+              successfulClaims: currentSuccessfulClaims // 传递当前已认领数量
             });
           });
         });
@@ -305,7 +313,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       clearInterval(autoClaimingTimer);
       autoClaimingTimer = null;
     }
+    // 重置已认领计数
+    currentSuccessfulClaims = 0;
     sendResponse({ status: "stopped" });
+    return true;
+  }
+  
+  // 处理更新认领计数的消息
+  if (request.action === "update_claim_count") {
+    currentSuccessfulClaims = request.successfulClaims;
+    console.log('[Background] 更新已认领计数:', currentSuccessfulClaims);
+    sendResponse({ status: "updated" });
     return true;
   }
 
