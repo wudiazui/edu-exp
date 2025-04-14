@@ -21,6 +21,7 @@ const ApiSettingsForm = ({
   const [kouziOcrWorkflowId, setKouziOcrWorkflowId] = useState("");
   const [kouziSolveWorkflowId, setKouziSolveWorkflowId] = useState("");
   const [kouziEquationAlignWorkflowId, setKouziEquationAlignWorkflowId] = useState("");
+  const [kouziQuestionSplitWorkflowId, setKouziQuestionSplitWorkflowId] = useState("");
 
   // Load saved settings from Chrome storage
   useEffect(() => {
@@ -32,7 +33,8 @@ const ApiSettingsForm = ({
             'kouziAppId',
             'kouziOcrWorkflowId',
             'kouziSolveWorkflowId',
-            'kouziEquationAlignWorkflowId'
+            'kouziEquationAlignWorkflowId',
+            'kouziQuestionSplitWorkflowId'
           ], resolve);
         });
         
@@ -43,6 +45,7 @@ const ApiSettingsForm = ({
         if (result.kouziOcrWorkflowId) setKouziOcrWorkflowId(result.kouziOcrWorkflowId);
         if (result.kouziSolveWorkflowId) setKouziSolveWorkflowId(result.kouziSolveWorkflowId);
         if (result.kouziEquationAlignWorkflowId) setKouziEquationAlignWorkflowId(result.kouziEquationAlignWorkflowId);
+        if (result.kouziQuestionSplitWorkflowId) setKouziQuestionSplitWorkflowId(result.kouziQuestionSplitWorkflowId);
       } catch (error) {
         console.error('Error loading settings:', error);
       }
@@ -58,9 +61,10 @@ const ApiSettingsForm = ({
       kouziAppId,
       kouziOcrWorkflowId,
       kouziSolveWorkflowId,
-      kouziEquationAlignWorkflowId
+      kouziEquationAlignWorkflowId,
+      kouziQuestionSplitWorkflowId
     });
-  }, [kouziAccessKey, kouziAppId, kouziOcrWorkflowId, kouziSolveWorkflowId, kouziEquationAlignWorkflowId]);
+  }, [kouziAccessKey, kouziAppId, kouziOcrWorkflowId, kouziSolveWorkflowId, kouziEquationAlignWorkflowId, kouziQuestionSplitWorkflowId]);
 
   const fetchUserInfo = async () => {
     if (serverType === "扣子") return;
@@ -196,6 +200,18 @@ const ApiSettingsForm = ({
               value={kouziEquationAlignWorkflowId}
               onChange={(e) => setKouziEquationAlignWorkflowId(e.target.value)}
               placeholder="输入方程对齐工作流 ID"
+              className="input input-bordered input-sm"
+            />
+          </div>
+          <div className="form-control w-full max-w-xs mt-2">
+            <label className="label">
+              <span className="label-text">题目切割工作流 ID</span>
+            </label>
+            <input
+              type="text"
+              value={kouziQuestionSplitWorkflowId}
+              onChange={(e) => setKouziQuestionSplitWorkflowId(e.target.value)}
+              placeholder="输入题目切割工作流 ID"
               className="input input-bordered input-sm"
             />
           </div>
