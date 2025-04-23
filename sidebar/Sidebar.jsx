@@ -4,6 +4,8 @@ import QuestionAnswerForm from './QuestionAnswerForm'; // 引入新组件
 import OcrComponent from './OcrComponent'; // 引入新组件
 import ClueClaimingComponent from './ClueClaimingComponent'; // 引入线索认领组件
 import TopicSplitComponent from './TopicSplitComponent'; // 引入题目切割组件
+import FeedbackComponent from './FeedbackComponent'; // 引入问题反馈组件
+import DocumentationComponent from './DocumentationComponent'; // 引入文档组件
 import { CozeService } from '../coze.js';
 
 export default function Main() {
@@ -26,7 +28,8 @@ export default function Main() {
     jieti: true,
     ocr: true,
     "clue-claiming": false,
-    "topic_split": true
+    "topic_split": true,
+    "documentation": true
   });
   const [serverType, setServerType] = useState(null);
   const [isSettingsLoading, setIsSettingsLoading] = useState(true);
@@ -525,6 +528,10 @@ export default function Main() {
               {features["clue-claiming"] && (
                 <a className={`tab ${activeTab === 'clue-claiming' ? 'tab-active' : ''}`} onClick={() => handleTabChange('clue-claiming')}>线索认领</a>
               )}
+              {features.documentation && (
+                <a className={`tab ${activeTab === 'documentation' ? 'tab-active' : ''}`} onClick={() => handleTabChange('documentation')}>文档</a>
+              )}
+              <a className={`tab ${activeTab === 'feedback' ? 'tab-active' : ''}`} onClick={() => handleTabChange('feedback')}>问题反馈</a>
               </div>
             </div>
             {activeTab === 'settings' && (
@@ -588,6 +595,12 @@ export default function Main() {
                 uname={name}
                 serverType={serverType}
               />
+            )}
+            {activeTab === 'documentation' && (
+              <DocumentationComponent />
+            )}
+            {activeTab === 'feedback' && (
+              <FeedbackComponent />
             )}
           </div>)
 }
