@@ -24,15 +24,11 @@
 
 ### 1. 基础功能演示
 下面的视频展示了基本的操作流程：
-<video width="100%" height="auto" controls>
-  <source src="/img/406.mp4" type="video/mp4">
-</video>
+<iframe width="100%" height="421" src="//player.bilibili.com/player.html?isOutside=true&aid=114396957246595&bvid=BV1hwLEzZEYF&cid=29600057246&p=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"></iframe>
 
 ### 2. 高级功能演示
 这个视频展示了一些进阶功能的使用方法：
-<video width="100%" height="auto" controls>
-  <source src="/img/ace.mp4" type="video/mp4">
-</video>
+<iframe width="100%" height="421" src="//player.bilibili.com/player.html?isOutside=true&aid=114396974025046&bvid=BV1acLEzbEAJ&cid=29600123145&p=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"></iframe>
 
 ## 快速入门
 

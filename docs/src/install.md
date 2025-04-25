@@ -2,7 +2,7 @@
 
 ## Chrome(谷歌浏览器)
 
-- 下载插件离线安装包 [http://47.109.61.89:5801/edu-exp-0.1.5.zip](http://47.109.61.89:5801/edu-exp-0.1.5.zip)
+- 下载插件离线安装包 [http://47.109.61.89:5801/edu-exp-0.1.6.zip](http://47.109.61.89:5801/edu-exp-0.1.6.zip)
 - 将下载的压缩包解压到一个干净的目(目录名称不要带中文)
 - 在Chrome浏览器中安装插件：
   1. 在地址栏中输入 `chrome://extensions/`（或点击浏览器右上角三点菜单 → 更多工具 → 扩展程序）
@@ -30,9 +30,7 @@
 ![](./img/clipboard_2025-01-28_01-41.bmp)
 -  点击 [获取] -> [添加扩展] -> [顶部扩展] -> [在工具栏显示]
 
-<video width="100%" height="auto" controls>
-  <source src="/img/edge_edu_exp_install.mp4" type="video/mp4">
-</video>
+<iframe width="100%" height="421" src="//player.bilibili.com/player.html?isOutside=true&aid=114396974024989&bvid=BV1acLEzbEPE&cid=29600122419&p=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"></iframe>
 
 ## 其他
 
