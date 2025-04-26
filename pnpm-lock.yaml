@@ -23,6 +23,9 @@ importers:
       marked:
         specifier: ^15.0.11
         version: 15.0.11
+      marked-katex-extension:
+        specifier: ^5.1.4
+        version: 5.1.4(katex@0.16.21)(marked@15.0.11)
       react:
         specifier: ^19.0.0
         version: 19.0.0
@@ -1814,6 +1817,12 @@ packages:
   make-dir@2.1.0:
     resolution: {integrity: sha512-LS9X+dc8KLxXCb8dni79fLIIUA5VyZoyjSMCwTluaXA0o27cCK0bhXkpgw+sTXVpPy/lSO57ilRixqk0vDmtRA==}
     engines: {node: '>=6'}
+
+  marked-katex-extension@5.1.4:
+    resolution: {integrity: sha512-GQOio4vCp0laxB1IY+2oNVo5nbn82yWMDP/jILRYHmyu2WXMVlXCB+krq2/U2fQn+V9j8aqDmnNdrsgqG2AkGQ==}
+    peerDependencies:
+      katex: '>=0.16 <0.17'
+      marked: '>=4 <16'
 
   marked@15.0.11:
     resolution: {integrity: sha512-1BEXAU2euRCG3xwgLVT1y0xbJEld1XOrmRJpUwRCcy7rxhSCwMrmEu9LXoPhHSCJG41V7YcQ2mjKRr5BA3ITIA==}
@@ -5071,6 +5080,11 @@ snapshots:
       pify: 4.0.1
       semver: 5.7.2
     optional: true
+
+  marked-katex-extension@5.1.4(katex@0.16.21)(marked@15.0.11):
+    dependencies:
+      katex: 0.16.21
+      marked: 15.0.11
 
   marked@15.0.11: {}
 
