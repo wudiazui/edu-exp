@@ -138,7 +138,7 @@ export default function Main() {
   }, []);
 
   const handleQuestionChange = (e) => {
-    setQuestion(e.target.value.trim());
+    setQuestion(e.target.value);
   };
 
   const handleFormat = async () => {

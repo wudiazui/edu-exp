@@ -10,7 +10,6 @@ marked.use(markedKatex({
   throwOnError: false,
   displayMode: true,
   nonStandard: true,
-  renderer: new katex.Renderer({ output: 'htmlAndSvg' }),
   macros: {
     "\\RR": "\\mathbb{R}",
     "\\NN": "\\mathbb{N}",
@@ -90,7 +89,7 @@ const TextAreaSection = ({
       ) : (
         <textarea
           value={value}
-          onChange={(e) => onChange(e.target.value.trim())}
+          onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           className="textarea textarea-bordered textarea-lg w-full h-full min-h-40 p-4"
         />
