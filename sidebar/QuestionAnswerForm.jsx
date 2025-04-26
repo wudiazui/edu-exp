@@ -31,6 +31,8 @@ const QuestionAnswerForm = ({
   serverType,
   gradeLevel,
   setGradeLevel,
+  site,
+  setSite,
 }) => {
   const [autoRenderFormula, setAutoRenderFormula] = useState(true);
 
@@ -65,6 +67,14 @@ const QuestionAnswerForm = ({
   return (
         <>
             <div className="w-full mt-2">
+                <select 
+                    className="select select-bordered select-sm w-full mb-2"
+                    value={site}
+                    onChange={(e) => setSite(e.target.value)}
+                >
+                    <option value="bd">百度</option>
+                    <option value="bc">百川</option>
+                </select>
                 <div className="label flex justify-between items-center">
                   <span className="label-text">题干</span>
                   <div className="flex gap-1 items-center">

@@ -37,6 +37,7 @@ export default function Main() {
   const [isSettingsLoading, setIsSettingsLoading] = useState(true);
   const [cozeService, setCozeService] = React.useState(null);
   const [kouziConfig, setKouziConfig] = React.useState(null);
+  const [site, setSite] = useState(null);
 
   // Load feature settings from Chrome storage on component mount
   useEffect(() => {
@@ -93,6 +94,25 @@ export default function Main() {
       chrome.storage.sync.set({ serverType });
     }
   }, [serverType]);
+
+  // Load site from storage
+  useEffect(() => {
+    chrome.storage.sync.get(['site'], (result) => {
+      if (result.site) {
+        setSite(result.site);
+      } else {
+        // 如果没有存储值，将默认值保存到存储中
+        chrome.storage.sync.set({ site: 'bd' });
+      }
+    });
+  }, []);
+
+  // Save site to storage when it changes
+  useEffect(() => {
+    if (site) {
+      chrome.storage.sync.set({ site });
+    }
+  }, [site]);
 
   React.useEffect(() => {
     // 监听来自 background 的消息
@@ -286,7 +306,7 @@ export default function Main() {
             type: 'TOPIC_ANSWER',
             host: host,
             uname: name,
-            data: {'topic': question, 'discipline': subject, 'image_data': selectedImage, 'topic_type': selectedValue, 'school_level': gradeLevel }
+            data: {'topic': question, 'discipline': subject, 'image_data': selectedImage, 'topic_type': selectedValue, 'school_level': gradeLevel, 'site': site }
           }
         );
         if (response && response.formatted) {
@@ -369,7 +389,7 @@ export default function Main() {
             type: 'TOPIC_ANALYSIS',
             host: host,
             uname: name,
-            data: {'topic': question, 'answer': answer, 'discipline': subject, 'image_data': selectedImage, 'topic_type': selectedValue, 'school_level': gradeLevel}
+            data: {'topic': question, 'answer': answer, 'discipline': subject, 'image_data': selectedImage, 'topic_type': selectedValue, 'school_level': gradeLevel, 'site': site}
           }
         );
         if (response && response.formatted) {
@@ -582,6 +602,8 @@ export default function Main() {
                 serverType={serverType}
                 gradeLevel={gradeLevel}
                 setGradeLevel={setGradeLevel}
+                site={site}
+                setSite={setSite}
               />
             )}
             {activeTab === 'ocr' && (
