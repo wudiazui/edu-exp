@@ -75,6 +75,9 @@ export const renderMarkdownWithMath = async (markdown) => {
       
           return `<li data-list="bullet"><span class="ql-ui" contenteditable="false"></span>${itemBody}</li>\n`;
         },
+        strong(text){
+          return `<span class="tkspec-bold-normal">${text.text}</span>`;
+        }
       }
     });
     // Configure marked options

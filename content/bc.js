@@ -19,9 +19,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       
       // Insert the content
       if (request.append && editorDiv.innerHTML) {
-        editorDiv.innerHTML += request.text;
+        editorDiv.innerHTML += request.text.replace(/\n/g, '');
       } else {
-        editorDiv.innerHTML = request.text;
+        editorDiv.innerHTML = request.text.replace(/\n/g, '');
       }
       
       // Trigger change event to update the editor

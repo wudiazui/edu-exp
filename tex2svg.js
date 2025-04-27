@@ -89,15 +89,33 @@ export const tex2svg = (formula, display = false, options = {}) => {
     // 替换所有<use xlink:href="#...">引用，以确保它们能在独立SVG中工作
     svgHtml = fixSvgReferences(svgHtml);
     
-    // 缓存结果
-    mathCache[cacheKey] = svgHtml;
+    // 创建完整的HTML结构，包含LaTeX源码和渲染的SVG
+    const htmlStructure = `<span class="ql-mathjax" latex="${escapeHtml(formula)}" mathid="" tabindex="-1">&#xFEFF;<span contenteditable="false">${svgHtml}</span>&#xFEFF;</span>`;
     
-    return svgHtml;
+    // 缓存结果
+    mathCache[cacheKey] = htmlStructure;
+    
+    return htmlStructure;
   } catch (error) {
     console.error('Error rendering formula:', error);
-    return `<span class="math-tex-error">公式渲染错误: ${formula}</span>`;
+    // 错误情况下也返回完整的HTML结构
+    return `<span class="ql-mathjax" latex="${escapeHtml(formula)}" mathid="error" tabindex="-1"><span contenteditable="false">公式渲染错误: ${formula}</span></span>`;
   }
 };
+
+/**
+ * 转义HTML特殊字符，防止XSS攻击
+ * @param {string} text - 需要转义的文本
+ * @returns {string} 转义后的文本
+ */
+function escapeHtml(text) {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
 
 /**
  * 从MathJax的容器中提取纯SVG元素
