@@ -25,13 +25,22 @@
   "content_scripts": [
     {
       "matches": [
-        "https://easylearn.baidu.com/*"
+        "https://easylearn.baidu.com/*",
+        "https://www.baichuanweb.com/*"
       ],
       "js": [
         "content/scripts.js"
       ],
       "css": [
         "css/filter-ui.css"
+      ]
+    },
+    {
+      "matches": [
+        "https://www.baichuanweb.com/*"
+      ],
+      "js": [
+        "content/bc.js"
       ]
     }
   ],

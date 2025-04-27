@@ -58,6 +58,7 @@ const TextAreaSection = ({
   onFill,
   onClear,
   displayModeHint,
+  site,
 }) => {
   const [displayMode, setDisplayMode] = useState(false);
   const [renderedHtml, setRenderedHtml] = useState('');
@@ -68,6 +69,13 @@ const TextAreaSection = ({
   useEffect(() => {
     loadMathStylesheet();
   }, []);
+  
+  // 当site为bc时自动切换为显示模式
+  useEffect(() => {
+    if (site === 'bc') {
+      setDisplayMode(true);
+    }
+  }, [site]);
   
   // 处理显示模式下的渲染
   useEffect(() => {
@@ -110,8 +118,13 @@ const TextAreaSection = ({
       <div className="label flex justify-between items-center">
         <span className="label-text">{title}</span>
         <div className="flex gap-1 items-center">
-          {isRendering && <span className="text-xs text-info">渲染中...</span>}
-          <div className="tooltip tooltip-bottom flex items-center" data-tip={displayModeHint || "显示模式 - 渲染Markdown和数学公式"}>
+          {isRendering && (
+            <span className="text-xs text-info flex items-center gap-1">
+              <span className="loading loading-spinner loading-xs"></span>
+              渲染中
+            </span>
+          )}
+          <div className="tooltip tooltip-bottom flex items-center" data-tip={displayModeHint || "预览模式：显示渲染后的Markdown和数学公式"}>
             <input
               type="checkbox"
               className="toggle toggle-xs toggle-secondary"
@@ -129,7 +142,14 @@ const TextAreaSection = ({
           </div>
           <div className="tooltip tooltip-bottom" data-tip={`填入到[${title}]编辑器`}>
             <button
-              onClick={onFill}
+              onClick={() => {
+                // 当site为bc时，使用渲染后的HTML内容
+                if (site === 'bc' && renderedHtml) {
+                  onFill(renderedHtml);
+                } else {
+                  onFill(value);
+                }
+              }}
               className="btn btn-ghost btn-xs flex items-center"
             >
               填入
@@ -147,7 +167,7 @@ const TextAreaSection = ({
       {displayMode ? (
         <div
           ref={outputRef}
-          className="textarea textarea-bordered textarea-lg w-full h-full min-h-40 overflow-auto p-4 prose prose-sm max-w-none mathjax-output"
+          className="textarea textarea-bordered textarea-lg w-full h-full min-h-40 overflow-auto p-4 prose prose-sm max-w-none"
           dangerouslySetInnerHTML={{ __html: renderedHtml }}
         />
       ) : (

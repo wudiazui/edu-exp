@@ -4,12 +4,12 @@ import Select from './QuestionTypeSelect.jsx'; // 确保引入 Select 组件
 import TextAreaSection from './TextAreaSection.jsx';
 
 const QuestionAnswerForm = ({
-  question,
+  question = "",
   setQuestion,
   handleQuestionChange,
-  answer,
+  answer = "",
   setAnswer,
-  analysis,
+  analysis = "",
   setAnalysis,
   isFormatting,
   handleFormat,
@@ -19,20 +19,20 @@ const QuestionAnswerForm = ({
   handleGenerateAnswer,
   isGeneratingAnalysis,
   handleGenerateAnalysis,
-  isImageQuestion,
+  isImageQuestion = false,
   setIsImageQuestion,
-  selectedImage,
+  selectedImage = "",
   setSelectedImage,
-  selectedValue,
+  selectedValue = "",
   setSelectedValue,
   host,
   uname,
-  subject,
+  subject = "",
   setSubject,
   serverType,
-  gradeLevel,
+  gradeLevel = "",
   setGradeLevel,
-  site,
+  site = "bd",
   setSite,
 }) => {
   const [autoRenderFormula, setAutoRenderFormula] = useState(true);
@@ -161,13 +161,14 @@ const QuestionAnswerForm = ({
         placeholder="解答"
         autoRenderFormula={autoRenderFormula}
         onAutoRenderFormulaChange={handleAutoRenderFormulaChange}
-        onFill={() => {
+        onFill={(content) => {
           chrome.runtime.sendMessage({
             type: "answer",
-            text: answer
+            text: content || answer
           });
         }}
         onClear={() => setAnswer('')}
+        site={site}
       />
       <TextAreaSection
         title="解析"
@@ -176,13 +177,14 @@ const QuestionAnswerForm = ({
         placeholder="解析"
         autoRenderFormula={autoRenderFormula}
         onAutoRenderFormulaChange={handleAutoRenderFormulaChange}
-        onFill={() => {
+        onFill={(content) => {
           chrome.runtime.sendMessage({
             type: "analysis",
-            text: analysis
+            text: content || analysis
           });
         }}
         onClear={() => setAnalysis('')}
+        site={site}
       />
     </>
   );
