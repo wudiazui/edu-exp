@@ -70,8 +70,20 @@ export const tex2svg = (formula, display = false, options = {}) => {
     // 获取SVG HTML
     let svgHtml = adaptor.outerHTML(node);
     
+    // 移除外部的mjx-container包裹，提取纯SVG
+    svgHtml = extractSvgFromContainer(svgHtml);
+    
     // 添加命名空间以确保SVG可以独立使用
     svgHtml = svgHtml.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"');
+    
+    // 添加行内元素样式，确保SVG作为行内元素与文本对齐
+    if (!display) {
+      // 行内模式，对齐基线
+      svgHtml = svgHtml.replace('<svg', '<svg style="display:inline-block; vertical-align:middle; position:relative;"');
+    } else {
+      // 显示模式（块级），独立一行
+      svgHtml = svgHtml.replace('<svg', '<svg style="display:block; margin:1em 0;"');
+    }
     
     // 获取已转换的SVG，并确保它可以独立工作
     // 替换所有<use xlink:href="#...">引用，以确保它们能在独立SVG中工作
@@ -86,6 +98,23 @@ export const tex2svg = (formula, display = false, options = {}) => {
     return `<span class="math-tex-error">公式渲染错误: ${formula}</span>`;
   }
 };
+
+/**
+ * 从MathJax的容器中提取纯SVG元素
+ * @param {string} html - 包含mjx-container的HTML字符串
+ * @returns {string} 提取出来的纯SVG字符串
+ */
+function extractSvgFromContainer(html) {
+  // 使用正则表达式提取<svg>...</svg>
+  const svgMatch = html.match(/<svg[^>]*>[\s\S]*?<\/svg>/);
+  
+  if (svgMatch) {
+    return svgMatch[0];
+  }
+  
+  // 如果没有找到SVG标签，返回原始HTML
+  return html;
+}
 
 /**
  * 修复SVG中的引用，确保它们可以在独立的SVG中工作
@@ -111,7 +140,18 @@ function fixSvgReferences(svgText) {
  */
 export const getStylesheet = () => {
   // 只返回基础MathJax样式，不添加额外自定义样式
-  return adaptor.textContent(svg.styleSheet(html));
+  let styles = adaptor.textContent(svg.styleSheet(html));
+  
+  // 添加基本的行内显示样式
+  styles += `
+  svg.mjx-svg {
+    display: inline-block;
+    vertical-align: middle;
+    line-height: 0;
+  }
+  `;
+  
+  return styles;
 };
 
 /**
