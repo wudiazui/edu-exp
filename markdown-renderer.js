@@ -21,6 +21,14 @@ export const renderMarkdownWithMath = async (markdown) => {
       return placeholder;
     });
 
+    // Replace \(...\) style math expressions with placeholders
+    processedMarkdown = processedMarkdown.replace(/\\\((.+?)\\\)/g, (match, expression) => {
+      const placeholder = `MATH_PLACEHOLDER_${mathExpressions.length}`;
+      mathExpressions.push(expression);
+      mathPlaceholders.push(placeholder);
+      return placeholder;
+    });
+
     // Replace display math expressions ($$...$$) with placeholders
     processedMarkdown = processedMarkdown.replace(/\$\$(.+?)\$\$/g, (match, expression) => {
       const placeholder = `DISPLAY_MATH_PLACEHOLDER_${displayMathExpressions.length}`;
@@ -82,8 +90,8 @@ export const renderMarkdownWithMath = async (markdown) => {
     });
     // Configure marked options
     marked.setOptions({
-      gfm: true,
-      breaks: true,
+      gfm: false,
+      breaks: false,
       sanitize: false,
       smartLists: true,
       smartypants: false,

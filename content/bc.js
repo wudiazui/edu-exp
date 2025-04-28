@@ -17,29 +17,31 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       const editorDiv = element.querySelector('.ql-editor');
       if (!editorDiv) return false;
       
+      // Convert text to HTML safely
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(request.text, 'text/html');
+      const sanitizedContent = doc.body.innerHTML;
+      
       // Insert the content
       if (request.append && editorDiv.innerHTML) {
-        editorDiv.innerHTML += request.text.replace(/\n/g, '');
+        editorDiv.innerHTML += sanitizedContent;
       } else {
-        editorDiv.innerHTML = request.text.replace(/\n/g, '');
+        editorDiv.innerHTML = sanitizedContent;
       }
       
       // Trigger change event to update the editor
       sendFixEvent(editorDiv);
+
       return true;
     }
     console.log(request);
     
     // Find elements with the specified class using umbrellajs
     const elements = u('.ql-container.ql-tk-base.text-editor-wrapper.ql-tiku');
-    console.log('Found elements:', elements.nodes);
-    
     // Take only the last 3 elements, discard the rest
     const allNodes = elements.nodes;
     const elementsCount = allNodes.length;
     const [elem1, elem2, elem3] = allNodes.slice(Math.max(0, elementsCount - 3));
-    
-    console.log('Last three elements:', { elem1, elem2, elem3 });
     
     if (request.type === "answer") {
       fillEditorContent(elem2); // 题目详解
