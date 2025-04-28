@@ -156,7 +156,10 @@ const TextAreaSection = ({
             </button>
           </div>
           <button
-            onClick={onClear}
+            onClick={() => {
+              onClear();
+              setRenderedHtml('');
+            }}
             className="btn btn-ghost btn-xs flex items-center"
           >
             清除
@@ -167,7 +170,7 @@ const TextAreaSection = ({
       {displayMode ? (
         <div
           ref={outputRef}
-          className="textarea textarea-bordered textarea-lg w-full h-full min-h-40 overflow-auto p-4 prose prose-sm max-w-none"
+          className="textarea textarea-bordered textarea-lg w-full h-full min-h-40 overflow-auto p-4 prose prose-sm max-w-none text-sm"
           dangerouslySetInnerHTML={{ __html: renderedHtml }}
         />
       ) : (
@@ -175,7 +178,7 @@ const TextAreaSection = ({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="textarea textarea-bordered textarea-lg w-full h-full min-h-40 p-4"
+          className="textarea textarea-bordered textarea-lg w-full h-full min-h-40 p-4 text-sm"
         />
       )}
     </div>

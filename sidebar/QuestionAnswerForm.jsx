@@ -92,7 +92,7 @@ const QuestionAnswerForm = ({
           value={question}
           onChange={handleQuestionChange}
           placeholder="题干"
-          className="textarea textarea-bordered textarea-lg w-full h-full min-h-40"
+          className="textarea textarea-bordered textarea-lg w-full h-full min-h-40 text-sm"
         ></textarea>
         {isImageQuestion && (
           <div className="form-control w-full">
@@ -124,41 +124,45 @@ const QuestionAnswerForm = ({
           setGradeLevel={setGradeLevel}
         />
         <div className="join m-2">
-          <button
-            className={`join-item ${isFormatting ? 'loading loading-spinner loading-sm' : 'btn btn-sm'}`}
-            onClick={handleFormat}
-            disabled={isFormatting || isCompleteeing || isGeneratingAnswer || isGeneratingAnalysis}
-          >
-            {isFormatting ? '' : '整理题干'}
-          </button>
-          <button
-            className={`join-item ${isCompleteeing ? 'loading loading-spinner loading-sm' : 'btn btn-sm'}`}
-            onClick={handleComplete}
-            disabled={isFormatting || isCompleteeing || isGeneratingAnswer || isGeneratingAnalysis}
-          >
-            {isCompleteeing ? '' : '残题补全'}
-          </button>
+          {site !== 'bc' && (
+            <>
+              <button
+                className={`join-item ${isFormatting ? 'loading loading-spinner loading-sm' : 'btn btn-sm'}`}
+                onClick={handleFormat}
+                disabled={isFormatting || isCompleteeing || isGeneratingAnswer || isGeneratingAnalysis}
+              >
+                {isFormatting ? '' : '整理题干'}
+              </button>
+              <button
+                className={`join-item ${isCompleteeing ? 'loading loading-spinner loading-sm' : 'btn btn-sm'}`}
+                onClick={handleComplete}
+                disabled={isFormatting || isCompleteeing || isGeneratingAnswer || isGeneratingAnalysis}
+              >
+                {isCompleteeing ? '' : '残题补全'}
+              </button>
+            </>
+          )}
           <button
             className={`join-item ${isGeneratingAnswer ? 'loading loading-spinner loading-sm' : 'btn btn-sm'}`}
             onClick={handleGenerateAnswer}
             disabled={isFormatting || isCompleteeing || isGeneratingAnswer || isGeneratingAnalysis}
           >
-            {isGeneratingAnswer ? '' : '生成解答'}
+            {isGeneratingAnswer ? '' : site === 'bc' ? '题目详解' : '生成解答'}
           </button>
           <button
             className={`join-item ${isGeneratingAnalysis ? 'loading loading-spinner loading-sm' : 'btn btn-sm'}`}
             onClick={handleGenerateAnalysis}
             disabled={isFormatting || isCompleteeing || isGeneratingAnswer || isGeneratingAnalysis}
           >
-            {isGeneratingAnalysis ? '' : '生成解析'}
+            {isGeneratingAnalysis ? '' : site === 'bc' ? '思路点拨' : '生成解析'}
           </button>
         </div>
       </div>
       <TextAreaSection
-        title="解答"
+        title={site === 'bc' ? '题目详解' : '解答'}
         value={answer}
         onChange={setAnswer}
-        placeholder="解答"
+        placeholder={site === 'bc' ? '题目详解' : '解答'}
         autoRenderFormula={autoRenderFormula}
         onAutoRenderFormulaChange={handleAutoRenderFormulaChange}
         onFill={(content) => {
@@ -171,10 +175,10 @@ const QuestionAnswerForm = ({
         site={site}
       />
       <TextAreaSection
-        title="解析"
+        title={site === 'bc' ? '思路点拨' : '解析'}
         value={analysis}
         onChange={setAnalysis}
-        placeholder="解析"
+        placeholder={site === 'bc' ? '思路点拨' : '解析'}
         autoRenderFormula={autoRenderFormula}
         onAutoRenderFormulaChange={handleAutoRenderFormulaChange}
         onFill={(content) => {
