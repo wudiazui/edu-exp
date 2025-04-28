@@ -306,7 +306,7 @@ export default function Main() {
             type: 'TOPIC_ANSWER',
             host: host,
             uname: name,
-            data: {'topic': question, 'discipline': subject, 'image_data': selectedImage, 'topic_type': selectedValue, 'school_level': gradeLevel, 'site': site }
+            data: {'topic': question, 'discipline': subject, 'image_data': selectedImage, 'topic_type': selectedValue, 'school_level': gradeLevel, 'site': site, 'analysis': analysis }
           }
         );
         if (response && response.formatted) {
@@ -356,6 +356,7 @@ export default function Main() {
             type: 'analysis',
             topic: question,
             answer: answer,
+            analysis: analysis,
             discipline: subject,
             topic_type: selectedValue,
             school_level: gradeLevel,
@@ -389,7 +390,7 @@ export default function Main() {
             type: 'TOPIC_ANALYSIS',
             host: host,
             uname: name,
-            data: {'topic': question, 'answer': answer, 'discipline': subject, 'image_data': selectedImage, 'topic_type': selectedValue, 'school_level': gradeLevel, 'site': site}
+            data: {'topic': question, 'answer': answer, 'analysis': analysis, 'discipline': subject, 'image_data': selectedImage, 'topic_type': selectedValue, 'school_level': gradeLevel, 'site': site}
           }
         );
         if (response && response.formatted) {
