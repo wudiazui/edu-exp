@@ -90,7 +90,7 @@ export const tex2svg = (formula, display = false, options = {}) => {
     svgHtml = fixSvgReferences(svgHtml);
     
     // 创建完整的HTML结构，包含LaTeX源码和渲染的SVG
-    const htmlStructure = `<span class="ql-mathjax" latex="${escapeHtml(formula)}" mathid="" tabindex="-1">&#xFEFF;<span contenteditable="false">${svgHtml}</span>&#xFEFF;</span>`;
+    const htmlStructure = `<span class="ql-mathjax" latex="${escapeHtml(formula)}" mathid="undefined" tabindex="-1">&#xFEFF;<span contenteditable="false">${svgHtml}</span>&#xFEFF;</span>`;
     
     // 缓存结果
     mathCache[cacheKey] = htmlStructure;

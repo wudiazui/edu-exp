@@ -33,90 +33,111 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: "baidu-edu-tools",
     title: "百度教育",
-    contexts: ["all"] // 可选：all, page, selection, image, link, editable, video, audio
+    contexts: ["all"]
   }, function() {
+    // Create "百度" submenu
     chrome.contextMenus.create({
-      id: "font-format",
-      title: "字体格式化",
+      id: "baidu-submenu",
+      title: "百度",
       parentId: "baidu-edu-tools",
       contexts: ["all"]
-    });
-    chrome.contextMenus.create({
-      id: "align-equals",
-      title: "等号对齐",
-      parentId: "baidu-edu-tools",
-      contexts: ["all"]
-    });
-    chrome.contextMenus.create({
-      id: "copy-html",
-      title: "复制HTML",
-      parentId: "baidu-edu-tools",
-      contexts: ["selection"]
-    });
-    chrome.contextMenus.create({
-      id: "paste-html",
-      title: "粘贴HTML",
-      parentId: "baidu-edu-tools",
-      contexts: ["all"]
-    });
-    chrome.contextMenus.create({
-      id: "send-topic",
-      title: "发送题干到侧边栏",
-      parentId: "baidu-edu-tools",
-      contexts: ["all"]
-    });
-    chrome.contextMenus.create({
-      id: "format-math",
-      title: "渲染数学公式",
-      parentId: "baidu-edu-tools",
-      contexts: ["all"]
-    });
-    chrome.contextMenus.create({
-      id: "math-img",
-      title: "渲染竖式计算",
-      parentId: "baidu-edu-tools",
-      contexts: ["selection"]
-    });
-    chrome.contextMenus.create({
-      id: "auto-fill-blank",
-      title: "自动填入答案",
-      parentId: "baidu-edu-tools",
-      contexts: ["selection"]
-    });
-    chrome.contextMenus.create({
-      id: "auto-fill-options",
-      title: "自动填入选项",
-      parentId: "baidu-edu-tools",
-      contexts: ["selection"]
-    });
-    chrome.contextMenus.create({
-      id: "topic-split",
-      title: "题目切割",
-      parentId: "baidu-edu-tools",
-      contexts: ["all"]
+    }, function() {
+      // Move existing menu items under "百度" submenu
+      chrome.contextMenus.create({
+        id: "font-format",
+        title: "字体格式化",
+        parentId: "baidu-submenu",
+        contexts: ["all"]
+      });
+      chrome.contextMenus.create({
+        id: "align-equals",
+        title: "等号对齐",
+        parentId: "baidu-submenu",
+        contexts: ["all"]
+      });
+      chrome.contextMenus.create({
+        id: "copy-html",
+        title: "复制HTML",
+        parentId: "baidu-submenu",
+        contexts: ["selection"]
+      });
+      chrome.contextMenus.create({
+        id: "paste-html",
+        title: "粘贴HTML",
+        parentId: "baidu-submenu",
+        contexts: ["all"]
+      });
+      chrome.contextMenus.create({
+        id: "send-topic",
+        title: "发送题干到侧边栏",
+        parentId: "baidu-submenu",
+        contexts: ["all"]
+      });
+      chrome.contextMenus.create({
+        id: "format-math",
+        title: "渲染数学公式",
+        parentId: "baidu-submenu",
+        contexts: ["all"]
+      });
+      chrome.contextMenus.create({
+        id: "math-img",
+        title: "渲染竖式计算",
+        parentId: "baidu-submenu",
+        contexts: ["selection"]
+      });
+      chrome.contextMenus.create({
+        id: "auto-fill-blank",
+        title: "自动填入答案",
+        parentId: "baidu-submenu",
+        contexts: ["selection"]
+      });
+      chrome.contextMenus.create({
+        id: "auto-fill-options",
+        title: "自动填入选项",
+        parentId: "baidu-submenu",
+        contexts: ["selection"]
+      });
+      chrome.contextMenus.create({
+        id: "topic-split",
+        title: "题目切割",
+        parentId: "baidu-submenu",
+        contexts: ["all"]
+      });
     });
 
-    // 创建字符插入菜单
+    // Create "百川" submenu
+    chrome.contextMenus.create({
+      id: "baichuan-submenu",
+      title: "百川",
+      parentId: "baidu-edu-tools",
+      contexts: ["all"]
+    }, function() {
+      chrome.contextMenus.create({
+        id: "format-organize",
+        title: "整理格式",
+        parentId: "baichuan-submenu",
+        contexts: ["all"]
+      });
+    });
+
+    // Create character insert menu under "百度" submenu
     createCharacterMenus();
   });
 });
 
-// 创建字符插入菜单
+// Update createCharacterMenus function to use the new parent menu
 function createCharacterMenus() {
-  // 先移除已存在的菜单
   chrome.contextMenus.remove("character-insert", () => {
-    // 创建主菜单
     chrome.contextMenus.create({
       id: "character-insert",
       title: "字符插入",
-      parentId: "baidu-edu-tools",
+      parentId: "baidu-submenu",
       contexts: ["editable"]
     }, () => {
       if (chrome.runtime.lastError) {
         console.log('Menu creation error:', chrome.runtime.lastError);
         return;
       }
-      // 从存储中获取快捷字符并创建子菜单
       chrome.storage.sync.get(['shortcuts'], (result) => {
         if (result.shortcuts) {
           result.shortcuts.forEach(shortcut => {
@@ -163,6 +184,9 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   }
   if (info.menuItemId === "topic-split") {
     chrome.tabs.sendMessage(tab.id, { action: "topic_split" });
+  }
+  if (info.menuItemId === "format-organize") {
+    chrome.tabs.sendMessage(tab.id, { action: "format_organize" });
   }
   if (info.menuItemId.startsWith('insert-char-')) {
     const shortcutName = info.menuItemId.replace('insert-char-', '');

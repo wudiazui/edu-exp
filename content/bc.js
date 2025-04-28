@@ -6,8 +6,37 @@ function sendFixEvent(element) {
   element.dispatchEvent(new Event('change', { bubbles: true, cancelable: true}));
 }
 
+// 百川格式整理功能
+async function formatOrganize(content) {
+  // 移除空白的 <p> 标签
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(content, 'text/html');
+  
+  // 查找所有 p 标签
+  const paragraphs = doc.querySelectorAll('p');
+  paragraphs.forEach(p => {
+    // 检查是否为空（只包含空格、换行等）
+    if (!p.textContent.trim()) {
+      p.remove();
+    }
+  });
+
+  // 移除空白的列表项
+  const listItems = doc.querySelectorAll('li[data-list="bullet"]');
+  listItems.forEach(li => {
+    // 检查是否只包含空的 ql-ui span
+    const spans = li.querySelectorAll('span.ql-ui');
+    if (spans.length === 1 && !li.textContent.trim()) {
+      li.remove();
+    }
+  });
+  
+  // 返回处理后的 HTML
+  return doc.body.innerHTML;
+}
+
 // Listen for messages from the extension
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   if (request.action === "fill_content") {
     // Helper function to fill editor content
     function fillEditorContent(element) {
@@ -51,6 +80,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       fillEditorContent(elem3); // 答案
     }
 
+    return true;
+  }
+
+  if (request.action === "format_organize") {
+    // 获取当前激活的编辑器
+    const activeElement = document.activeElement;
+    if (activeElement) {
+      const content = activeElement.innerHTML;
+      const formattedContent = await formatOrganize(content);
+      activeElement.innerHTML = formattedContent;
+      sendFixEvent(activeElement);
+    }
+    
+    sendResponse({ status: 'success' });
     return true;
   }
 });

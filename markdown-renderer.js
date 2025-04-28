@@ -53,7 +53,7 @@ export const renderMarkdownWithMath = async (markdown) => {
       
           const type = 'ol';
           const startAttr = (ordered && start !== 1) ? (' start="' + start + '"') : '';
-          return '<' + type + startAttr + '>\n' + body + '</' + type + '>\n';
+          return '<' + type + startAttr + '>' + body + '</' + type + '>';
         },
         listitem(item){
           let itemBody = '';
@@ -80,8 +80,13 @@ export const renderMarkdownWithMath = async (markdown) => {
           }
       
           itemBody += this.parser.parse(item.tokens, !!item.loose);
+          
+          // Skip rendering if itemBody is empty
+          if (!itemBody || itemBody.trim() === '') {
+            return '';
+          }
       
-          return `<li data-list="bullet"><span class="ql-ui" contenteditable="false"></span>${itemBody}</li>\n`;
+          return `<li data-list="bullet"><span class="ql-ui" contenteditable="false"></span>${itemBody}</li>`;
         },
         strong(text){
           return `<span class="tkspec-bold-normal">${text.text}</span>`;
@@ -107,6 +112,11 @@ export const renderMarkdownWithMath = async (markdown) => {
     // Process each inline math expression
     for (let i = 0; i < mathExpressions.length; i++) {
       const expression = mathExpressions[i];
+      // Skip empty expressions
+      if (!expression || expression.trim() === '') {
+        html = html.replace(mathPlaceholders[i], '');
+        continue;
+      }
       try {
         const svgHtml = tex2svg(expression, false);
         html = html.replace(mathPlaceholders[i], svgHtml);
@@ -119,6 +129,11 @@ export const renderMarkdownWithMath = async (markdown) => {
     // Process each display math expression
     for (let i = 0; i < displayMathExpressions.length; i++) {
       const expression = displayMathExpressions[i];
+      // Skip empty expressions
+      if (!expression || expression.trim() === '') {
+        html = html.replace(displayMathPlaceholders[i], '');
+        continue;
+      }
       try {
         const svgHtml = tex2svg(expression, true);
         html = html.replace(displayMathPlaceholders[i], svgHtml);
