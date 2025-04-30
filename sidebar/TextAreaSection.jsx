@@ -70,10 +70,12 @@ const TextAreaSection = ({
     loadMathStylesheet();
   }, []);
   
-  // 当site为bc时自动切换为显示模式
+  // 当site为bc时自动切换为显示模式，为bd时关闭显示模式
   useEffect(() => {
     if (site === 'bc') {
       setDisplayMode(true);
+    } else if (site === 'bd') {
+      setDisplayMode(false);
     }
   }, [site]);
   
