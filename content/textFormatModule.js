@@ -4,9 +4,10 @@ import { replacePunctuation } from "../lib.js";
 /**
  * Cleans HTML content by removing styles and standardizing paragraph structure
  * @param {string} html - The HTML content to clean
+ * @param {boolean} [replacePunctuations=true] - Whether to replace punctuations
  * @returns {Promise<string>} - The cleaned HTML content
  */
-async function cleanPTags(html) {
+async function cleanPTags(html, replacePunctuations = true) {
   const temp = document.createElement('div');
   temp.innerHTML = html;
 
@@ -45,7 +46,8 @@ async function cleanPTags(html) {
       }
     });
 
-    return replacePunctuation(text);
+    // 根据参数决定是否替换标点符号
+    return replacePunctuations ? replacePunctuation(text) : text;
   }
 
   // 第一步：将所有非p标签的内容块转换为p标签

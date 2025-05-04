@@ -12,6 +12,9 @@ import { showNotification, hideNotification } from './notificationModule.js';
 // 导入文本格式化模块
 import { cleanPTags } from './textFormatModule.js';
 
+// 导入工具函数
+import { printCascaderInputValue } from './domUtils.js';
+
 // 初始化加载关键词
 loadKeywordsFromStorage();
 
@@ -375,6 +378,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   if (request.action === "font_format") {
+    // 调用printCascaderInputValue函数并获取返回值
+    const cascaderValue = printCascaderInputValue();
+    
     const selectedElement = document.activeElement;
     if (selectedElement) {
       // 保存滚动位置
@@ -389,7 +395,15 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
 
       // 创建一个临时容器来解析清理后的HTML
       const temp = document.createElement('div');
-      temp.innerHTML = await cleanPTags(selectedElement.innerHTML);
+      
+      // 如果cascaderValue包含"英语"，则不执行replacePunctuation
+      if (cascaderValue && cascaderValue.includes('英语')) {
+        // 清理HTML，但不替换标点符号（第二个参数为false）
+        temp.innerHTML = await cleanPTags(selectedElement.innerHTML, false);
+      } else {
+        // 正常清理HTML，包括替换标点符号（默认参数为true）
+        temp.innerHTML = await cleanPTags(selectedElement.innerHTML);
+      }
       const cleanedElement = temp.firstElementChild;
 
       // 复制原始元素的属性到清理后的元素
