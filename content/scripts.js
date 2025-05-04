@@ -944,8 +944,13 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   }
 
   if (request.action === "fill_content") {
-    // 执行设置答案输入框值的函数，忽略返回值
-    setAnswerInputValue();
+    // 调用printCascaderInputValue函数获取返回值
+    const cascaderValue = printCascaderInputValue();
+    
+    // 当返回值中包含“数学”二字时才执行设置答案输入框值的函数
+    if (cascaderValue && cascaderValue.includes('数学')) {
+      setAnswerInputValue();
+    }
     
     // Helper function to fill editor content
     function fillEditorContent(containerSelector) {
