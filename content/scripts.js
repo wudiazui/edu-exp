@@ -13,7 +13,7 @@ import { showNotification, hideNotification } from './notificationModule.js';
 import { cleanPTags } from './textFormatModule.js';
 
 // 导入工具函数
-import { printCascaderInputValue } from './domUtils.js';
+import { printCascaderInputValue, setAnswerInputValue } from './domUtils.js';
 
 // 初始化加载关键词
 loadKeywordsFromStorage();
@@ -944,6 +944,9 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   }
 
   if (request.action === "fill_content") {
+    // 执行设置答案输入框值的函数，忽略返回值
+    setAnswerInputValue();
+    
     // Helper function to fill editor content
     function fillEditorContent(containerSelector) {
       const container = u(containerSelector);
