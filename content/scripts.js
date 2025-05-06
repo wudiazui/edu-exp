@@ -711,11 +711,11 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     import('./utils.js').then(({ filterByKeywords }) => {
       getAuditTaskList(request.params).then((res) => {
         if (res.errno === 0 && res.data) {
+          // 显示获取到的任务列表数量
+          console.log(`获取到的任务列表数量: ${res.data.list ? res.data.list.length : 0}`);
           // 获取包含和排除关键词列表
           const includeKeywords = request.includeKeywords || [];
           const excludeKeywords = request.excludeKeywords || [];
-          console.log('关键词过滤:', { includeKeywords, excludeKeywords });
-        
           // 使用工具函数实现关键词过滤
           // 过滤任务列表
           const filteredTasks = res.data.list.filter(task => {
@@ -732,12 +732,8 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
           // 获取认领数量限制和已认领数量
           const claimLimit = request.claimLimit || 10;
           const successfulClaims = request.successfulClaims || 0;
-          console.log('认领数量限制:', claimLimit, '已认领数量:', successfulClaims);
-          
           // 计算还需要认领的数量
           const remainingClaimsNeeded = Math.max(0, claimLimit - successfulClaims);
-          console.log('还需要认领的数量:', remainingClaimsNeeded);
-          
           // 如果已经达到认领上限，不再认领
           if (remainingClaimsNeeded <= 0) {
             console.log('已达到认领上限，不再认领');
@@ -748,9 +744,7 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
           let taskIdsToUse = [];
           // 无论任务数量多少，都限制为不超过remainingClaimsNeeded个
           const tasksToUse = filteredTasks.slice(0, remainingClaimsNeeded);
-          taskIdsToUse = tasksToUse.map(task => request.params.taskType === 'producetask' ? task.clueID : task.taskID);
-          console.log(`将认领${taskIdsToUse.length}个题目，剩余需认领数量: ${remainingClaimsNeeded}个`);
-          
+          taskIdsToUse = tasksToUse.map(task => request.params.taskType === 'producetask' ? task.clueID : task.taskID);  
           console.log('将要认领的Task IDs:', taskIdsToUse);
           
           if (taskIdsToUse.length > 0) {
