@@ -66,35 +66,35 @@ export const tex2svg = (formula, display = false, options = {}) => {
 
     // 转换公式
     const node = html.convert(formula, convertOptions);
-    
+
     // 获取SVG HTML
     let svgHtml = adaptor.outerHTML(node);
-    
+
     // 移除外部的mjx-container包裹，提取纯SVG
     svgHtml = extractSvgFromContainer(svgHtml);
-    
+
     // 添加命名空间以确保SVG可以独立使用
     svgHtml = svgHtml.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"');
-    
+
     // 添加行内元素样式，确保SVG作为行内元素与文本对齐
     if (!display) {
       // 行内模式，对齐基线
       svgHtml = svgHtml.replace('<svg', '<svg style="display:inline-block; vertical-align:middle; position:relative;"');
     } else {
       // 显示模式（块级），独立一行
-      svgHtml = svgHtml.replace('<svg', '<svg style="display:block; margin:1em 0;"');
+      svgHtml = svgHtml.replace('<svg', '<svg style="display:inline-block; vertical-align:middle; position:relative;"');
     }
-    
+
     // 获取已转换的SVG，并确保它可以独立工作
     // 替换所有<use xlink:href="#...">引用，以确保它们能在独立SVG中工作
     svgHtml = fixSvgReferences(svgHtml);
-    
+
     // 创建完整的HTML结构，包含LaTeX源码和渲染的SVG
     const htmlStructure = `<span class="ql-mathjax" latex="${escapeHtml(formula)}" mathid="undefined" tabindex="-1">&#xFEFF;<span contenteditable="false">${svgHtml}</span>&#xFEFF;</span>`;
-    
+
     // 缓存结果
     mathCache[cacheKey] = htmlStructure;
-    
+
     return htmlStructure;
   } catch (error) {
     console.error('Error rendering formula:', error);
@@ -125,11 +125,11 @@ function escapeHtml(text) {
 function extractSvgFromContainer(html) {
   // 使用正则表达式提取<svg>...</svg>
   const svgMatch = html.match(/<svg[^>]*>[\s\S]*?<\/svg>/);
-  
+
   if (svgMatch) {
     return svgMatch[0];
   }
-  
+
   // 如果没有找到SVG标签，返回原始HTML
   return html;
 }
@@ -142,13 +142,13 @@ function extractSvgFromContainer(html) {
 function fixSvgReferences(svgText) {
   // 使用一个随机ID前缀来避免冲突
   const uniquePrefix = `mjx-${Math.random().toString(36).substring(2, 10)}`;
-  
+
   // 为所有ID添加前缀
   let result = svgText.replace(/id="([^"]+)"/g, `id="${uniquePrefix}-$1"`);
-  
+
   // 更新所有使用这些ID的引用
   result = result.replace(/href="#([^"]+)"/g, `href="#${uniquePrefix}-$1"`);
-  
+
   return result;
 }
 
@@ -159,7 +159,7 @@ function fixSvgReferences(svgText) {
 export const getStylesheet = () => {
   // 只返回基础MathJax样式，不添加额外自定义样式
   let styles = adaptor.textContent(svg.styleSheet(html));
-  
+
   // 添加基本的行内显示样式
   styles += `
   svg.mjx-svg {
@@ -168,7 +168,7 @@ export const getStylesheet = () => {
     line-height: 0;
   }
   `;
-  
+
   return styles;
 };
 
@@ -180,12 +180,12 @@ export const injectStylesheet = () => {
   return new Promise((resolve, reject) => {
     try {
       const styles = getStylesheet();
-      
+
       // 创建样式元素
       const styleEl = document.createElement('style');
       styleEl.id = 'mathjax-styles';
       styleEl.textContent = styles;
-      
+
       // 检查是否已存在，如果存在则更新内容
       const existingStyle = document.getElementById('mathjax-styles');
       if (existingStyle) {
@@ -193,11 +193,11 @@ export const injectStylesheet = () => {
       } else {
         document.head.appendChild(styleEl);
       }
-      
+
       resolve();
     } catch (error) {
       console.error('无法注入MathJax样式表:', error);
       reject(error);
     }
   });
-}; 
+};
