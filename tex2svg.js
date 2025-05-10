@@ -1,3 +1,42 @@
+// 正确检测当前运行环境
+const getGlobalObject = () => {
+  if (typeof globalThis !== 'undefined') return globalThis;
+  if (typeof self !== 'undefined') return self;
+  if (typeof window !== 'undefined') return window;
+  if (typeof global !== 'undefined') return global;
+  // 在service_worker环境中创建一个空对象作为全局对象
+  return {};
+};
+
+// 获取当前环境的全局对象
+const globalObject = getGlobalObject();
+
+// 确保有document对象
+if (typeof document === 'undefined') {
+  globalObject.document = {
+    createElement: () => ({
+      style: {},
+      setAttribute: () => {},
+      appendChild: () => {},
+      getElementsByTagName: () => []
+    }),
+    createElementNS: () => ({
+      setAttribute: () => {},
+      appendChild: () => {}
+    }),
+    head: {
+      appendChild: () => {}
+    },
+    body: {
+      appendChild: () => {}
+    },
+    createTextNode: () => ({}),
+    documentElement: {
+      appendChild: () => {}
+    }
+  };
+}
+
 // 参考 https://github.com/mathjax/MathJax-demos-node/tree/master/direct
 // 使用ES模块语法导入MathJax模块
 
@@ -59,6 +98,17 @@ export const tex2svg = (formula, display = false, options = {}) => {
       return mathCache[cacheKey];
     }
 
+    // 如果在service worker环境中，直接返回简单的HTML表示
+    if (typeof window === 'undefined' && typeof document === 'undefined' && typeof self !== 'undefined') {
+      console.warn('在Service Worker环境中，无法完全渲染SVG，返回简化版本');
+      const escapedFormula = escapeHtml(formula);
+      const simpleHtml = `<span class="ql-mathjax" latex="${escapedFormula}" mathid="service-worker" tabindex="-1">
+        <span contenteditable="false">${display ? '\\[' + escapedFormula + '\\]' : '$' + escapedFormula + '$'}</span>
+      </span>`;
+      mathCache[cacheKey] = simpleHtml;
+      return simpleHtml;
+    }
+
     // 转换选项 - 使用有限的选项集
     const convertOptions = {
       display: display
@@ -76,7 +126,25 @@ export const tex2svg = (formula, display = false, options = {}) => {
     // 添加命名空间以确保SVG可以独立使用
     svgHtml = svgHtml.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"');
 
-    // 添加行内元素样式，确保SVG作为行内元素与文本对齐
+    // 增强内联样式，添加更多必要的样式规则
+    const enhancedStyle = `
+      display: inline-block;
+      vertical-align: middle;
+      position: relative;
+      font: normal 1em/1 'MJXc-TeX-math-I',Times New Roman,serif;
+      line-height: 0;
+      text-indent: 0;
+      text-align: center;
+      text-transform: none;
+      letter-spacing: normal;
+      word-wrap: normal;
+      word-spacing: normal;
+      white-space: nowrap;
+      direction: ltr;
+      ${display ? 'margin: 1em 0;' : ''}
+    `;
+
+    // 应用增强的内联样式
     if (!display) {
       // 行内模式，对齐基线
       svgHtml = svgHtml.replace('<svg', '<svg style="display:inline-block; vertical-align:middle; position:relative;"');
@@ -90,7 +158,7 @@ export const tex2svg = (formula, display = false, options = {}) => {
     svgHtml = fixSvgReferences(svgHtml);
 
     // 创建完整的HTML结构，包含LaTeX源码和渲染的SVG
-    const htmlStructure = `<span class="ql-mathjax" latex="${escapeHtml(formula)}" mathid="undefined" tabindex="-1">&#xFEFF;<span contenteditable="false">${svgHtml}</span>&#xFEFF;</span>`;
+    const htmlStructure = `<span class="ql-mathjax" latex="${escapeHtml(formula)}" mathid="undefined" tabindex="-1" style="display: inline-block; vertical-align: middle;">&#xFEFF;<span contenteditable="false">${svgHtml}</span>&#xFEFF;</span>`;
 
     // 缓存结果
     mathCache[cacheKey] = htmlStructure;
@@ -151,53 +219,3 @@ function fixSvgReferences(svgText) {
 
   return result;
 }
-
-/**
- * 获取转换所需的CSS样式
- * @returns {string} CSS样式文本
- */
-export const getStylesheet = () => {
-  // 只返回基础MathJax样式，不添加额外自定义样式
-  let styles = adaptor.textContent(svg.styleSheet(html));
-
-  // 添加基本的行内显示样式
-  styles += `
-  svg.mjx-svg {
-    display: inline-block;
-    vertical-align: middle;
-    line-height: 0;
-  }
-  `;
-
-  return styles;
-};
-
-/**
- * 注入样式表到当前页面
- * @returns {Promise<void>}
- */
-export const injectStylesheet = () => {
-  return new Promise((resolve, reject) => {
-    try {
-      const styles = getStylesheet();
-
-      // 创建样式元素
-      const styleEl = document.createElement('style');
-      styleEl.id = 'mathjax-styles';
-      styleEl.textContent = styles;
-
-      // 检查是否已存在，如果存在则更新内容
-      const existingStyle = document.getElementById('mathjax-styles');
-      if (existingStyle) {
-        existingStyle.textContent = styles;
-      } else {
-        document.head.appendChild(styleEl);
-      }
-
-      resolve();
-    } catch (error) {
-      console.error('无法注入MathJax样式表:', error);
-      reject(error);
-    }
-  });
-};

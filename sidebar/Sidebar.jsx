@@ -25,6 +25,7 @@ export default function Main() {
   const [selectedValue, setSelectedValue] = useState('问答');
   const [subject, setSubject] = useState("shuxue");
   const [gradeLevel, setGradeLevel] = useState('小学');
+  const [isSwapActive, setIsSwapActive] = useState(false);
   const [features, setFeatures] = useState({
     jieti: true,
     ocr: true,

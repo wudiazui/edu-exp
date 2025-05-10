@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import CopyButton from './CopyButton.jsx';
 import { marked } from 'marked';
-import { injectStylesheet } from '../tex2svg.js';
+import { renderMarkdownWithMath } from '../markdown-renderer.js';
 
 // Configure marked options
 marked.setOptions({
@@ -13,40 +13,7 @@ marked.setOptions({
   xhtml: false
 });
 
-// 标记是否已加载样式表
-let stylesInjected = false;
-
-// 加载数学公式样式表
-const loadMathStylesheet = async () => {
-  try {
-    if (!stylesInjected) {
-      // 直接使用injectStylesheet函数
-      await injectStylesheet();
-      stylesInjected = true;
-      console.log('MathJax样式表已加载');
-    }
-  } catch (error) {
-    console.error('加载MathJax样式表失败:', error);
-  }
-};
-
-// Custom rendering for markdown with math formulas through background.js
-const renderMarkdownWithMath = async (markdown) => {
-  return new Promise((resolve, reject) => {
-    chrome.runtime.sendMessage(
-      { action: "render_math_markdown", markdown },
-      (response) => {
-        if (chrome.runtime.lastError) {
-          reject(chrome.runtime.lastError);
-        } else if (response && response.success) {
-          resolve(response.html);
-        } else {
-          reject(new Error((response && response.error) || "未知错误"));
-        }
-      }
-    );
-  });
-};
+// 移除本地渲染函数，直接使用导入的renderMarkdownWithMath
 
 const TextAreaSection = ({
   title,
@@ -64,11 +31,6 @@ const TextAreaSection = ({
   const [renderedHtml, setRenderedHtml] = useState('');
   const [isRendering, setIsRendering] = useState(false);
   const outputRef = useRef(null);
-
-  // 组件挂载时加载MathJax样式表
-  useEffect(() => {
-    loadMathStylesheet();
-  }, []);
   
   // 当site为bc时自动切换为显示模式，为bd时关闭显示模式
   useEffect(() => {
@@ -87,14 +49,16 @@ const TextAreaSection = ({
       // 异步渲染以避免阻塞UI
       const render = async () => {
         try {
-          // 先确保样式表已加载
-          await loadMathStylesheet();
-          
+          console.log('开始在TextAreaSection中渲染:', value.substring(0, 30) + '...');
           const html = await renderMarkdownWithMath(value);
+          console.log('渲染成功，HTML长度:', html.length);
           setRenderedHtml(html);
         } catch (error) {
           console.error('Rendering error:', error);
-          setRenderedHtml(marked(value)); // 回退到简单markdown
+          // 回退到简单markdown，不包含数学公式渲染
+          setRenderedHtml(marked(value)); 
+          // 显示错误提示
+          console.warn('已回退到简单Markdown渲染，数学公式可能无法正确显示');
         } finally {
           setIsRendering(false);
         }

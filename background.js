@@ -1,6 +1,8 @@
 import {ocr_text, run_llm, getAuditTaskLabel, format_latex, topic_split} from "./lib.js";
-import { tex2svg, getStylesheet } from "./tex2svg.js";
+import { tex2svg } from "./tex2svg.js";
 import { renderMarkdownWithMath } from "./markdown-renderer.js";
+// 使用动态导入，而不是静态导入
+// import marked from "marked";
 
 console.log('Hello from the background script!')
 
@@ -247,6 +249,54 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
   }
   
+  // 处理Markdown和数学公式渲染请求
+  if (request.action === "render_math_markdown") {
+    try {
+      console.log('开始渲染Markdown和数学公式:', request.markdown.substring(0, 50) + '...');
+      
+      // 使用try-catch包装异步渲染过程
+      (async () => {
+        try {
+          const html = await renderMarkdownWithMath(request.markdown);
+          console.log('Markdown渲染成功，长度:', html.length);
+          sendResponse({ success: true, html });
+        } catch (error) {
+          console.error('渲染出错:', error);
+          
+          // 使用marked作为回退方案
+          try {
+            // 动态导入marked
+            const { marked } = await import('marked');
+            const fallbackHtml = marked(request.markdown);
+            console.log('使用fallback渲染，长度:', fallbackHtml.length);
+            sendResponse({ 
+              success: true, 
+              html: fallbackHtml,
+              warning: '使用了简化渲染，数学公式可能无法正确显示'
+            });
+          } catch (fallbackError) {
+            console.error('Fallback渲染也失败:', fallbackError);
+            sendResponse({ 
+              success: false, 
+              error: `${error.message}; Fallback也失败: ${fallbackError.message}`,
+              html: `<pre>${request.markdown}</pre>`
+            });
+          }
+        }
+      })();
+      
+      // 返回true表示稍后会调用sendResponse
+      return true;
+    } catch (error) {
+      console.error('处理渲染请求出错:', error);
+      sendResponse({ 
+        success: false, 
+        error: error.message,
+        html: `<pre>${request.markdown}</pre>`
+      });
+    }
+  }
+  
   // 处理题目切割消息，转发图片数据到侧边栏
   if (request.type === 'TOPIC_SPLIT' && request.data) {
     // 如果有图片数据，将其直接转发到TopicSplitComponent
@@ -262,42 +312,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   // 处理LaTeX渲染消息
-  if (request.action === "render_math_markdown") {
-    (async () => {  
-      try {
-        const html = await renderMarkdownWithMath(request.markdown);
-        sendResponse({success: true, html});
-      } catch (error) {
-        console.error('Error rendering markdown with math:', error);
-        sendResponse({success: false, error: error.message});
-      }
-    })();
-    return true; // Indicates async response
-  }
-  
   if (request.action === "render_math_formula") {
     try {
       console.log('渲染公式:', request.formula);
+      // 调用 tex2svg 渲染公式
       const svgHtml = tex2svg(request.formula, request.isDisplay);
-      console.log('渲染结果:', svgHtml.slice(0, 50) + '...');
+      console.log('渲染结果:', svgHtml.slice(0, 100) + '...');
       sendResponse({success: true, svgHtml});
     } catch (error) {
-      console.error('Error rendering formula:', error);
-      sendResponse({success: false, error: error.message});
+      console.error('渲染公式失败:', error);
+      // 错误情况下返回错误提示
+      sendResponse({
+        success: false, 
+        error: error.message,
+        svgHtml: `<span class="math-error">公式渲染错误: ${request.formula}</span>`
+      });
     }
     return true; // Indicates async response
-  }
-
-  if (request.action === "get_math_stylesheet") {
-    try {
-      const stylesheet = getStylesheet();
-      console.log('获取样式表成功，长度:', stylesheet.length);
-      sendResponse({success: true, stylesheet});
-    } catch (error) {
-      console.error('Error getting stylesheet:', error);
-      sendResponse({success: false, error: error.message});
-    }
-    return true;
   }
 
   // 处理format_latex消息

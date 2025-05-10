@@ -1,6 +1,21 @@
 import { tex2svg } from "./tex2svg.js";
 
 /**
+ * 简单包装tex2svg函数，添加错误处理
+ * @param {string} tex - TeX公式
+ * @param {boolean} display - 是否为显示模式
+ * @returns {string} - 渲染后的HTML，或错误信息
+ */
+const safeRenderTeX = (tex, display) => {
+  try {
+    return tex2svg(tex, display);
+  } catch (error) {
+    console.error('TeX渲染错误:', error);
+    return `<span class="math-tex-error" style="color:red;font-family:monospace;white-space:pre">${tex}</span>`;
+  }
+};
+
+/**
  * Renders markdown with math expressions to HTML
  * @param {string} markdown - The markdown text to render
  * @returns {Promise<string>} - HTML string with rendered math
@@ -118,7 +133,7 @@ export const renderMarkdownWithMath = async (markdown) => {
         continue;
       }
       try {
-        const svgHtml = tex2svg(expression, false);
+        const svgHtml = safeRenderTeX(expression, false);
         html = html.replace(mathPlaceholders[i], svgHtml);
       } catch (error) {
         console.error('Error rendering inline math:', error);
@@ -135,7 +150,7 @@ export const renderMarkdownWithMath = async (markdown) => {
         continue;
       }
       try {
-        const svgHtml = tex2svg(expression, true);
+        const svgHtml = safeRenderTeX(expression, true);
         html = html.replace(displayMathPlaceholders[i], svgHtml);
       } catch (error) {
         console.error('Error rendering display math:', error);
