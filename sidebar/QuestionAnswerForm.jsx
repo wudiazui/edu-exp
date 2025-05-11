@@ -74,7 +74,8 @@ const QuestionAnswerForm = ({
           onChange={(e) => setSite(e.target.value)}
         >
           <option value="bd">百度</option>
-          <option value="bc">百川</option>
+          <option value="bc">百川-cot</option>
+          <option value="bc-no-cot">百川-no-cot</option>
         </select>
         <div className="label flex justify-between items-center">
           <span className="label-text">题干</span>
@@ -124,7 +125,7 @@ const QuestionAnswerForm = ({
           setGradeLevel={setGradeLevel}
         />
         <div className="join m-2">
-          {site !== 'bc' && (
+          {!['bc', 'bc-no-cot'].includes(site) && (
             <>
               <button
                 className={`join-item ${isFormatting ? 'loading loading-spinner loading-sm' : 'btn btn-sm'}`}
