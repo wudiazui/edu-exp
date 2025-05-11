@@ -45,6 +45,7 @@ import {TeX} from 'mathjax-full/js/input/tex.js';
 import {SVG} from 'mathjax-full/js/output/svg.js';
 import {liteAdaptor} from 'mathjax-full/js/adaptors/liteAdaptor.js';
 import {RegisterHTMLHandler} from 'mathjax-full/js/handlers/html.js';
+import {AssistiveMmlHandler} from 'mathjax-full/js/a11y/assistive-mml.js';
 import {AllPackages} from 'mathjax-full/js/input/tex/AllPackages.js';
 
 // 导入字体相关模块 - 只导入主字体模块
@@ -53,9 +54,24 @@ import 'mathjax-full/js/output/svg/fonts/tex.js';
 // 移除无法找到的字体文件导入，只保留主模块
 // 手动引入常用符号字体是不必要的，已经在主模块中包含了
 
+// 最小化的CSS样式，用于独立SVG图像
+const CSS = [
+  'svg a{fill:blue;stroke:blue}',
+  '[data-mml-node="merror"]>g{fill:red;stroke:red}',
+  '[data-mml-node="merror"]>rect[data-background]{fill:yellow;stroke:none}',
+  '[data-frame],[data-line]{stroke-width:70px;fill:none}',
+  '.mjx-dashed{stroke-dasharray:140}',
+  '.mjx-dotted{stroke-linecap:round;stroke-dasharray:0,140}',
+  'use[data-c]{stroke-width:3px}'
+].join('');
+
 // 创建适配器和处理程序
 const adaptor = liteAdaptor();
-RegisterHTMLHandler(adaptor);
+const handler = RegisterHTMLHandler(adaptor);
+
+// 可选：启用无障碍MathML处理程序
+// 如果需要无障碍支持，可以取消下面这行的注释
+// AssistiveMmlHandler(handler);
 
 // 创建TeX和SVG处理器
 const tex = new TeX({
@@ -80,9 +96,6 @@ const svg = new SVG({
 // 创建文档对象
 const html = mathjax.document('', {InputJax: tex, OutputJax: svg});
 
-// 公式缓存
-const mathCache = {};
-
 /**
  * 将TeX公式转换为SVG
  * @param {string} formula - 要转换的TeX公式
@@ -92,57 +105,23 @@ const mathCache = {};
  */
 export const tex2svg = (formula, display = false, options = {}) => {
   try {
-    // 检查缓存
-    const cacheKey = `${formula}-${display}`;
-    if (mathCache[cacheKey]) {
-      return mathCache[cacheKey];
-    }
 
-    // 如果在service worker环境中，直接返回简单的HTML表示
-    if (typeof window === 'undefined' && typeof document === 'undefined' && typeof self !== 'undefined') {
-      console.warn('在Service Worker环境中，无法完全渲染SVG，返回简化版本');
-      const escapedFormula = escapeHtml(formula);
-      const simpleHtml = `<span class="ql-mathjax" latex="${escapedFormula}" mathid="service-worker" tabindex="-1">
-        <span contenteditable="false">${display ? '\\[' + escapedFormula + '\\]' : '$' + escapedFormula + '$'}</span>
-      </span>`;
-      mathCache[cacheKey] = simpleHtml;
-      return simpleHtml;
-    }
-
-    // 转换选项 - 使用有限的选项集
+    // 转换选项 - 传递所有选项
     const convertOptions = {
-      display: display
+      display: display,
+      ...options  // 包含用户提供的所有选项
     };
 
     // 转换公式
     const node = html.convert(formula, convertOptions);
 
-    // 获取SVG HTML
+    // 获取SVG HTML - 可以选择是否包含容器
     let svgHtml = adaptor.outerHTML(node);
-
-    // 移除外部的mjx-container包裹，提取纯SVG
     svgHtml = extractSvgFromContainer(svgHtml);
-
-    // 添加命名空间以确保SVG可以独立使用
-    svgHtml = svgHtml.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"');
-
-    // 增强内联样式，添加更多必要的样式规则
-    const enhancedStyle = `
-      display: inline-block;
-      vertical-align: middle;
-      position: relative;
-      font: normal 1em/1 'MJXc-TeX-math-I',Times New Roman,serif;
-      line-height: 0;
-      text-indent: 0;
-      text-align: center;
-      text-transform: none;
-      letter-spacing: normal;
-      word-wrap: normal;
-      word-spacing: normal;
-      white-space: nowrap;
-      direction: ltr;
-      ${display ? 'margin: 1em 0;' : ''}
-    `;
+    
+    // 始终包含CSS样式
+    // 在SVG的defs中添加CSS样式
+    svgHtml = svgHtml.replace(/<defs>/, `<defs><style>${CSS}</style>`);
 
     // 应用增强的内联样式
     if (!display) {
@@ -160,8 +139,7 @@ export const tex2svg = (formula, display = false, options = {}) => {
     // 创建完整的HTML结构，包含LaTeX源码和渲染的SVG
     const htmlStructure = `<span class="ql-mathjax" latex="${escapeHtml(formula)}" mathid="undefined" tabindex="-1" style="display: inline-block; vertical-align: middle;">&#xFEFF;<span contenteditable="false">${svgHtml}</span>&#xFEFF;</span>`;
 
-    // 缓存结果
-    mathCache[cacheKey] = htmlStructure;
+    // 直接返回结果，不再缓存
 
     return htmlStructure;
   } catch (error) {

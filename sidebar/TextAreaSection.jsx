@@ -49,9 +49,7 @@ const TextAreaSection = ({
       // 异步渲染以避免阻塞UI
       const render = async () => {
         try {
-          console.log('开始在TextAreaSection中渲染:', value.substring(0, 30) + '...');
           const html = await renderMarkdownWithMath(value);
-          console.log('渲染成功，HTML长度:', html.length);
           setRenderedHtml(html);
         } catch (error) {
           console.error('Rendering error:', error);

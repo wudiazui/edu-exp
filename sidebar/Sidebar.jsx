@@ -38,7 +38,7 @@ export default function Main() {
   const [isSettingsLoading, setIsSettingsLoading] = useState(true);
   const [cozeService, setCozeService] = React.useState(null);
   const [kouziConfig, setKouziConfig] = React.useState(null);
-  const [site, setSite] = useState(null);
+  const [site, setSite] = useState("");
 
   // Load feature settings from Chrome storage on component mount
   useEffect(() => {

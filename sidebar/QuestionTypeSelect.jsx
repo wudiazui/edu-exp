@@ -44,7 +44,7 @@ const KOUZI_SUBJECT_TYPES = {
 const QuestionTypeSelect = ({
   isImageQuestion,
   setIsImageQuestion,
-  selectedValue,
+  selectedValue = "", // 确保默认值不为null
   setSelectedValue,
   host,
   uname,
@@ -68,13 +68,23 @@ const QuestionTypeSelect = ({
         // 如果当前选择的题型不在新的题型列表中，设置为第一个题型
         if (!types.includes(selectedValue) && types.length > 0) {
           setSelectedValue(types[0]);
+        } else if (types.length === 0 && selectedValue === null) {
+          // 确保selectedValue不为null
+          setSelectedValue("");
         }
       } else {
         // 其他情况下从服务器获取题型列表
         if (!host || !uname) return;
         const data = await topic_type_list(host, uname, subject);
         console.log(data);
-        setSelectOptions(data || []);
+        const options = data || [];
+        setSelectOptions(options);
+        // 确保selectedValue不为null
+        if (options.length > 0 && !options.includes(selectedValue)) {
+          setSelectedValue(options[0]);
+        } else if (options.length === 0 && selectedValue === null) {
+          setSelectedValue("");
+        }
       }
     };
 
@@ -132,7 +142,7 @@ const QuestionTypeSelect = ({
         </select>
         <select 
           className="select select-sm select-bordered w-24"
-          value={selectedValue} 
+          value={selectedValue || ""} 
           onChange={(e) => setSelectedValue(e.target.value)}
         >
           {selectOptions.map(option => (

@@ -70,7 +70,7 @@ const QuestionAnswerForm = ({
       <div className="w-full mt-2">
         <select 
           className="select select-bordered select-sm w-full mb-2"
-          value={site}
+          value={site || "bd"}
           onChange={(e) => setSite(e.target.value)}
         >
           <option value="bd">百度</option>

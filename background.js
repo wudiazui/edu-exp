@@ -252,13 +252,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   // 处理Markdown和数学公式渲染请求
   if (request.action === "render_math_markdown") {
     try {
-      console.log('开始渲染Markdown和数学公式:', request.markdown.substring(0, 50) + '...');
-      
       // 使用try-catch包装异步渲染过程
       (async () => {
         try {
           const html = await renderMarkdownWithMath(request.markdown);
-          console.log('Markdown渲染成功，长度:', html.length);
           sendResponse({ success: true, html });
         } catch (error) {
           console.error('渲染出错:', error);
@@ -268,7 +265,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             // 动态导入marked
             const { marked } = await import('marked');
             const fallbackHtml = marked(request.markdown);
-            console.log('使用fallback渲染，长度:', fallbackHtml.length);
             sendResponse({ 
               success: true, 
               html: fallbackHtml,
