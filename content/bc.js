@@ -72,10 +72,29 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     const elementsCount = allNodes.length;
     const [elem1, elem2, elem3] = allNodes.slice(Math.max(0, elementsCount - 3));
     
+    // 检查URL是否包含newAnswerTask
+    const isNewAnswerTask = window.location.href.includes('newAnswerTask');
+    
     if (request.type === "answer") {
-      fillEditorContent(elem2); // 题目详解
+      // 题目详解
+      if (isNewAnswerTask) {
+        // 新答题任务页面使用elem2作为题目详解
+        fillEditorContent(elem1);
+      } else {
+        // 非新答题任务页面使用elem2作为题目详解
+        // 目前两种页面都使用相同的元素，但逻辑已准备好支持不同情况
+        fillEditorContent(elem2);
+      }
     } else if (request.type === "analysis") {
-      fillEditorContent(elem1); // 思路点拨
+      // 思路点拨
+      if (isNewAnswerTask) {
+        // 新答题任务页面使用elem1作为思路点拨
+        fillEditorContent(elem2);
+      } else {
+        // 非新答题任务页面使用elem1作为思路点拨
+        // 目前两种页面都使用相同的元素，但逻辑已准备好支持不同情况
+        fillEditorContent(elem1);
+      }
     } else if (request.type === "topic") {
       fillEditorContent(elem3); // 答案
     }

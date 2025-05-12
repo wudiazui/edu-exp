@@ -34,7 +34,7 @@ const TextAreaSection = ({
   
   // 当site为bc时自动切换为显示模式，为bd时关闭显示模式
   useEffect(() => {
-    if (site === 'bc') {
+    if (['bc', 'bc-no-cot'].includes(site)) {
       setDisplayMode(true);
     } else if (site === 'bd') {
       setDisplayMode(false);
@@ -108,7 +108,7 @@ const TextAreaSection = ({
             <button
               onClick={() => {
                 // 当site为bc时，使用渲染后的HTML内容
-                if (site === 'bc' && renderedHtml) {
+                if (['bc', 'bc-no-cot'].includes(site) && renderedHtml) {
                   onFill(renderedHtml);
                 } else {
                   onFill(value);

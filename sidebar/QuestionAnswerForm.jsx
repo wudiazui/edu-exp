@@ -148,22 +148,22 @@ const QuestionAnswerForm = ({
             onClick={handleGenerateAnswer}
             disabled={isFormatting || isCompleteeing || isGeneratingAnswer || isGeneratingAnalysis}
           >
-            {isGeneratingAnswer ? '' : site === 'bc' ? '题目详解' : '生成解答'}
+            {isGeneratingAnswer ? '' : ['bc', 'bc-no-cot'].includes(site) ? '题目详解' : '生成解答'}
           </button>
           <button
             className={`join-item ${isGeneratingAnalysis ? 'loading loading-spinner loading-sm' : 'btn btn-sm'}`}
             onClick={handleGenerateAnalysis}
             disabled={isFormatting || isCompleteeing || isGeneratingAnswer || isGeneratingAnalysis}
           >
-            {isGeneratingAnalysis ? '' : site === 'bc' ? '思路点拨' : '生成解析'}
+            {isGeneratingAnalysis ? '' : ['bc', 'bc-no-cot'].includes(site) ? '思路点拨' : '生成解析'}
           </button>
         </div>
       </div>
       <TextAreaSection
-        title={site === 'bc' ? '题目详解' : '解答'}
+        title={['bc', 'bc-no-cot'].includes(site) ? '题目详解' : '解答'}
         value={answer}
         onChange={setAnswer}
-        placeholder={site === 'bc' ? '题目详解' : '解答'}
+        placeholder={['bc', 'bc-no-cot'].includes(site) ? '题目详解' : '解答'}
         autoRenderFormula={autoRenderFormula}
         onAutoRenderFormulaChange={handleAutoRenderFormulaChange}
         onFill={(content) => {
@@ -176,10 +176,10 @@ const QuestionAnswerForm = ({
         site={site}
       />
       <TextAreaSection
-        title={site === 'bc' ? '思路点拨' : '解析'}
+        title={['bc', 'bc-no-cot'].includes(site) ? '思路点拨' : '解析'}
         value={analysis}
         onChange={setAnalysis}
-        placeholder={site === 'bc' ? '思路点拨' : '解析'}
+        placeholder={['bc', 'bc-no-cot'].includes(site) ? '思路点拨' : '解析'}
         autoRenderFormula={autoRenderFormula}
         onAutoRenderFormulaChange={handleAutoRenderFormulaChange}
         onFill={(content) => {
