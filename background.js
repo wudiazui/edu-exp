@@ -493,6 +493,40 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // 更新右键菜单
     createCharacterMenus();
   }
+
+  // 处理审核功能相关的消息转发
+  if (request.action === "start_audit_check") {
+    // 获取当前活动标签页
+    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+      if (tabs && tabs[0]) {
+        // 转发消息到内容脚本
+        chrome.tabs.sendMessage(tabs[0].id, {
+          action: "start_audit_check"
+        });
+      } else {
+        // 如果没有找到活动标签页，返回错误
+        chrome.runtime.sendMessage({
+          action: "audit_content_result",
+          error: "未找到活动标签页"
+        });
+      }
+    });
+    return true;
+  }
+
+  // 从内容脚本接收消息并转发到扩展页面
+  if (request.action === "audit_content_extract") {
+    // 将消息转发到扩展页面
+    chrome.runtime.sendMessage({
+      action: "audit_content_result",
+      html: request.html,
+      rawData: request.rawData,
+      error: request.error
+    });
+    return true;
+  }
+  
+  return false;
 });
 
 // 监听存储变化

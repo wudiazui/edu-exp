@@ -7,6 +7,7 @@ import TopicSplitComponent from './TopicSplitComponent'; // 引入题目切割�
 import FeedbackComponent from './FeedbackComponent'; // 引入问题反馈组件
 import DocumentationComponent from './DocumentationComponent'; // 引入文档组件
 import MobileWebComponent from './MobileWebComponent'; // 引入手机网页端组件
+import AuditComponent from './AuditComponent'; // 引入审核组件
 import { CozeService } from '../coze.js';
 
 export default function Main() {
@@ -32,7 +33,8 @@ export default function Main() {
     "clue-claiming": false,
     "topic_split": true,
     "documentation": true,
-    "mobile-web": true
+    "mobile-web": true,
+    "audit": true
   });
   const [serverType, setServerType] = useState(null);
   const [isSettingsLoading, setIsSettingsLoading] = useState(true);
@@ -558,6 +560,9 @@ export default function Main() {
               {features["mobile-web"] && (
                 <a className={`tab ${activeTab === 'mobile-web' ? 'tab-active' : ''}`} onClick={() => handleTabChange('mobile-web')}>移动网页版</a>
               )}
+              {features.audit && (
+                <a className={`tab ${activeTab === 'audit' ? 'tab-active' : ''}`} onClick={() => handleTabChange('audit')}>审核</a>
+              )}
               <a className={`tab ${activeTab === 'feedback' ? 'tab-active' : ''}`} onClick={() => handleTabChange('feedback')}>问题反馈</a>
               </div>
             </div>
@@ -630,6 +635,13 @@ export default function Main() {
             )}
             {activeTab === 'mobile-web' && (
               <MobileWebComponent />
+            )}
+            {activeTab === 'audit' && (
+              <AuditComponent 
+                host={host}
+                uname={name}
+                serverType={serverType}
+              />
             )}
             {activeTab === 'feedback' && (
               <FeedbackComponent />

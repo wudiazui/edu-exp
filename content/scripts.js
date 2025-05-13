@@ -520,6 +520,91 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     return true;
   }
 
+  if (request.action === "start_audit_check") {
+    // 获取题目类型信息
+    const cascaderValue = printCascaderInputValue();
+    
+    // 查找题干、解答和解析的编辑区域
+    const stemElement = document.querySelector('[id^="stem-edit-"] .w-e-text');
+    const answerElement = document.querySelector('[id^="answer-edit-"] .w-e-text');
+    const analysisElement = document.querySelector('[id^="analyse-edit-"] .w-e-text');
+    
+    // 提取文本内容的函数，保留特殊字符
+    const extractText = (element, seenTexts = new Set()) => {
+      if (!element) return '';
+      
+      let text = '';
+      const childNodes = element.childNodes;
+
+      for (const node of childNodes) {
+        if (node.nodeType === Node.TEXT_NODE) {
+          // 保留前后的空格
+          const content = node.textContent;
+          if (!seenTexts.has(content)) {
+            text += content; // 直接添加文本内容
+            seenTexts.add(content); // 记录已添加的文本
+          }
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+          // 对于 BR 标签，添加换行符
+          if (node.tagName.toLowerCase() === 'br') {
+            text += '\n'; // 添加换行符
+          } else if (node.tagName.toLowerCase() === 'p') {
+            // 逐行提取p标签的文本
+            text += extractText(node, seenTexts) + '\n'; // 添加换行符
+          } else if (node.tagName.toLowerCase() === 'img') {
+            // 提取data-math属性并用$包裹，进行URL解码
+            const mathValue = node.getAttribute('data-math');
+            if (mathValue) {
+              const decodedValue = decodeURIComponent(mathValue); // URL解码
+              if (!seenTexts.has(decodedValue)) {
+                text += `$${decodedValue}$`; // 用$包裹
+                seenTexts.add(decodedValue); // 记录已添加的文本
+              }
+            }
+          }
+          // 递归处理子元素
+          text += extractText(node, seenTexts);
+        }
+      }
+      return text;
+    };
+
+    // 提取各个部分的内容
+    const stemText = stemElement ? extractText(stemElement) : '未找到题干内容';
+    const answerText = answerElement ? extractText(answerElement) : '未找到解答内容';
+    const analysisText = analysisElement ? extractText(analysisElement) : '未找到解析内容';
+
+    // 组装审核内容
+    const auditContent = {
+      subject: cascaderValue || '未知学科',
+      stem: stemText,
+      answer: answerText,
+      analysis: analysisText
+    };
+
+    // 生成格式化的审核文本
+    const formattedAuditText = `
+【学科】: ${auditContent.subject}
+
+【题干】: 
+${auditContent.stem}
+
+【解答】: 
+${auditContent.answer}
+
+【解析】: 
+${auditContent.analysis}
+    `.trim();
+
+    // 发送到 background script，使用专门的 audit 相关消息类型
+    chrome.runtime.sendMessage({
+      action: "audit_content_extract",
+      html: formattedAuditText,
+      rawData: auditContent
+    });
+    return true;
+  }
+
   if (request.action === "format_math") {
     (async () => {
       try {
@@ -941,7 +1026,7 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     // 调用printCascaderInputValue函数获取返回值
     const cascaderValue = printCascaderInputValue();
     
-    // 当返回值中包含“数学”二字时才执行设置答案输入框值的函数
+    // 当返回值中包含"数学"二字时才执行设置答案输入框值的函数
     if (cascaderValue && cascaderValue.includes('数学')) {
       setAnswerInputValue();
     }
