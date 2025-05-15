@@ -518,7 +518,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "audit_content_extract") {
     // 将消息转发到扩展页面
     chrome.runtime.sendMessage({
-      action: "audit_content_result",
+      action: "audit_content_extract",
       html: request.html,
       rawData: request.rawData,
       error: request.error

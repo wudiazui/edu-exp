@@ -1170,6 +1170,88 @@ ${auditContent.analysis}
     }
     return true;
   }
+  
+  if (request.action === "extract_editor_content") {
+    try {
+      // 查找题干、解答和解析的编辑区域
+      const stemElement = document.querySelector('[id^="stem-edit-"] .w-e-text');
+      const answerElement = document.querySelector('[id^="answer-edit-"] .w-e-text');
+      const analysisElement = document.querySelector('[id^="analyse-edit-"] .w-e-text');
+      
+      // 提取文本内容的函数，保留特殊字符
+      const extractText = (element, seenTexts = new Set()) => {
+        if (!element) return '';
+        
+        let text = '';
+        const childNodes = element.childNodes;
+
+        for (const node of childNodes) {
+          if (node.nodeType === Node.TEXT_NODE) {
+            const content = node.textContent;
+            if (!seenTexts.has(content)) {
+              text += content;
+              seenTexts.add(content);
+            }
+          } else if (node.nodeType === Node.ELEMENT_NODE) {
+            if (node.tagName.toLowerCase() === 'br') {
+              text += '\n';
+            } else if (node.tagName.toLowerCase() === 'p') {
+              text += extractText(node, seenTexts) + '\n';
+            } else if (node.tagName.toLowerCase() === 'img') {
+              const mathValue = node.getAttribute('data-math');
+              if (mathValue) {
+                const decodedValue = decodeURIComponent(mathValue);
+                if (!seenTexts.has(decodedValue)) {
+                  text += `$${decodedValue}$`;
+                  seenTexts.add(decodedValue);
+                }
+              }
+            }
+            text += extractText(node, seenTexts);
+          }
+        }
+        return text;
+      };
+
+      // 获取cascader值（科目信息）
+      const cascaderValue = printCascaderInputValue();
+
+      // 提取各个部分的内容
+      const stemText = stemElement ? extractText(stemElement) : '';
+      const answerText = answerElement ? extractText(answerElement) : '';
+      const analysisText = analysisElement ? extractText(analysisElement) : '';
+
+      // 组装返回内容为纯文本格式
+      const editorContent = `
+【学科】: 
+${cascaderValue || '未知学科'}
+
+【题干】: 
+${stemText}
+
+【解答】: 
+${answerText}
+
+【解析】: 
+${analysisText}
+      `.trim();
+      
+      // 发送提取的编辑器内容回背景脚本
+      chrome.runtime.sendMessage({
+        action: "extracted_editor_content",
+        content: editorContent
+      });
+    } catch (error) {
+      console.error('编辑器内容提取错误:', error);
+      // 发送错误消息回背景脚本
+      chrome.runtime.sendMessage({
+        action: "extracted_editor_content",
+        error: error.message || '内容提取失败',
+        content: ''
+      });
+    }
+    return true;
+  }
 });
 
 // 监听键盘事件

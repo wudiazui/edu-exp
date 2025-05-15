@@ -8,11 +8,12 @@ const AuditComponent = ({ host, uname, serverType }) => {
     // 监听来自 background.js 的消息
     const messageListener = (message) => {
       if (message.action === "audit_content_result" && message.html) {
+        console.log('message.html', message.html);
         setAuditResults(message.html);
         setIsLoading(false);
-      } else if (message.action === "extracted_content" && message.content) {
-        // 当内容提取完成后，发送请求开始内容审核
-        startContentReview(message.content);
+      } else if (message.action === "audit_content_extract" && message.html) {
+        // 当从编辑器提取完成后，只发送请求开始内容审核，不显示提取的内容
+        startContentReview(message.html);
       } else if (message.action === "content_review_message") {
         // 处理流式响应消息
         try {
@@ -62,10 +63,10 @@ const AuditComponent = ({ host, uname, serverType }) => {
     try {
       // 请求从当前页面提取内容
       chrome.runtime.sendMessage({
-        action: "extract_content"
+        action: "start_audit_check"
       });
       
-      // 内容将通过消息监听器接收，然后调用 startContentReview
+      // 内容将通过消息监听器接收处理
     } catch (error) {
       console.error('审核请求出错:', error);
       setAuditResults('审核失败：' + error.message);
