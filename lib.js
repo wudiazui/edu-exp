@@ -391,6 +391,71 @@ export async function topic_split(text_data, host, uname) {
   }
 }
 
+export function content_review(text, host, uname, onMessage, onError, onComplete) {
+  try {
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    fetch(`${host}/llm/content_review`, {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
+        'X-Pfy-Key': uname
+      },
+      body: JSON.stringify({ text }),
+      signal: signal
+    }).then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      
+      function processStream() {
+        return reader.read().then(({ value, done }) => {
+          if (done) {
+            if (onComplete) onComplete();
+            return;
+          }
+          
+          const chunk = decoder.decode(value, { stream: true });
+          
+          // Process SSE format (data: messages)
+          const lines = chunk.split('\n');
+          lines.forEach(line => {
+            if (line.startsWith('data:')) {
+              try {
+                const eventData = line.slice(5).trim();
+                if (eventData && onMessage) {
+                  onMessage(eventData);
+                }
+              } catch (e) {
+                if (onError) onError(e);
+              }
+            }
+          });
+          
+          return processStream();
+        });
+      }
+      
+      return processStream();
+    }).catch(error => {
+      console.error('Error in content review:', error);
+      if (onError) onError(error);
+    });
+    
+    // Return abort controller to allow cancellation
+    return controller;
+  } catch (error) {
+    console.error('Error setting up content review:', error);
+    if (onError) onError(error);
+    return null;
+  }
+}
+
 export async function replaceLatexWithImages(text) {
   // Convert \( and \) to $
   text = text.replace(/\\\(/g, '$').replace(/\\\)/g, '$')

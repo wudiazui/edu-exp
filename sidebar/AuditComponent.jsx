@@ -5,38 +5,69 @@ const AuditComponent = ({ host, uname, serverType }) => {
   const [auditResults, setAuditResults] = useState('');
 
   useEffect(() => {
-    // Listen for messages from background script
+    // 监听来自 background.js 的消息
     const messageListener = (message) => {
       if (message.action === "audit_content_result" && message.html) {
         setAuditResults(message.html);
         setIsLoading(false);
+      } else if (message.action === "extracted_content" && message.content) {
+        // 当内容提取完成后，发送请求开始内容审核
+        startContentReview(message.content);
+      } else if (message.action === "content_review_message") {
+        // 处理流式响应消息
+        try {
+          const data = message.data;
+          if (typeof data === 'string') {
+            setAuditResults(prev => prev + data);
+          } else if (data && data.content) {
+            setAuditResults(prev => prev + data.content);
+          }
+        } catch (e) {
+          console.error('处理审核消息出错:', e);
+        }
+      } else if (message.action === "content_review_error") {
+        console.error('内容审核错误:', message.error);
+        setAuditResults(prev => prev + '\n\n审核过程中出错: ' + message.error);
+        setIsLoading(false);
+      } else if (message.action === "content_review_complete") {
+        setIsLoading(false);
       }
     };
 
-    // Add listener
+    // 添加监听器
     chrome.runtime.onMessage.addListener(messageListener);
 
-    // Clean up listener when component unmounts
+    // 组件卸载时清理监听器
     return () => {
       chrome.runtime.onMessage.removeListener(messageListener);
     };
   }, []);
 
+  const startContentReview = (text) => {
+    if (!text) return;
+    
+    // 向后台脚本发送消息，请求进行内容审核
+    chrome.runtime.sendMessage({
+      action: "start_content_review",
+      text: text,
+      host: host,
+      uname: uname
+    });
+  };
+
   const handleAuditCheck = async () => {
     setIsLoading(true);
+    setAuditResults('');
+    
     try {
-      // 添加3秒延迟
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      // 发送消息到background.js请求内容提取
+      // 请求从当前页面提取内容
       chrome.runtime.sendMessage({
-        action: "start_audit_check"
+        action: "extract_content"
       });
       
-      // 实际内容将通过useEffect钩子中的消息监听器接收，
-      // 该监听器会更新auditResults
+      // 内容将通过消息监听器接收，然后调用 startContentReview
     } catch (error) {
-      console.error('Error during audit check:', error);
+      console.error('审核请求出错:', error);
       setAuditResults('审核失败：' + error.message);
       setIsLoading(false);
     }
@@ -62,9 +93,13 @@ const AuditComponent = ({ host, uname, serverType }) => {
         </div>
 
         {auditResults && (
-          <div className="mb-3 p-3 bg-gray-100 rounded-md">
-            <h3 className="text-md font-medium mb-2">审核结果：</h3>
-            <div className="whitespace-pre-wrap">{auditResults}</div>
+          <div className="mb-3 p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-200">
+            <h3 className="text-md font-medium mb-3 pb-2 border-b border-gray-200 text-purple-800">审核结果</h3>
+            
+            
+            <div className="whitespace-pre-wrap text-sm leading-relaxed mt-2 text-gray-700">
+              {auditResults}
+            </div>
           </div>
         )}
 

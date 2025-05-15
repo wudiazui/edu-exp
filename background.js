@@ -1,4 +1,4 @@
-import {ocr_text, run_llm, getAuditTaskLabel, format_latex, topic_split} from "./lib.js";
+import {ocr_text, run_llm, getAuditTaskLabel, format_latex, topic_split, content_review} from "./lib.js";
 import { tex2svg } from "./tex2svg.js";
 import { renderMarkdownWithMath } from "./markdown-renderer.js";
 // 使用动态导入，而不是静态导入
@@ -525,7 +525,93 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
     return true;
   }
-  
+
+  // 处理内容提取请求
+  if (request.action === "extract_content") {
+    // 获取当前活动标签页
+    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+      if (tabs && tabs[0]) {
+        // 发送消息给内容脚本，请求提取页面内容
+        chrome.tabs.sendMessage(tabs[0].id, {
+          action: "extract_page_content"
+        });
+      } else {
+        // 如果没有找到活动标签页，返回错误
+        chrome.runtime.sendMessage({
+          action: "content_review_error",
+          error: "未找到活动标签页"
+        });
+      }
+    });
+    return true;
+  }
+
+  // 处理从内容脚本接收的提取内容
+  if (request.action === "extracted_page_content") {
+    // 将提取的内容转发给扩展界面
+    chrome.runtime.sendMessage({
+      action: "extracted_content",
+      content: request.content
+    });
+    return true;
+  }
+
+  // 处理内容审核请求
+  if (request.action === "start_content_review") {
+    const { text, host, uname } = request;
+    
+    if (!text || !host || !uname) {
+      chrome.runtime.sendMessage({
+        action: "content_review_error",
+        error: "参数不完整，缺少文本内容或服务器信息"
+      });
+      return true;
+    }
+
+    // 调用 content_review 函数处理内容并获取流式响应
+    const controller = content_review(
+      text,
+      host,
+      uname,
+      // 消息处理器 - 将接收到的每个数据块转发给扩展UI
+      (eventData) => {
+        try {
+          let data;
+          try {
+            data = JSON.parse(eventData);
+          } catch {
+            data = eventData;
+          }
+          
+          chrome.runtime.sendMessage({
+            action: "content_review_message",
+            data: data
+          });
+        } catch (error) {
+          console.error("处理审核数据时出错:", error);
+        }
+      },
+      // 错误处理器
+      (error) => {
+        console.error("内容审核出错:", error);
+        chrome.runtime.sendMessage({
+          action: "content_review_error",
+          error: error.message || "未知错误"
+        });
+      },
+      // 完成处理器
+      () => {
+        chrome.runtime.sendMessage({
+          action: "content_review_complete"
+        });
+      }
+    );
+    
+    // 储存控制器，以便在需要时可以中止请求
+    // 注意：由于background脚本的生命周期，并不需要特意管理中止逻辑
+    return true;
+  }
+
   return false;
 });
 

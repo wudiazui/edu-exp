@@ -1113,6 +1113,63 @@ ${auditContent.analysis}
       fillEditorContent('[id="documentassistant"]');
     }
   }
+
+  // 处理页面内容提取请求
+  if (request.action === "extract_page_content") {
+    try {
+      // 获取页面的可见文本内容
+      const bodyText = document.body.innerText || '';
+      
+      // 提取标题
+      const title = document.title || '';
+      
+      // 提取元描述（如果有）
+      let metaDescription = '';
+      const metaDescTag = document.querySelector('meta[name="description"]');
+      if (metaDescTag) {
+        metaDescription = metaDescTag.getAttribute('content') || '';
+      }
+      
+      // 提取主要内容区域（尝试找到主要内容区域，如果无法确定，则使用body）
+      let mainContent = '';
+      const possibleMainElements = [
+        document.querySelector('main'),
+        document.querySelector('article'),
+        document.querySelector('#content'),
+        document.querySelector('.content'),
+        document.querySelector('#main'),
+        document.querySelector('.main')
+      ].filter(Boolean); // 过滤掉null和undefined
+      
+      if (possibleMainElements.length > 0) {
+        // 使用最长的内容作为主要内容
+        mainContent = possibleMainElements
+          .map(element => element.innerText || '')
+          .reduce((longest, current) => 
+            current.length > longest.length ? current : longest, '');
+      }
+      
+      // 组合提取的内容
+      const extractedContent = `标题: ${title}\n\n` + 
+                               (metaDescription ? `描述: ${metaDescription}\n\n` : '') +
+                               `内容:\n${mainContent || bodyText}`;
+      
+      // 发送提取的内容回背景脚本
+      chrome.runtime.sendMessage({
+        action: "extracted_page_content",
+        content: extractedContent
+      });
+    } catch (error) {
+      console.error('内容提取错误:', error);
+      // 发送错误消息回背景脚本
+      chrome.runtime.sendMessage({
+        action: "extracted_page_content",
+        error: error.message || '内容提取失败',
+        content: '无法提取页面内容: ' + (error.message || '未知错误')
+      });
+    }
+    return true;
+  }
 });
 
 // 监听键盘事件
