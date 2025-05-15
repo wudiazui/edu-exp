@@ -500,6 +500,13 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
                   text += `$${decodedValue}$`; // 用$包裹
                   seenTexts.add(decodedValue); // 记录已添加的文本
                 }
+              } else {
+                // 处理非公式图片，包含src属性
+                const imgSrc = node.getAttribute('src');
+                if (imgSrc && !seenTexts.has(imgSrc)) {
+                  text += `[图片: ${imgSrc}]`; // 添加图片链接
+                  seenTexts.add(imgSrc); // 记录已添加的文本
+                }
               }
             }
             // 递归处理子元素
@@ -559,6 +566,13 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
               if (!seenTexts.has(decodedValue)) {
                 text += `$${decodedValue}$`; // 用$包裹
                 seenTexts.add(decodedValue); // 记录已添加的文本
+              }
+            } else {
+              // 处理非公式图片，包含src属性
+              const imgSrc = node.getAttribute('src');
+              if (imgSrc && !seenTexts.has(imgSrc)) {
+                text += `[图片: ${imgSrc}]`; // 添加图片链接
+                seenTexts.add(imgSrc); // 记录已添加的文本
               }
             }
           }
@@ -1210,6 +1224,13 @@ ${auditContent.analysis}
                 if (!seenTexts.has(decodedValue)) {
                   text += `$${decodedValue}$`;
                   seenTexts.add(decodedValue);
+                }
+              } else {
+                // 处理非公式图片，包含src属性
+                const imgSrc = node.getAttribute('src');
+                if (imgSrc && !seenTexts.has(imgSrc)) {
+                  text += `[图片: ${imgSrc}]`; // 添加图片链接
+                  seenTexts.add(imgSrc); // 记录已添加的文本
                 }
               }
             }

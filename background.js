@@ -268,6 +268,12 @@ chrome.runtime.onConnect.addListener((port) => {
     port.onMessage.addListener((request) => {
       // 处理审核开始请求
       if (request.action === "start_audit_check") {
+        // 向侧边栏发送加载开始状态
+        port.postMessage({
+          action: "audit_loading_state",
+          isLoading: true
+        });
+        
         // 获取当前活动标签页
         chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
           if (tabs && tabs[0]) {
@@ -286,7 +292,7 @@ chrome.runtime.onConnect.addListener((port) => {
           } else {
             // 如果没有找到活动标签页，返回错误
             port.postMessage({
-              action: "audit_content_result",
+              action: "content_review_error",
               error: "未找到活动标签页"
             });
           }
@@ -296,6 +302,12 @@ chrome.runtime.onConnect.addListener((port) => {
       // 处理内容审核请求
       if (request.action === "start_content_review") {
         const { text, host, uname } = request;
+        
+        // 向侧边栏发送加载开始状态
+        port.postMessage({
+          action: "audit_loading_state",
+          isLoading: true
+        });
         
         if (!text || !host || !uname) {
           port.postMessage({
@@ -339,7 +351,8 @@ chrome.runtime.onConnect.addListener((port) => {
           // 完成处理器
           () => {
             port.postMessage({
-              action: "content_review_complete"
+              action: "content_review_complete",
+              isLoading: false
             });
           }
         );

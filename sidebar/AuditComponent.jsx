@@ -37,6 +37,9 @@ const AuditComponent = ({ host, uname, serverType }) => {
         setIsLoading(false);
       } else if (message.action === "content_review_complete") {
         setIsLoading(false);
+      } else if (message.action === "audit_loading_state") {
+        // 处理加载状态更新
+        setIsLoading(message.isLoading);
       }
     });
 
@@ -73,7 +76,7 @@ const AuditComponent = ({ host, uname, serverType }) => {
       return;
     }
 
-    setIsLoading(true);
+    // 清空之前的结果，但不设置加载状态（会由background.js通过消息通知）
     setAuditResults('');
     
     try {
