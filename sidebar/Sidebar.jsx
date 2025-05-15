@@ -539,7 +539,7 @@ export default function Main() {
   }, [serverType]);
 
   return (<div className="container max-auto px-1 mt-2">
-            <div className="overflow-x-auto pb-1">
+            <div className="pb-1">
               <div className="tabs tabs-boxed inline-flex whitespace-nowrap min-w-full">
               <a className={`tab ${activeTab === 'settings' ? 'tab-active' : ''}`} onClick={() => handleTabChange('settings')}>设置</a>
               {features.jieti && (
@@ -548,22 +548,28 @@ export default function Main() {
               {features.ocr && (
                 <a className={`tab ${activeTab === 'ocr' ? 'tab-active' : ''}`} onClick={() => handleTabChange('ocr')}>文字识别</a>
               )}
-              {features.topic_split && (
-                <a className={`tab ${activeTab === 'topic_split' ? 'tab-active' : ''}`} onClick={() => handleTabChange('topic_split')}>题目切割</a>
-              )}
-              {features["clue-claiming"] && (
-                <a className={`tab ${activeTab === 'clue-claiming' ? 'tab-active' : ''}`} onClick={() => handleTabChange('clue-claiming')}>线索认领</a>
-              )}
-              {features.documentation && (
-                <a className={`tab ${activeTab === 'documentation' ? 'tab-active' : ''}`} onClick={() => handleTabChange('documentation')}>文档</a>
-              )}
-              {features["mobile-web"] && (
-                <a className={`tab ${activeTab === 'mobile-web' ? 'tab-active' : ''}`} onClick={() => handleTabChange('mobile-web')}>移动网页版</a>
-              )}
               {features.audit && (
                 <a className={`tab ${activeTab === 'audit' ? 'tab-active' : ''}`} onClick={() => handleTabChange('audit')}>审核</a>
               )}
-              <a className={`tab ${activeTab === 'feedback' ? 'tab-active' : ''}`} onClick={() => handleTabChange('feedback')}>问题反馈</a>
+              
+              <div className="dropdown dropdown-end">
+                <label tabIndex={0} className="tab">更多 ▼</label>
+                <ul tabIndex={0} className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52 z-10">
+                  {features.topic_split && (
+                    <li><a className={activeTab === 'topic_split' ? 'active' : ''} onClick={() => handleTabChange('topic_split')}>题目切割</a></li>
+                  )}
+                  {features["clue-claiming"] && (
+                    <li><a className={activeTab === 'clue-claiming' ? 'active' : ''} onClick={() => handleTabChange('clue-claiming')}>线索认领</a></li>
+                  )}
+                  {features.documentation && (
+                    <li><a className={activeTab === 'documentation' ? 'active' : ''} onClick={() => handleTabChange('documentation')}>文档</a></li>
+                  )}
+                  {features["mobile-web"] && (
+                    <li><a className={activeTab === 'mobile-web' ? 'active' : ''} onClick={() => handleTabChange('mobile-web')}>移动网页版</a></li>
+                  )}
+                  <li><a className={activeTab === 'feedback' ? 'active' : ''} onClick={() => handleTabChange('feedback')}>问题反馈</a></li>
+                </ul>
+              </div>
               </div>
             </div>
             {activeTab === 'settings' && (
