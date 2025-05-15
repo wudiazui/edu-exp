@@ -231,6 +231,132 @@ chrome.commands.onCommand.addListener((command) => {
   });
 });
 
+// 存储当前激活的审核端口连接
+let activeAuditPort = null;
+
+// 添加连接端口监听器
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name === 'audit-task-label') {
+    port.onMessage.addListener(async (message) => {
+      if (message.type === 'GET_AUDIT_TASK_LABEL') {
+        try {
+          // 获取当前活动的标签页
+          const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+          // 发送消息到 content script 并等待响应
+          const response = await chrome.tabs.sendMessage(activeTab.id, {
+            type: 'GET_AUDIT_TASK_LABEL_RESPONSE',
+            data: message.data,
+            selectedTaskType: message.selectedTaskType
+          });
+          // 将内容脚本的响应发送回端口
+          port.postMessage(response);
+        } catch (error) {
+          console.error('Error in audit task label handler:', error);
+          port.postMessage({ errno: 1, errmsg: error.message });
+        }
+      }
+    });
+  }
+  
+  // 处理审核内容长连接
+  if (port.name === 'audit-content-channel') {
+    console.log('已建立审核内容长连接');
+    // 保存当前活动的审核端口
+    activeAuditPort = port;
+    
+    // 监听从侧边栏发来的消息
+    port.onMessage.addListener((request) => {
+      // 处理审核开始请求
+      if (request.action === "start_audit_check") {
+        // 获取当前活动标签页
+        chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+          if (tabs && tabs[0]) {
+            // 转发消息到内容脚本，明确指定主框架
+            chrome.tabs.sendMessage(tabs[0].id, {
+              action: "start_audit_check"
+            }, { frameId: 0 }, response => {
+              // 若有直接响应，立即转发回侧边栏
+              if (response) {
+                port.postMessage({
+                  action: "audit_content_result",
+                  html: response.html
+                });
+              }
+            });
+          } else {
+            // 如果没有找到活动标签页，返回错误
+            port.postMessage({
+              action: "audit_content_result",
+              error: "未找到活动标签页"
+            });
+          }
+        });
+      }
+      
+      // 处理内容审核请求
+      if (request.action === "start_content_review") {
+        const { text, host, uname } = request;
+        
+        if (!text || !host || !uname) {
+          port.postMessage({
+            action: "content_review_error",
+            error: "参数不完整，缺少文本内容或服务器信息"
+          });
+          return;
+        }
+
+        // 调用 content_review 函数处理内容并获取流式响应
+        const controller = content_review(
+          text,
+          host,
+          uname,
+          // 消息处理器 - 将接收到的每个数据块转发给侧边栏
+          (eventData) => {
+            try {
+              let data;
+              try {
+                data = JSON.parse(eventData);
+              } catch {
+                data = eventData;
+              }
+              
+              port.postMessage({
+                action: "content_review_message",
+                data: data
+              });
+            } catch (error) {
+              console.error("处理审核数据时出错:", error);
+            }
+          },
+          // 错误处理器
+          (error) => {
+            console.error("内容审核出错:", error);
+            port.postMessage({
+              action: "content_review_error",
+              error: error.message || "未知错误"
+            });
+          },
+          // 完成处理器
+          () => {
+            port.postMessage({
+              action: "content_review_complete"
+            });
+          }
+        );
+      }
+    });
+    
+    // 监听连接断开
+    port.onDisconnect.addListener(() => {
+      console.log('审核内容长连接已断开');
+      // 清除引用
+      if (activeAuditPort === port) {
+        activeAuditPort = null;
+      }
+    });
+  }
+});
+
 // Add message listener for LaTeX rendering requests
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "store_copied_html") {
@@ -499,10 +625,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // 获取当前活动标签页
     chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
       if (tabs && tabs[0]) {
-        // 转发消息到内容脚本
+        // 转发消息到内容脚本, 明确指定主框架
         chrome.tabs.sendMessage(tabs[0].id, {
           action: "start_audit_check"
-        });
+        }, { frameId: 0 });
       } else {
         // 如果没有找到活动标签页，返回错误
         chrome.runtime.sendMessage({
@@ -516,13 +642,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   // 从内容脚本接收消息并转发到扩展页面
   if (request.action === "audit_content_extract") {
-    // 将消息转发到扩展页面
-    chrome.runtime.sendMessage({
-      action: "audit_content_extract",
-      html: request.html,
-      rawData: request.rawData,
-      error: request.error
-    });
+    // 如果有活动的审核端口，通过端口发送
+    if (activeAuditPort) {
+      activeAuditPort.postMessage({
+        action: "audit_content_extract",
+        html: request.html,
+        rawData: request.rawData,
+        error: request.error
+      });
+    } else {
+      // 如果没有活动端口，使用广播方式
+      chrome.runtime.sendMessage({
+        action: "audit_content_extract",
+        html: request.html,
+        rawData: request.rawData,
+        error: request.error
+      });
+    }
     return true;
   }
 
@@ -620,30 +756,5 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
   if (namespace === 'sync' && changes.shortcuts) {
     // shortcuts 发生变化时重建菜单
     createCharacterMenus();
-  }
-});
-
-// 添加连接端口监听器
-chrome.runtime.onConnect.addListener((port) => {
-  if (port.name === 'audit-task-label') {
-    port.onMessage.addListener(async (message) => {
-      if (message.type === 'GET_AUDIT_TASK_LABEL') {
-        try {
-          // 获取当前活动的标签页
-          const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
-          // 发送消息到 content script 并等待响应
-          const response = await chrome.tabs.sendMessage(activeTab.id, {
-            type: 'GET_AUDIT_TASK_LABEL_RESPONSE',
-            data: message.data,
-            selectedTaskType: message.selectedTaskType
-          });
-          // 将内容脚本的响应发送回端口
-          port.postMessage(response);
-        } catch (error) {
-          console.error('Error in audit task label handler:', error);
-          port.postMessage({ errno: 1, errmsg: error.message });
-        }
-      }
-    });
   }
 });

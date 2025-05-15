@@ -596,12 +596,18 @@ ${auditContent.answer}
 ${auditContent.analysis}
     `.trim();
 
-    // 发送到 background script，使用专门的 audit 相关消息类型
+    // 直接响应请求，避免通过background.js中转
+    if (typeof sendResponse === 'function') {
+      sendResponse({ html: formattedAuditText, rawData: auditContent });
+    }
+    
+    // 同时发送到background script，以确保兼容性
     chrome.runtime.sendMessage({
       action: "audit_content_extract",
       html: formattedAuditText,
       rawData: auditContent
     });
+    
     return true;
   }
 
