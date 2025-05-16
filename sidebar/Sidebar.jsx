@@ -14,6 +14,8 @@ export default function Main() {
   const [question, setQuestion] = React.useState('');
   const [answer, setAnswer] = React.useState('');
   const [analysis, setAnalysis] = React.useState('');
+  const [answerThinkingChain, setAnswerThinkingChain] = React.useState('');
+  const [analysisThinkingChain, setAnalysisThinkingChain] = React.useState('');
   const [isFormatting, setIsFormatting] = useState(false);
   const [isCompleteeing, setIsCompleteeing] = useState(false);
   const [isGeneratingAnswer, setIsGeneratingAnswer] = useState(false);
@@ -55,13 +57,33 @@ export default function Main() {
       // 处理从background.js接收的消息
       port.onMessage.addListener((message) => {
         if (message.action === "stream_format_result" && message.data) {
-          setQuestion(prev => prev + message.data);
+          // 题干整理不处理思维链内容，直接追加数据
+          if (message.dataType !== "reasoning") {
+            // 保留数据中的换行符
+            setQuestion(prev => prev + message.data);
+          }
         } else if (message.action === "stream_complete_result" && message.data) {
-          setQuestion(prev => prev + message.data);
+          // 残题补全不处理思维链内容，直接追加数据
+          if (message.dataType !== "reasoning") {
+            // 保留数据中的换行符
+            setQuestion(prev => prev + message.data);
+          }
         } else if (message.action === "stream_answer_result" && message.data) {
-          setAnswer(prev => prev + message.data);
+          if (message.dataType === "reasoning") {
+            // 思维链数据 - 保留换行符
+            setAnswerThinkingChain(prev => prev + message.data);
+          } else {
+            // 常规内容数据 - 保留换行符
+            setAnswer(prev => prev + message.data);
+          }
         } else if (message.action === "stream_analysis_result" && message.data) {
-          setAnalysis(prev => prev + message.data);
+          if (message.dataType === "reasoning") {
+            // 思维链数据 - 保留换行符
+            setAnalysisThinkingChain(prev => prev + message.data);
+          } else {
+            // 常规内容数据 - 保留换行符
+            setAnalysis(prev => prev + message.data);
+          }
         } else if (message.action === "stream_error") {
           console.error('流式响应错误:', message.error);
         } else if (message.action === "stream_complete") {
@@ -408,6 +430,7 @@ export default function Main() {
       } else if (serverType === "官方服务器" && portRef.current) {
         // 使用流式响应
         setAnswer(''); // 清空之前的结果
+        setAnswerThinkingChain(''); // 清空思维链数据
         
         // 通过长连接发送消息
         portRef.current.postMessage({
@@ -516,6 +539,7 @@ export default function Main() {
       } else if (serverType === "官方服务器" && portRef.current) {
         // 使用流式响应
         setAnalysis(''); // 清空之前的结果
+        setAnalysisThinkingChain(''); // 清空思维链数据
         
         // 通过长连接发送消息
         portRef.current.postMessage({
@@ -744,6 +768,8 @@ export default function Main() {
                 setAnswer={setAnswer}
                 analysis={analysis}
                 setAnalysis={setAnalysis}
+                answerThinkingChain={answerThinkingChain}
+                analysisThinkingChain={analysisThinkingChain}
                 isFormatting={isFormatting}
                 handleFormat={handleFormat}
                 isCompleteeing={isCompleteeing}

@@ -11,6 +11,8 @@ const QuestionAnswerForm = ({
   setAnswer,
   analysis = "",
   setAnalysis,
+  answerThinkingChain = "",
+  analysisThinkingChain = "",
   isFormatting,
   handleFormat,
   isCompleteeing,
@@ -174,6 +176,7 @@ const QuestionAnswerForm = ({
         }}
         onClear={() => setAnswer('')}
         site={site}
+        thinkingChain={answerThinkingChain}
       />
       <TextAreaSection
         title={['bc', 'bc-no-cot'].includes(site) ? '思路点拨' : '解析'}
@@ -190,6 +193,7 @@ const QuestionAnswerForm = ({
         }}
         onClear={() => setAnalysis('')}
         site={site}
+        thinkingChain={analysisThinkingChain}
       />
     </>
   );

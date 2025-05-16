@@ -26,11 +26,16 @@ const TextAreaSection = ({
   onClear,
   displayModeHint,
   site,
+  thinkingChain = "", // 接收从父组件传递的思维链数据（文本格式）
 }) => {
   const [displayMode, setDisplayMode] = useState(false);
+  const [isThinkingExpanded, setIsThinkingExpanded] = useState(true);
   const [renderedHtml, setRenderedHtml] = useState('');
+  const [renderedThinkingHtml, setRenderedThinkingHtml] = useState('');
   const [isRendering, setIsRendering] = useState(false);
+  const [isRenderingThinking, setIsRenderingThinking] = useState(false);
   const outputRef = useRef(null);
+  const thinkingOutputRef = useRef(null);
   
   // 当site为bc时自动切换为显示模式，为bd时关闭显示模式
   useEffect(() => {
@@ -65,17 +70,51 @@ const TextAreaSection = ({
       render();
     }
   }, [displayMode, value]);
+  
+  // 处理思维链内容的渲染
+  useEffect(() => {
+    if (displayMode && thinkingChain && isThinkingExpanded) {
+      setIsRenderingThinking(true);
+      
+      // 异步渲染思维链内容
+      const renderThinking = async () => {
+        try {
+          const html = await renderMarkdownWithMath(thinkingChain);
+          setRenderedThinkingHtml(html);
+        } catch (error) {
+          console.error('思维链渲染错误:', error);
+          // 回退到简单markdown
+          setRenderedThinkingHtml(marked(thinkingChain)); 
+          console.warn('思维链已回退到简单Markdown渲染，数学公式可能无法正确显示');
+        } finally {
+          setIsRenderingThinking(false);
+        }
+      };
+      
+      renderThinking();
+    }
+  }, [displayMode, thinkingChain, isThinkingExpanded]);
 
   // 应用额外的样式调整
   useEffect(() => {
-    if (displayMode && outputRef.current) {
-      // 确保SVG元素正确显示
-      const svgs = outputRef.current.querySelectorAll('.mathjax-svg');
-      if (svgs.length > 0) {
-        console.log(`找到 ${svgs.length} 个SVG元素`);
+    if (displayMode) {
+      // 确保主内容区域SVG元素正确显示
+      if (outputRef.current) {
+        const svgs = outputRef.current.querySelectorAll('.mathjax-svg');
+        if (svgs.length > 0) {
+          console.log(`主内容区域找到 ${svgs.length} 个SVG元素`);
+        }
+      }
+      
+      // 确保思维链区域SVG元素正确显示
+      if (thinkingOutputRef.current) {
+        const svgs = thinkingOutputRef.current.querySelectorAll('.mathjax-svg');
+        if (svgs.length > 0) {
+          console.log(`思维链区域找到 ${svgs.length} 个SVG元素`);
+        }
       }
     }
-  }, [renderedHtml, displayMode]);
+  }, [renderedHtml, renderedThinkingHtml, displayMode]);
 
   return (
     <div className="w-full mt-2">
@@ -93,7 +132,9 @@ const TextAreaSection = ({
               type="checkbox"
               className="toggle toggle-xs toggle-secondary"
               checked={displayMode}
-              onChange={(e) => setDisplayMode(e.target.checked)}
+              onChange={(e) => {
+                setDisplayMode(e.target.checked);
+              }}
             />
           </div>
           <div className="tooltip tooltip-bottom flex items-center" data-tip="自动渲染数学公式">
@@ -123,6 +164,7 @@ const TextAreaSection = ({
             onClick={() => {
               onClear();
               setRenderedHtml('');
+              setRenderedThinkingHtml('');
             }}
             className="btn btn-ghost btn-xs flex items-center"
           >
@@ -131,6 +173,51 @@ const TextAreaSection = ({
           <CopyButton text={displayMode ? renderedHtml : value} />
         </div>
       </div>
+      {thinkingChain && (
+        <div className="mb-1 border rounded-lg overflow-hidden text-xs">
+          <div 
+            className="bg-base-200 p-1 flex justify-between items-center cursor-pointer"
+            onClick={() => setIsThinkingExpanded(!isThinkingExpanded)}
+          >
+            <h3 className="text-xs font-medium">思考过程</h3>
+            <div className="flex items-center">
+              {isRenderingThinking && (
+                <span className="text-xs text-info flex items-center gap-1 mr-2">
+                  <span className="loading loading-spinner loading-xs"></span>
+                  渲染中
+                </span>
+              )}
+              <button className="btn btn-xs btn-ghost">
+                {isThinkingExpanded ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                )}
+              </button>
+            </div>
+          </div>
+          {isThinkingExpanded && (
+            <div className="p-2 bg-base-100 text-xs border-t">
+              {displayMode ? (
+                <div 
+                  ref={thinkingOutputRef}
+                  className="prose prose-sm max-w-none"
+                  dangerouslySetInnerHTML={{ __html: renderedThinkingHtml }}
+                />
+              ) : (
+                <div className="whitespace-pre-wrap">
+                  {thinkingChain}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+      
       {displayMode ? (
         <div
           ref={outputRef}

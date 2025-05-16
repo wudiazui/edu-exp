@@ -325,16 +325,30 @@ chrome.runtime.onConnect.addListener((port) => {
           // 消息处理器 - 将接收到的每个数据块转发给侧边栏
           (eventData) => {
             try {
+              // 检查是否是结束标志 [DONE]
+              if (eventData === "[DONE]") {
+                console.log("收到审核流结束标志 [DONE]");
+                return; // 不处理这个数据块，直接返回
+              }
+              
               let data;
+              let dataType = "content"; // 默认类型
+              
               try {
                 data = JSON.parse(eventData);
+                
+                if (data.type === "reasoning") {
+                  // 如果是思维链数据
+                  dataType = "reasoning";
+                }
               } catch {
                 data = eventData;
               }
               
               port.postMessage({
                 action: "content_review_message",
-                data: data
+                data: data,
+                dataType: dataType
               });
             } catch (error) {
               console.error("处理审核数据时出错:", error);
@@ -425,11 +439,29 @@ chrome.runtime.onConnect.addListener((port) => {
           // 数据块处理函数
           (chunk) => {
             try {
+              // 检查是否是结束标志 [DONE]
+              if (chunk === "[DONE]") {
+                console.log("收到流结束标志 [DONE]");
+                return; // 不处理这个数据块，直接返回
+              }
+              
               // 尝试解析数据，处理可能的JSON格式
               let processedData;
+              let dataType = "content"; // 默认类型
+              
               try {
                 const jsonData = JSON.parse(chunk);
-                processedData = jsonData.topic || jsonData.content || jsonData;
+                
+                if (jsonData.type === "reasoning") {
+                  // 如果是思维链数据
+                  dataType = "reasoning";
+                  // 确保保留换行符
+                  processedData = jsonData.text || "";
+                } else {
+                  // 其他类型数据（内容）
+                  // 确保保留换行符
+                  processedData = jsonData.text || jsonData.topic || jsonData.content || jsonData;
+                }
               } catch {
                 // 如果不是有效的JSON，直接使用原始字符串
                 processedData = chunk;
@@ -437,7 +469,8 @@ chrome.runtime.onConnect.addListener((port) => {
               
               port.postMessage({
                 action: responseAction,
-                data: processedData
+                data: processedData,
+                dataType: dataType
               });
             } catch (error) {
               console.error("处理流式数据时出错:", error);
@@ -824,16 +857,30 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       // 消息处理器 - 将接收到的每个数据块转发给扩展UI
       (eventData) => {
         try {
+          // 检查是否是结束标志 [DONE]
+          if (eventData === "[DONE]") {
+            console.log("收到审核流结束标志 [DONE]");
+            return; // 不处理这个数据块，直接返回
+          }
+          
           let data;
+          let dataType = "content"; // 默认类型
+          
           try {
             data = JSON.parse(eventData);
+            
+            if (data.type === "reasoning") {
+              // 如果是思维链数据
+              dataType = "reasoning";
+            }
           } catch {
             data = eventData;
           }
           
           chrome.runtime.sendMessage({
             action: "content_review_message",
-            data: data
+            data: data,
+            dataType: dataType
           });
         } catch (error) {
           console.error("处理审核数据时出错:", error);
