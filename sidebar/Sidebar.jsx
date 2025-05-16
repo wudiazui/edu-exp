@@ -121,9 +121,22 @@ export default function Main() {
     // 监听来自 background 的消息
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (message.type === 'SET_QUESTION') {
-        setQuestion(message.data.trim());
-        setIsImageQuestion(false);
-        setSelectedImage(null);
+        // 检查是否包含图片URL格式 [图片：url] 或 [图片: url]（同时支持中英文冒号）
+        const imageUrlRegex = /\[图片[：:]\s*(https?:\/\/[^\s\]]+)\]/;
+        const questionText = message.data.trim();
+        const match = questionText.match(imageUrlRegex);
+        
+        if (match && match[1]) {
+          // 如果包含图片链接，设置图片题模式并提取图片URL
+          setQuestion(questionText.replace(match[0], '').trim());
+          setIsImageQuestion(true);
+          loadImageAsDataUrl(match[1]);
+        } else {
+          // 否则正常设置题干，并重置图片相关设置
+          setQuestion(questionText);
+          setIsImageQuestion(false);
+          setSelectedImage(null);
+        }
       }
     });
   }, []);
@@ -142,6 +155,11 @@ export default function Main() {
 
   const handleQuestionChange = (e) => {
     setQuestion(e.target.value);
+  };
+
+  // 加载图片并转换为Data URL的函数
+  const loadImageAsDataUrl = (url) => {
+    setSelectedImage(url);
   };
 
   const handleFormat = async () => {
