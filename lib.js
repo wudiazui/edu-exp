@@ -217,6 +217,86 @@ export async function run_llm(host, uname, item, data) {
   }
 }
 
+export function run_llm_stream(host, uname, item, data, onChunk, onError, onComplete) {
+  try {
+    const controller = new AbortController();
+    const { signal } = controller;
+    
+    fetch(`${host}/llm/run/${item}/stream`, {
+      method: 'POST',
+      headers: {
+        'accept': 'text/event-stream',
+        'Content-Type': 'application/json',
+        'X-Pfy-Key': uname
+      },
+      body: JSON.stringify(data),
+      signal
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      
+      function processStream() {
+        return reader.read().then(({ done, value }) => {
+          if (done) {
+            if (onComplete) {
+              onComplete();
+            }
+            return;
+          }
+          
+          const chunk = decoder.decode(value, { stream: true });
+          
+          // Process SSE format (data: messages)
+          const lines = chunk.split('\n');
+          lines.forEach(line => {
+            if (line.startsWith('data:')) {
+              try {
+                const eventData = line.slice(5).trim();
+                if (eventData && onChunk) {
+                  onChunk(eventData);
+                }
+              } catch (e) {
+                if (onError) onError(e);
+              }
+            }
+          });
+          
+          return processStream();
+        }).catch(err => {
+          if (onError) {
+            onError(err);
+          } else {
+            console.error('Stream error:', err);
+          }
+        });
+      }
+      
+      return processStream();
+    })
+    .catch(error => {
+      if (onError) {
+        onError(error);
+      } else {
+        console.error('Fetch error:', error);
+      }
+    });
+    
+    return controller; // Return controller so caller can abort if needed
+  } catch (error) {
+    if (onError) {
+      onError(error);
+    } else {
+      console.error('Error in run_llm_stream:', error);
+    }
+    return null;
+  }
+}
+
 export async function format_latex(host, uname, text) {
   try {
     const response = await fetch(`${host}/llm/format_latex`, {

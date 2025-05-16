@@ -41,6 +41,58 @@ export default function Main() {
   const [cozeService, setCozeService] = React.useState(null);
   const [kouziConfig, setKouziConfig] = React.useState(null);
   const [site, setSite] = useState("");
+  // 添加长连接引用
+  const portRef = useRef(null);
+
+  // 设置与background.js的长连接
+  useEffect(() => {
+    // 只在官方服务器模式下创建长连接
+    if (serverType === "官方服务器") {
+      // 创建与background.js的长连接
+      const port = chrome.runtime.connect({ name: 'solving-stream-channel' });
+      portRef.current = port;
+
+      // 处理从background.js接收的消息
+      port.onMessage.addListener((message) => {
+        if (message.action === "stream_format_result" && message.data) {
+          setQuestion(prev => prev + message.data);
+        } else if (message.action === "stream_complete_result" && message.data) {
+          setQuestion(prev => prev + message.data);
+        } else if (message.action === "stream_answer_result" && message.data) {
+          setAnswer(prev => prev + message.data);
+        } else if (message.action === "stream_analysis_result" && message.data) {
+          setAnalysis(prev => prev + message.data);
+        } else if (message.action === "stream_error") {
+          console.error('流式响应错误:', message.error);
+        } else if (message.action === "stream_complete") {
+          // 处理流式响应完成
+          if (message.type === 'FORMAT_QUESTION') {
+            setIsFormatting(false);
+          } else if (message.type === 'TOPIC_COMPLETE') {
+            setIsCompleteeing(false);
+          } else if (message.type === 'TOPIC_ANSWER') {
+            setIsGeneratingAnswer(false);
+          } else if (message.type === 'TOPIC_ANALYSIS') {
+            setIsGeneratingAnalysis(false);
+          }
+        }
+      });
+
+      // 处理连接断开
+      port.onDisconnect.addListener(() => {
+        console.log('与background的连接已断开');
+        portRef.current = null;
+      });
+    }
+
+    // 组件卸载或serverType变化时断开连接
+    return () => {
+      if (portRef.current) {
+        portRef.current.disconnect();
+        portRef.current = null;
+      }
+    };
+  }, [serverType]);
 
   // Load feature settings from Chrome storage on component mount
   useEffect(() => {
@@ -195,6 +247,19 @@ export default function Main() {
             console.error('Error parsing workflow result:', error);
           }
         }
+      } else if (serverType === "官方服务器" && portRef.current) {
+        // 使用流式响应
+        setQuestion(''); // 清空之前的结果
+        
+        // 通过长连接发送消息
+        portRef.current.postMessage({
+          action: "start_stream_request",
+          type: 'FORMAT_QUESTION',
+          data: {'topic': question, 'discipline': subject},
+          host: host,
+          uname: name
+        });
+        // 不在这里设置 setIsFormatting(false)，会在流式响应完成时设置
       } else {
         const response = await chrome.runtime.sendMessage(
           { type: 'FORMAT_QUESTION', data: {'topic': question, 'discipline': subject}, host: host, uname: name }
@@ -202,8 +267,10 @@ export default function Main() {
         if (response && response.formatted) {
           setQuestion(response.formatted);
         }
+        setIsFormatting(false);
       }
-    } finally {
+    } catch (error) {
+      console.error('Error formatting question:', error);
       setIsFormatting(false);
     }
   };
@@ -241,6 +308,20 @@ export default function Main() {
             console.error('Error parsing workflow result:', error);
           }
         }
+        setIsCompleteeing(false);
+      } else if (serverType === "官方服务器" && portRef.current) {
+        // 使用流式响应
+        setQuestion(''); // 清空之前的结果
+        
+        // 通过长连接发送消息
+        portRef.current.postMessage({
+          action: "start_stream_request",
+          type: 'TOPIC_COMPLETE',
+          data: {'topic': question, 'discipline': subject},
+          host: host,
+          uname: name
+        });
+        // 不在这里设置 setIsCompleteeing(false)，会在流式响应完成时设置
       } else {
         const response = await chrome.runtime.sendMessage(
           { type: 'TOPIC_COMPLETE', data: {'topic': question, 'discipline': subject}, host: host, uname: name }
@@ -248,8 +329,10 @@ export default function Main() {
         if (response && response.formatted) {
           setQuestion(response.formatted);
         }
+        setIsCompleteeing(false);
       }
-    } finally {
+    } catch (error) {
+      console.error('Error completing topic:', error);
       setIsCompleteeing(false);
     }
   };
@@ -321,6 +404,28 @@ export default function Main() {
             console.error('Error parsing workflow result:', error);
           }
         }
+        setIsGeneratingAnswer(false);
+      } else if (serverType === "官方服务器" && portRef.current) {
+        // 使用流式响应
+        setAnswer(''); // 清空之前的结果
+        
+        // 通过长连接发送消息
+        portRef.current.postMessage({
+          action: "start_stream_request",
+          type: 'TOPIC_ANSWER',
+          data: {
+            'topic': question, 
+            'discipline': subject, 
+            'image_data': selectedImage, 
+            'topic_type': selectedValue, 
+            'school_level': gradeLevel, 
+            'site': site, 
+            'analysis': analysis
+          },
+          host: host,
+          uname: name
+        });
+        // 不在这里设置 setIsGeneratingAnswer(false)，会在流式响应完成时设置
       } else {
         const response = await chrome.runtime.sendMessage(
           {
@@ -333,8 +438,10 @@ export default function Main() {
         if (response && response.formatted) {
           setAnswer(response.formatted.trim());
         }
+        setIsGeneratingAnswer(false);
       }
-    } finally {
+    } catch (error) {
+      console.error('Error generating answer:', error);
       setIsGeneratingAnswer(false);
     }
   };
@@ -405,6 +512,29 @@ export default function Main() {
             console.error('Error parsing workflow result:', error);
           }
         }
+        setIsGeneratingAnalysis(false);
+      } else if (serverType === "官方服务器" && portRef.current) {
+        // 使用流式响应
+        setAnalysis(''); // 清空之前的结果
+        
+        // 通过长连接发送消息
+        portRef.current.postMessage({
+          action: "start_stream_request",
+          type: 'TOPIC_ANALYSIS',
+          data: {
+            'topic': question, 
+            'answer': answer, 
+            'analysis': analysis, 
+            'discipline': subject, 
+            'image_data': selectedImage, 
+            'topic_type': selectedValue, 
+            'school_level': gradeLevel, 
+            'site': site
+          },
+          host: host,
+          uname: name
+        });
+        // 不在这里设置 setIsGeneratingAnalysis(false)，会在流式响应完成时设置
       } else {
         const response = await chrome.runtime.sendMessage(
           {
@@ -417,8 +547,10 @@ export default function Main() {
         if (response && response.formatted) {
           setAnalysis(response.formatted.trim());
         }
+        setIsGeneratingAnalysis(false);
       }
-    } finally {
+    } catch (error) {
+      console.error('Error generating analysis:', error);
       setIsGeneratingAnalysis(false);
     }
   };

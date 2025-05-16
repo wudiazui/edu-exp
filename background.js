@@ -1,4 +1,4 @@
-import {ocr_text, run_llm, getAuditTaskLabel, format_latex, topic_split, content_review} from "./lib.js";
+import {ocr_text, run_llm, run_llm_stream, getAuditTaskLabel, format_latex, topic_split, content_review} from "./lib.js";
 import { tex2svg } from "./tex2svg.js";
 import { renderMarkdownWithMath } from "./markdown-renderer.js";
 // 使用动态导入，而不是静态导入
@@ -366,6 +366,105 @@ chrome.runtime.onConnect.addListener((port) => {
       if (activeAuditPort === port) {
         activeAuditPort = null;
       }
+    });
+  }
+
+  // 处理解题流式响应长连接
+  if (port.name === 'solving-stream-channel') {
+    console.log('已建立解题流式响应长连接');
+    
+    // 监听从侧边栏发来的消息
+    port.onMessage.addListener((request) => {
+      // 处理流式请求
+      if (request.action === "start_stream_request") {
+        const { type, data, host, uname } = request;
+        
+        if (!data || !host || !uname) {
+          port.postMessage({
+            action: "stream_error",
+            error: "参数不完整，缺少数据或服务器信息"
+          });
+          return;
+        }
+
+        let item;
+        if (type === 'FORMAT_QUESTION') {
+          item = 'topic_format';
+        } else if (type === 'TOPIC_ANSWER') {
+          item = 'topic_answer';
+        } else if (type === 'TOPIC_ANALYSIS') {
+          item = 'topic_analysis';
+        } else if (type === 'TOPIC_COMPLETE') {
+          item = 'topic_complete';
+        } else {
+          port.postMessage({
+            action: "stream_error",
+            error: "未知的请求类型"
+          });
+          return;
+        }
+
+        // 确定消息类型对应的响应action
+        let responseAction;
+        if (type === 'FORMAT_QUESTION') {
+          responseAction = "stream_format_result";
+        } else if (type === 'TOPIC_ANSWER') {
+          responseAction = "stream_answer_result";
+        } else if (type === 'TOPIC_ANALYSIS') {
+          responseAction = "stream_analysis_result";
+        } else if (type === 'TOPIC_COMPLETE') {
+          responseAction = "stream_complete_result";
+        }
+
+        // 调用 run_llm_stream 函数处理请求并获取流式响应
+        const controller = run_llm_stream(
+          host,
+          uname,
+          item,
+          data,
+          // 数据块处理函数
+          (chunk) => {
+            try {
+              // 尝试解析数据，处理可能的JSON格式
+              let processedData;
+              try {
+                const jsonData = JSON.parse(chunk);
+                processedData = jsonData.topic || jsonData.content || jsonData;
+              } catch {
+                // 如果不是有效的JSON，直接使用原始字符串
+                processedData = chunk;
+              }
+              
+              port.postMessage({
+                action: responseAction,
+                data: processedData
+              });
+            } catch (error) {
+              console.error("处理流式数据时出错:", error);
+            }
+          },
+          // 错误处理函数
+          (error) => {
+            console.error("流式请求出错:", error);
+            port.postMessage({
+              action: "stream_error",
+              error: error.message || "未知错误"
+            });
+          },
+          // 完成处理函数
+          () => {
+            port.postMessage({
+              action: "stream_complete",
+              type: type
+            });
+          }
+        );
+      }
+    });
+    
+    // 监听连接断开
+    port.onDisconnect.addListener(() => {
+      console.log('解题流式响应长连接已断开');
     });
   }
 });
