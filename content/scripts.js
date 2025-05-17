@@ -1047,7 +1047,7 @@ ${auditContent.analysis}
     const cascaderValue = printCascaderInputValue();
     
     // 当返回值中包含"数学"二字时才执行设置答案输入框值的函数
-    if (cascaderValue && cascaderValue.includes('数学')) {
+    if (cascaderValue && (cascaderValue.includes('数学') || cascaderValue.includes('化学') || cascaderValue.includes('物理') || cascaderValue.includes('生物'))) {
       setAnswerInputValue();
     }
     

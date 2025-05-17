@@ -10,3 +10,6 @@
 
 - **Windows 如何选中文本**
   <iframe width="100%" height="421" src="//player.bilibili.com/player.html?isOutside=true&aid=114494852433172&bvid=BV1vkEEzGEGa&cid=29925969865&p=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"></iframe>
+
+- **扣子版本,如何更换过期的API密钥**
+  <iframe width="100%" height="421" src="//player.bilibili.com/player.html?isOutside=true&aid=114524262764187&bvid=BV1p3JTzoEjY&cid=30013785484&p=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"></iframe>
