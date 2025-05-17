@@ -177,6 +177,7 @@ const QuestionAnswerForm = ({
         onClear={() => setAnswer('')}
         site={site}
         thinkingChain={answerThinkingChain}
+        gradeLevel={gradeLevel}
       />
       <TextAreaSection
         title={['bc', 'bc-no-cot'].includes(site) ? '思路点拨' : '解析'}
@@ -194,6 +195,7 @@ const QuestionAnswerForm = ({
         onClear={() => setAnalysis('')}
         site={site}
         thinkingChain={analysisThinkingChain}
+        gradeLevel={gradeLevel}
       />
     </>
   );

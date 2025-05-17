@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import CopyButton from './CopyButton.jsx';
 import { marked } from 'marked';
 import { renderMarkdownWithMath } from '../markdown-renderer.js';
+import { removeEmptyLinesFromString } from '../text.js';
 
 // Configure marked options
 marked.setOptions({
@@ -27,6 +28,7 @@ const TextAreaSection = ({
   displayModeHint,
   site,
   thinkingChain = "", // 接收从父组件传递的思维链数据（文本格式）
+  gradeLevel = "小学", // 添加学段属性，默认为"小学"
 }) => {
   const [displayMode, setDisplayMode] = useState(false);
   const [isThinkingExpanded, setIsThinkingExpanded] = useState(true);
@@ -152,7 +154,7 @@ const TextAreaSection = ({
                 if (['bc', 'bc-no-cot'].includes(site) && renderedHtml) {
                   onFill(renderedHtml);
                 } else {
-                  onFill(value);
+                  onFill(removeEmptyLinesFromString(value, gradeLevel === "小学"));
                 }
               }}
               className="btn btn-ghost btn-xs flex items-center"
@@ -226,7 +228,7 @@ const TextAreaSection = ({
         />
       ) : (
         <textarea
-          value={value}
+          value={removeEmptyLinesFromString(value, gradeLevel === "小学")}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           className="textarea textarea-bordered textarea-lg w-full h-full min-h-40 p-4 text-sm"

@@ -57,7 +57,7 @@ const QuestionTypeSelect = ({
   const [selectOptions, setSelectOptions] = useState([]);
   const [disciplines, setDisciplines] = useState([]);
 
-  const gradeLevels = ['小学', '初中', '高中', '大学'];  // 定义支持的学段
+  const gradeLevels = ['小学', '初中', '高中', '大学'];  // 定义支持的学时
 
   useEffect(() => {
     const fetchOptions = async () => {

@@ -171,7 +171,7 @@ const AuditComponent = ({ host, uname, serverType }) => {
           <div className="mb-3 p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-200">
             <h3 className="text-md font-medium mb-3 pb-2 border-b border-gray-200 text-purple-800">审核结果</h3>
             <div className="whitespace-pre-wrap text-sm leading-relaxed mt-2 text-gray-700 overflow-auto">
-              {auditResults}
+              {auditResults.trim()}
             </div>
           </div>
         )}
