@@ -460,7 +460,19 @@ chrome.runtime.onConnect.addListener((port) => {
                 } else {
                   // 其他类型数据（内容）
                   // 确保保留换行符
-                  processedData = jsonData.text || jsonData.topic || jsonData.content || jsonData;
+                  if (jsonData.text !== undefined) {
+                    processedData = jsonData.text;
+                  } else if (jsonData.topic !== undefined) {
+                    processedData = jsonData.topic;
+                  } else if (jsonData.content !== undefined) {
+                    processedData = jsonData.content;
+                  } else if (typeof jsonData === 'object') {
+                    // 避免将整个对象直接转为字符串
+                    console.warn('收到不包含text/topic/content的对象:', jsonData);
+                    return; // 跳过这个数据块
+                  } else {
+                    processedData = jsonData;
+                  }
                 }
               } catch {
                 // 如果不是有效的JSON，直接使用原始字符串

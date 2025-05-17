@@ -48,73 +48,74 @@ export default function Main() {
 
   // 设置与background.js的长连接
   useEffect(() => {
-    // 只在官方服务器模式下创建长连接
-    if (serverType === "官方服务器") {
-      // 创建与background.js的长连接
-      const port = chrome.runtime.connect({ name: 'solving-stream-channel' });
-      portRef.current = port;
+    // 始终创建长连接，不再根据serverType判断
+    console.log('建立流式响应长连接');
+    
+    // 创建与background.js的长连接
+    const port = chrome.runtime.connect({ name: 'solving-stream-channel' });
+    portRef.current = port;
+    console.log('长连接已建立');
 
-      // 处理从background.js接收的消息
-      port.onMessage.addListener((message) => {
-        if (message.action === "stream_format_result" && message.data) {
-          // 题干整理不处理思维链内容，直接追加数据
-          if (message.dataType !== "reasoning") {
-            // 保留数据中的换行符
-            setQuestion(prev => prev + message.data);
-          }
-        } else if (message.action === "stream_complete_result" && message.data) {
-          // 残题补全不处理思维链内容，直接追加数据
-          if (message.dataType !== "reasoning") {
-            // 保留数据中的换行符
-            setQuestion(prev => prev + message.data);
-          }
-        } else if (message.action === "stream_answer_result" && message.data) {
-          if (message.dataType === "reasoning") {
-            // 思维链数据 - 保留换行符
-            setAnswerThinkingChain(prev => prev + message.data);
-          } else {
-            // 常规内容数据 - 保留换行符
-            setAnswer(prev => prev + message.data);
-          }
-        } else if (message.action === "stream_analysis_result" && message.data) {
-          if (message.dataType === "reasoning") {
-            // 思维链数据 - 保留换行符
-            setAnalysisThinkingChain(prev => prev + message.data);
-          } else {
-            // 常规内容数据 - 保留换行符
-            setAnalysis(prev => prev + message.data);
-          }
-        } else if (message.action === "stream_error") {
-          console.error('流式响应错误:', message.error);
-        } else if (message.action === "stream_complete") {
-          // 处理流式响应完成
-          if (message.type === 'FORMAT_QUESTION') {
-            setIsFormatting(false);
-          } else if (message.type === 'TOPIC_COMPLETE') {
-            setIsCompleteeing(false);
-          } else if (message.type === 'TOPIC_ANSWER') {
-            setIsGeneratingAnswer(false);
-          } else if (message.type === 'TOPIC_ANALYSIS') {
-            setIsGeneratingAnalysis(false);
-          }
+    // 处理从background.js接收的消息
+    port.onMessage.addListener((message) => {
+      if (message.action === "stream_format_result" && message.data) {
+        // 题干整理不处理思维链内容，直接追加数据
+        if (message.dataType !== "reasoning") {
+          // 保留数据中的换行符
+          setQuestion(prev => prev + message.data);
         }
-      });
+      } else if (message.action === "stream_complete_result" && message.data) {
+        // 残题补全不处理思维链内容，直接追加数据
+        if (message.dataType !== "reasoning") {
+          // 保留数据中的换行符
+          setQuestion(prev => prev + message.data);
+        }
+      } else if (message.action === "stream_answer_result" && message.data) {
+        if (message.dataType === "reasoning") {
+          // 思维链数据 - 保留换行符
+          setAnswerThinkingChain(prev => prev + message.data);
+        } else {
+          // 常规内容数据 - 保留换行符
+          setAnswer(prev => prev + message.data);
+        }
+      } else if (message.action === "stream_analysis_result" && message.data) {
+        if (message.dataType === "reasoning") {
+          // 思维链数据 - 保留换行符
+          setAnalysisThinkingChain(prev => prev + message.data);
+        } else {
+          // 常规内容数据 - 保留换行符
+          setAnalysis(prev => prev + message.data);
+        }
+      } else if (message.action === "stream_error") {
+        console.error('流式响应错误:', message.error);
+      } else if (message.action === "stream_complete") {
+        // 处理流式响应完成
+        if (message.type === 'FORMAT_QUESTION') {
+          setIsFormatting(false);
+        } else if (message.type === 'TOPIC_COMPLETE') {
+          setIsCompleteeing(false);
+        } else if (message.type === 'TOPIC_ANSWER') {
+          setIsGeneratingAnswer(false);
+        } else if (message.type === 'TOPIC_ANALYSIS') {
+          setIsGeneratingAnalysis(false);
+        }
+      }
+    });
 
-      // 处理连接断开
-      port.onDisconnect.addListener(() => {
-        console.log('与background的连接已断开');
-        portRef.current = null;
-      });
-    }
+    // 处理连接断开
+    port.onDisconnect.addListener(() => {
+      console.log('与background的连接已断开');
+      portRef.current = null;
+    });
 
-    // 组件卸载或serverType变化时断开连接
+    // 组件卸载时断开连接
     return () => {
       if (portRef.current) {
         portRef.current.disconnect();
         portRef.current = null;
       }
     };
-  }, [serverType]);
+  }, []); // 移除serverType依赖，确保只在组件挂载时创建连接
 
   // Load feature settings from Chrome storage on component mount
   useEffect(() => {
@@ -240,7 +241,7 @@ export default function Main() {
     setIsFormatting(true);
     try {
       if (serverType === "扣子" && cozeService) {
-        // Get workflow ID from storage
+        // 扣子服务器处理逻辑保持不变
         const result = await new Promise((resolve) => {
           chrome.storage.sync.get(['kouziSolveWorkflowId', 'kouziAppId'], resolve);
         });
@@ -269,9 +270,17 @@ export default function Main() {
             console.error('Error parsing workflow result:', error);
           }
         }
-      } else if (serverType === "官方服务器" && portRef.current) {
-        // 使用流式响应
+        setIsFormatting(false);
+      } else {
+        // 其他情况一律使用流式响应
+        console.log('使用流式响应处理题干整理');
         setQuestion(''); // 清空之前的结果
+        
+        if (!portRef.current) {
+          console.error('长连接未建立，重新建立连接');
+          const port = chrome.runtime.connect({ name: 'solving-stream-channel' });
+          portRef.current = port;
+        }
         
         // 通过长连接发送消息
         portRef.current.postMessage({
@@ -282,14 +291,6 @@ export default function Main() {
           uname: name
         });
         // 不在这里设置 setIsFormatting(false)，会在流式响应完成时设置
-      } else {
-        const response = await chrome.runtime.sendMessage(
-          { type: 'FORMAT_QUESTION', data: {'topic': question, 'discipline': subject}, host: host, uname: name }
-        );
-        if (response && response.formatted) {
-          setQuestion(response.formatted);
-        }
-        setIsFormatting(false);
       }
     } catch (error) {
       console.error('Error formatting question:', error);
@@ -301,7 +302,7 @@ export default function Main() {
     setIsCompleteeing(true);
     try {
       if (serverType === "扣子" && cozeService) {
-        // Get workflow ID from storage
+        // 扣子服务器处理逻辑保持不变
         const result = await new Promise((resolve) => {
           chrome.storage.sync.get(['kouziSolveWorkflowId', 'kouziAppId'], resolve);
         });
@@ -331,9 +332,16 @@ export default function Main() {
           }
         }
         setIsCompleteeing(false);
-      } else if (serverType === "官方服务器" && portRef.current) {
-        // 使用流式响应
+      } else {
+        // 其他情况一律使用流式响应
+        console.log('使用流式响应处理残题补全');
         setQuestion(''); // 清空之前的结果
+        
+        if (!portRef.current) {
+          console.error('长连接未建立，重新建立连接');
+          const port = chrome.runtime.connect({ name: 'solving-stream-channel' });
+          portRef.current = port;
+        }
         
         // 通过长连接发送消息
         portRef.current.postMessage({
@@ -344,14 +352,6 @@ export default function Main() {
           uname: name
         });
         // 不在这里设置 setIsCompleteeing(false)，会在流式响应完成时设置
-      } else {
-        const response = await chrome.runtime.sendMessage(
-          { type: 'TOPIC_COMPLETE', data: {'topic': question, 'discipline': subject}, host: host, uname: name }
-        );
-        if (response && response.formatted) {
-          setQuestion(response.formatted);
-        }
-        setIsCompleteeing(false);
       }
     } catch (error) {
       console.error('Error completing topic:', error);
@@ -369,8 +369,13 @@ export default function Main() {
 
   const handleGenerateAnswer = async () => {
     setIsGeneratingAnswer(true);
+    // 添加诊断日志
+    console.log('生成解答时的服务器类型:', serverType);
+    console.log('长连接状态:', portRef.current ? '已连接' : '未连接');
+    
     try {
       if (serverType === "扣子" && cozeService && kouziConfig) {
+        // 扣子服务器处理逻辑保持不变
         let imageFileId = null;
         if (selectedImage) {
           // Convert base64 to blob
@@ -427,10 +432,17 @@ export default function Main() {
           }
         }
         setIsGeneratingAnswer(false);
-      } else if (serverType === "官方服务器" && portRef.current) {
-        // 使用流式响应
+      } else {
+        // 其他情况一律使用流式响应
+        console.log('使用流式响应生成解答');
         setAnswer(''); // 清空之前的结果
         setAnswerThinkingChain(''); // 清空思维链数据
+        
+        if (!portRef.current) {
+          console.error('长连接未建立，重新建立连接');
+          const port = chrome.runtime.connect({ name: 'solving-stream-channel' });
+          portRef.current = port;
+        }
         
         // 通过长连接发送消息
         portRef.current.postMessage({
@@ -449,19 +461,6 @@ export default function Main() {
           uname: name
         });
         // 不在这里设置 setIsGeneratingAnswer(false)，会在流式响应完成时设置
-      } else {
-        const response = await chrome.runtime.sendMessage(
-          {
-            type: 'TOPIC_ANSWER',
-            host: host,
-            uname: name,
-            data: {'topic': question, 'discipline': subject, 'image_data': selectedImage, 'topic_type': selectedValue, 'school_level': gradeLevel, 'site': site, 'analysis': analysis }
-          }
-        );
-        if (response && response.formatted) {
-          setAnswer(response.formatted.trim());
-        }
-        setIsGeneratingAnswer(false);
       }
     } catch (error) {
       console.error('Error generating answer:', error);
@@ -473,7 +472,7 @@ export default function Main() {
     setIsGeneratingAnalysis(true);
     try {
       if (serverType === "扣子" && cozeService) {
-        // Get workflow ID from storage
+        // 扣子服务器处理逻辑保持不变
         const result = await new Promise((resolve) => {
           chrome.storage.sync.get(['kouziSolveWorkflowId', 'kouziAppId'], resolve);
         });
@@ -536,10 +535,17 @@ export default function Main() {
           }
         }
         setIsGeneratingAnalysis(false);
-      } else if (serverType === "官方服务器" && portRef.current) {
-        // 使用流式响应
+      } else {
+        // 其他情况一律使用流式响应
+        console.log('使用流式响应生成解析');
         setAnalysis(''); // 清空之前的结果
         setAnalysisThinkingChain(''); // 清空思维链数据
+        
+        if (!portRef.current) {
+          console.error('长连接未建立，重新建立连接');
+          const port = chrome.runtime.connect({ name: 'solving-stream-channel' });
+          portRef.current = port;
+        }
         
         // 通过长连接发送消息
         portRef.current.postMessage({
@@ -559,19 +565,6 @@ export default function Main() {
           uname: name
         });
         // 不在这里设置 setIsGeneratingAnalysis(false)，会在流式响应完成时设置
-      } else {
-        const response = await chrome.runtime.sendMessage(
-          {
-            type: 'TOPIC_ANALYSIS',
-            host: host,
-            uname: name,
-            data: {'topic': question, 'answer': answer, 'analysis': analysis, 'discipline': subject, 'image_data': selectedImage, 'topic_type': selectedValue, 'school_level': gradeLevel, 'site': site}
-          }
-        );
-        if (response && response.formatted) {
-          setAnalysis(response.formatted.trim());
-        }
-        setIsGeneratingAnalysis(false);
       }
     } catch (error) {
       console.error('Error generating analysis:', error);

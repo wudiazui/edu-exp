@@ -54,7 +54,7 @@ const AuditComponent = ({ host, uname, serverType }) => {
               }
             } catch {
               // 无法解析为JSON，作为普通文本处理 - 保留换行符
-              setAuditResults(prev => prev + data);
+            setAuditResults(prev => prev + data);
             }
           }
         } catch (e) {
