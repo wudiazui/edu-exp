@@ -2,6 +2,7 @@ import React from 'react';
 import CopyButton from './CopyButton.jsx';
 import { CozeService } from '../coze.js';
 import { topic_split } from '../lib.js';
+import ImageUploader from './ImageUploader.jsx';
 
 // 图片压缩和转换函数
 async function compressAndConvertToBase64(blob, quality = 0.7, maxWidth = 1200) {
@@ -46,7 +47,6 @@ const TopicSplitComponent = ({ host, uname, serverType }) => {
   const [splitResult, setSplitResult] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
   const [cozeService, setCozeService] = React.useState(null);
-  const [imagePreviewSize, setImagePreviewSize] = React.useState({ width: 300, height: 'auto' });
   const [appendMode, setAppendMode] = React.useState(true); // 默认为追加模式
 
   // Initialize CozeService when serverType is "扣子"
@@ -77,26 +77,6 @@ const TopicSplitComponent = ({ host, uname, serverType }) => {
         
         // 直接设置图片数据
         setSelectedImage(message.data);
-        
-        // 创建图像对象获取尺寸信息
-        const img = new Image();
-        img.onload = () => {
-          console.log('Received image original dimensions:', img.width, 'x', img.height, 'pixels');
-          
-          // 计算预览尺寸
-          const maxWidth = 300;
-          const ratio = img.width > maxWidth ? maxWidth / img.width : 1;
-          const previewWidth = Math.floor(img.width * ratio);
-          const previewHeight = Math.floor(img.height * ratio);
-          
-          console.log('Received image preview dimensions:', previewWidth, 'x', previewHeight, 'pixels');
-          
-          setImagePreviewSize({
-            width: previewWidth,
-            height: previewHeight
-          });
-        };
-        img.src = message.data;
       }
     };
     
@@ -108,84 +88,6 @@ const TopicSplitComponent = ({ host, uname, serverType }) => {
       chrome.runtime.onMessage.removeListener(messageListener);
     };
   }, []);
-
-
-
-  const onPaste = (event) => {
-    const items = event.clipboardData?.items;
-    if (!items) return;
-    
-    for (let i = 0; i < items.length; i++) {
-      if (items[i].type.startsWith('image/')) {
-        const file = items[i].getAsFile();
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          // 记录粘贴的图片数据大小
-          console.log('Pasted image data size:', reader.result.length, 'bytes');
-          console.log('Pasted image type:', reader.result.substring(0, reader.result.indexOf(';')));
-          
-          setSelectedImage(reader.result);
-          // Create an image to get dimensions
-          const img = new Image();
-          img.onload = () => {
-            // Calculate appropriate preview size (max width 300px)
-            const maxWidth = 300;
-            const ratio = img.width > maxWidth ? maxWidth / img.width : 1;
-            const previewWidth = Math.floor(img.width * ratio);
-            const previewHeight = Math.floor(img.height * ratio);
-            
-            // 记录图片原始尺寸和预览尺寸
-            console.log('Pasted image original dimensions:', img.width, 'x', img.height, 'pixels');
-            console.log('Pasted image preview dimensions:', previewWidth, 'x', previewHeight, 'pixels');
-            
-            setImagePreviewSize({
-              width: previewWidth,
-              height: previewHeight
-            });
-          };
-          img.src = reader.result;
-        };
-        reader.readAsDataURL(file);
-        event.preventDefault();
-        break;
-      }
-    }
-  };
-  
-  // Handle file input change
-  const handleFileInputChange = (event) => {
-    const file = event.target.files[0];
-    if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        // 记录上传的图片数据大小
-        console.log('Uploaded image data size:', reader.result.length, 'bytes');
-        console.log('Uploaded image type:', reader.result.substring(0, reader.result.indexOf(';')));
-        
-        setSelectedImage(reader.result);
-        // Create an image to get dimensions
-        const img = new Image();
-        img.onload = () => {
-          // Calculate appropriate preview size (max width 300px)
-          const maxWidth = 300;
-          const ratio = img.width > maxWidth ? maxWidth / img.width : 1;
-          const previewWidth = Math.floor(img.width * ratio);
-          const previewHeight = Math.floor(img.height * ratio);
-          
-          // 记录图片原始尺寸和预览尺寸
-          console.log('Uploaded image original dimensions:', img.width, 'x', img.height, 'pixels');
-          console.log('Uploaded image preview dimensions:', previewWidth, 'x', previewHeight, 'pixels');
-          
-          setImagePreviewSize({
-            width: previewWidth,
-            height: previewHeight
-          });
-        };
-        img.src = reader.result;
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
   const handleSplitTopic = async () => {
     if (selectedImage) {
@@ -344,51 +246,17 @@ const TopicSplitComponent = ({ host, uname, serverType }) => {
     }
   };
 
-
-
   return (
     <div className="container max-auto w-full">
       <div className="flex flex-col gap-2">
-        <div
-          className="border-2 border-dashed border-gray-300 rounded-lg p-3 text-center"
-          onPaste={onPaste}
-          tabIndex="0"
-        >
-          <input
-            type="text"
-            className="input input-bordered input-sm w-full mb-2"
-            placeholder="可以直接粘贴图片"
-            onPaste={onPaste}
-          />
-          {selectedImage ? (
-            <div className="flex flex-col items-center">
-              <img
-                src={selectedImage}
-                alt="Selected"
-                style={{
-                  width: `${imagePreviewSize.width}px`,
-                  height: imagePreviewSize.height === 'auto' ? 'auto' : `${imagePreviewSize.height}px`,
-                  maxHeight: '180px',
-                  objectFit: 'contain'
-                }}
-              />
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedImage(null);
-                }}
-                className="btn btn-xs btn-error mt-2 text-xs"
-              >
-                删除图片
-              </button>
-            </div>
-          ) : (
-            <div className="text-gray-500 py-3">
-              <p>直接粘贴图片</p>
-              <p className="text-xs mt-1">支持截图直接粘贴</p>
-            </div>
-          )}
-        </div>
+        <ImageUploader 
+          selectedImage={selectedImage}
+          setSelectedImage={setSelectedImage}
+          placeholder="可以直接粘贴图片"
+          showDeleteButton={true}
+          maxPreviewWidth={300}
+          maxPreviewHeight={180}
+        />
         <button
           onClick={handleSplitTopic}
           disabled={!selectedImage || isLoading}

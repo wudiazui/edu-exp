@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import CopyButton from './CopyButton.jsx'; // 确保引入 CopyButton 组件
 import Select from './QuestionTypeSelect.jsx'; // 确保引入 Select 组件
 import TextAreaSection from './TextAreaSection.jsx';
+import ImageUploader from './ImageUploader.jsx'; // 引入新的ImageUploader组件
 
 const QuestionAnswerForm = ({
   question = "",
@@ -53,20 +54,6 @@ const QuestionAnswerForm = ({
     chrome.storage.sync.set({ autoRenderFormula: checked });
   };
 
-  const onPaste = (event) => {
-    const items = event.clipboardData.items;
-    for (let i = 0; i < items.length; i++) {
-      if (items[i].type.startsWith('image/')) {
-        const file = items[i].getAsFile();
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setSelectedImage(reader.result);
-        };
-        reader.readAsDataURL(file);
-      }
-    }
-  };
-
   return (
     <>
       <div className="w-full mt-2">
@@ -98,17 +85,13 @@ const QuestionAnswerForm = ({
           className="textarea textarea-bordered textarea-lg w-full h-full min-h-40 text-sm"
         ></textarea>
         {isImageQuestion && (
-          <div className="form-control w-full">
-            <div className="w-full">
-              <input type="text" onPaste={onPaste} placeholder="粘贴图片" className="input input-sm input-bordered w-full" />
-            </div>
-            <div className="w-full mt-2 p-2 rounded-lg border">
-              {selectedImage ? (
-                <img src={selectedImage} alt="Selected" className="img object-cover" />
-              ) : (
-                <div className="skeleton w-full h-24"></div>
-              )}
-            </div>
+          <div className="form-control w-full mt-2">
+            <ImageUploader
+              selectedImage={selectedImage}
+              setSelectedImage={setSelectedImage}
+              placeholder="粘贴图片"
+              showDeleteButton={true}
+            />
           </div>
         )}
       </div>

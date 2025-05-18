@@ -1,15 +1,14 @@
 import React from 'react';
-import { useDropzone } from 'react-dropzone';
 import CopyButton from './CopyButton.jsx';
 import { CozeService } from '../coze.js';
 import { ocr_text } from '../lib.js'; // 导入ocr_text函数
+import ImageUploader from './ImageUploader.jsx'; // 引入新的ImageUploader组件
 
 const OcrComponent = ({ host, uname, serverType }) => {
   const [selectedImage, setSelectedImage] = React.useState(null);
   const [recognizedText, setRecognizedText] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
   const [cozeService, setCozeService] = React.useState(null);
-  const [imagePreviewSize, setImagePreviewSize] = React.useState({ width: 300, height: 'auto' });
 
   // Initialize CozeService when serverType is "扣子"
   React.useEffect(() => {
@@ -21,83 +20,6 @@ const OcrComponent = ({ host, uname, serverType }) => {
       });
     }
   }, [serverType]);
-
-  const onDrop = (acceptedFiles) => {
-    const file = acceptedFiles[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setSelectedImage(reader.result);
-        // Create an image to get dimensions
-        const img = new Image();
-        img.onload = () => {
-          // Calculate appropriate preview size (max width 300px)
-          const maxWidth = 300;
-          const ratio = img.width > maxWidth ? maxWidth / img.width : 1;
-          setImagePreviewSize({
-            width: Math.floor(img.width * ratio),
-            height: Math.floor(img.height * ratio)
-          });
-        };
-        img.src = reader.result;
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const onPaste = (event) => {
-    const items = event.clipboardData?.items;
-    if (!items) return;
-    
-    for (let i = 0; i < items.length; i++) {
-      if (items[i].type.startsWith('image/')) {
-        const file = items[i].getAsFile();
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setSelectedImage(reader.result);
-          // Create an image to get dimensions
-          const img = new Image();
-          img.onload = () => {
-            // Calculate appropriate preview size (max width 300px)
-            const maxWidth = 300;
-            const ratio = img.width > maxWidth ? maxWidth / img.width : 1;
-            setImagePreviewSize({
-              width: Math.floor(img.width * ratio),
-              height: Math.floor(img.height * ratio)
-            });
-          };
-          img.src = reader.result;
-        };
-        reader.readAsDataURL(file);
-        event.preventDefault();
-        break;
-      }
-    }
-  };
-  
-  // Handle file input change
-  const handleFileInputChange = (event) => {
-    const file = event.target.files[0];
-    if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setSelectedImage(reader.result);
-        // Create an image to get dimensions
-        const img = new Image();
-        img.onload = () => {
-          // Calculate appropriate preview size (max width 300px)
-          const maxWidth = 300;
-          const ratio = img.width > maxWidth ? maxWidth / img.width : 1;
-          setImagePreviewSize({
-            width: Math.floor(img.width * ratio),
-            height: Math.floor(img.height * ratio)
-          });
-        };
-        img.src = reader.result;
-      };
-      reader.readAsDataURL(file);
-    }
-  };
 
   const handleRecognition = async () => {
     if (selectedImage) {
@@ -177,51 +99,17 @@ const OcrComponent = ({ host, uname, serverType }) => {
     }
   };
 
-  const { getRootProps, getInputProps } = useDropzone({ onDrop });
-
   return (
     <div className="container max-auto w-full">
       <div className="flex flex-col gap-2">
-        <div
-          className="border-2 border-dashed border-gray-300 rounded-lg p-3 text-center"
-          onPaste={onPaste}
-          tabIndex="0"
-        >
-          <input
-            type="text"
-            className="input input-bordered input-sm w-full mb-2"
-            placeholder="可以直接粘贴图片"
-            onPaste={onPaste}
-          />
-          {selectedImage ? (
-            <div className="flex flex-col items-center">
-              <img
-                src={selectedImage}
-                alt="Selected"
-                style={{
-                  width: `${imagePreviewSize.width}px`,
-                  height: imagePreviewSize.height === 'auto' ? 'auto' : `${imagePreviewSize.height}px`,
-                  maxHeight: '180px',
-                  objectFit: 'contain'
-                }}
-              />
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedImage(null);
-                }}
-                className="btn btn-xs btn-error mt-2 text-xs"
-              >
-                删除图片
-              </button>
-            </div>
-          ) : (
-            <div className="text-gray-500 py-3">
-              <p>直接粘贴图片</p>
-              <p className="text-xs mt-1">支持截图直接粘贴</p>
-            </div>
-          )}
-        </div>
+        <ImageUploader
+          selectedImage={selectedImage}
+          setSelectedImage={setSelectedImage}
+          placeholder="可以直接粘贴图片"
+          showDeleteButton={true}
+          maxPreviewWidth={300}
+          maxPreviewHeight={180}
+        />
         <button
           onClick={handleRecognition}
           disabled={!selectedImage || isLoading}
@@ -248,7 +136,7 @@ const OcrComponent = ({ host, uname, serverType }) => {
                   text: recognizedText
                 });
               }}
-              className="btn btn-ghost btn-xs btn-sm flex items-center text-xs"
+              className="btn btn-xs btn-outline flex items-center gap-1"
             >
               填入
             </button>
@@ -258,10 +146,9 @@ const OcrComponent = ({ host, uname, serverType }) => {
         <textarea
           value={recognizedText}
           onChange={(e) => setRecognizedText(e.target.value)}
-          placeholder="识别后的文字内容"
-          className="textarea textarea-bordered textarea-md w-full h-full min-h-32"
-        >
-        </textarea>
+          placeholder="识别结果将显示在这里"
+          className="textarea textarea-bordered w-full min-h-32 text-sm"
+        ></textarea>
       </div>
     </div>
   );
