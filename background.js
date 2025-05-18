@@ -1,4 +1,4 @@
-import {ocr_text, run_llm, run_llm_stream, getAuditTaskLabel, format_latex, topic_split, content_review} from "./lib.js";
+import {getAuditTaskLabelformat_latex, format_latex} from "./lib.js";
 import { tex2svg } from "./tex2svg.js";
 import { renderMarkdownWithMath } from "./markdown-renderer.js";
 // 使用动态导入，而不是静态导入
@@ -298,79 +298,6 @@ chrome.runtime.onConnect.addListener((port) => {
           }
         });
       }
-      
-      // 处理内容审核请求
-      if (request.action === "start_content_review") {
-        const { text, host, uname } = request;
-        
-        // 向侧边栏发送加载开始状态
-        port.postMessage({
-          action: "audit_loading_state",
-          isLoading: true
-        });
-        
-        if (!text || !host || !uname) {
-          port.postMessage({
-            action: "content_review_error",
-            error: "参数不完整，缺少文本内容或服务器信息"
-          });
-          return;
-        }
-
-        // 调用 content_review 函数处理内容并获取流式响应
-        const controller = content_review(
-          text,
-          host,
-          uname,
-          // 消息处理器 - 将接收到的每个数据块转发给侧边栏
-          (eventData) => {
-            try {
-              // 检查是否是结束标志 [DONE]
-              if (eventData === "[DONE]") {
-                console.log("收到审核流结束标志 [DONE]");
-                return; // 不处理这个数据块，直接返回
-              }
-              
-              let data;
-              let dataType = "content"; // 默认类型
-              
-              try {
-                data = JSON.parse(eventData);
-                
-                if (data.type === "reasoning") {
-                  // 如果是思维链数据
-                  dataType = "reasoning";
-                }
-              } catch {
-                data = eventData;
-              }
-              
-              port.postMessage({
-                action: "content_review_message",
-                data: data,
-                dataType: dataType
-              });
-            } catch (error) {
-              console.error("处理审核数据时出错:", error);
-            }
-          },
-          // 错误处理器
-          (error) => {
-            console.error("内容审核出错:", error);
-            port.postMessage({
-              action: "content_review_error",
-              error: error.message || "未知错误"
-            });
-          },
-          // 完成处理器
-          () => {
-            port.postMessage({
-              action: "content_review_complete",
-              isLoading: false
-            });
-          }
-        );
-      }
     });
     
     // 监听连接断开
@@ -380,136 +307,6 @@ chrome.runtime.onConnect.addListener((port) => {
       if (activeAuditPort === port) {
         activeAuditPort = null;
       }
-    });
-  }
-
-  // 处理解题流式响应长连接
-  if (port.name === 'solving-stream-channel') {
-    console.log('已建立解题流式响应长连接');
-    
-    // 监听从侧边栏发来的消息
-    port.onMessage.addListener((request) => {
-      // 处理流式请求
-      if (request.action === "start_stream_request") {
-        const { type, data, host, uname } = request;
-        
-        if (!data || !host || !uname) {
-          port.postMessage({
-            action: "stream_error",
-            error: "参数不完整，缺少数据或服务器信息"
-          });
-          return;
-        }
-
-        let item;
-        if (type === 'FORMAT_QUESTION') {
-          item = 'topic_format';
-        } else if (type === 'TOPIC_ANSWER') {
-          item = 'topic_answer';
-        } else if (type === 'TOPIC_ANALYSIS') {
-          item = 'topic_analysis';
-        } else if (type === 'TOPIC_COMPLETE') {
-          item = 'topic_complete';
-        } else {
-          port.postMessage({
-            action: "stream_error",
-            error: "未知的请求类型"
-          });
-          return;
-        }
-
-        // 确定消息类型对应的响应action
-        let responseAction;
-        if (type === 'FORMAT_QUESTION') {
-          responseAction = "stream_format_result";
-        } else if (type === 'TOPIC_ANSWER') {
-          responseAction = "stream_answer_result";
-        } else if (type === 'TOPIC_ANALYSIS') {
-          responseAction = "stream_analysis_result";
-        } else if (type === 'TOPIC_COMPLETE') {
-          responseAction = "stream_complete_result";
-        }
-
-        // 调用 run_llm_stream 函数处理请求并获取流式响应
-        const controller = run_llm_stream(
-          host,
-          uname,
-          item,
-          data,
-          // 数据块处理函数
-          (chunk) => {
-            try {
-              // 检查是否是结束标志 [DONE]
-              if (chunk === "[DONE]") {
-                console.log("收到流结束标志 [DONE]");
-                return; // 不处理这个数据块，直接返回
-              }
-              
-              // 尝试解析数据，处理可能的JSON格式
-              let processedData;
-              let dataType = "content"; // 默认类型
-              
-              try {
-                const jsonData = JSON.parse(chunk);
-                
-                if (jsonData.type === "reasoning") {
-                  // 如果是思维链数据
-                  dataType = "reasoning";
-                  // 确保保留换行符
-                  processedData = jsonData.text || "";
-                } else {
-                  // 其他类型数据（内容）
-                  // 确保保留换行符
-                  if (jsonData.text !== undefined) {
-                    processedData = jsonData.text;
-                  } else if (jsonData.topic !== undefined) {
-                    processedData = jsonData.topic;
-                  } else if (jsonData.content !== undefined) {
-                    processedData = jsonData.content;
-                  } else if (typeof jsonData === 'object') {
-                    // 避免将整个对象直接转为字符串
-                    console.warn('收到不包含text/topic/content的对象:', jsonData);
-                    return; // 跳过这个数据块
-                  } else {
-                    processedData = jsonData;
-                  }
-                }
-              } catch {
-                // 如果不是有效的JSON，直接使用原始字符串
-                processedData = chunk;
-              }
-              
-              port.postMessage({
-                action: responseAction,
-                data: processedData,
-                dataType: dataType
-              });
-            } catch (error) {
-              console.error("处理流式数据时出错:", error);
-            }
-          },
-          // 错误处理函数
-          (error) => {
-            console.error("流式请求出错:", error);
-            port.postMessage({
-              action: "stream_error",
-              error: error.message || "未知错误"
-            });
-          },
-          // 完成处理函数
-          () => {
-            port.postMessage({
-              action: "stream_complete",
-              type: type
-            });
-          }
-        );
-      }
-    });
-    
-    // 监听连接断开
-    port.onDisconnect.addListener(() => {
-      console.log('解题流式响应长连接已断开');
     });
   }
 });
@@ -584,9 +381,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         type: 'TOPIC_SPLIT_IMAGE',
         data: request.data.image_data
       });
-    } else {
-      // 如果是文本数据，使用原有的topic_split处理
-      formatMessage('TOPIC_SPLIT', request.data, request.host, request.uname);
     }
   }
 
@@ -612,30 +406,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   // 处理format_latex消息
   if (request.action === "format_latex") {
-    (async () => {
-      try {
-        // 从storage获取服务器配置
-        const { host, name } = await new Promise(resolve => {
-          chrome.storage.sync.get(['host', 'name'], resolve);
-        });
-
-        if (!host || !name) {
-          throw new Error('未找到服务器配置');
-        }
-
-        // 调用format_latex函数处理文本
-        const formatted = await format_latex(host, name, request.text);
-        
-        if (formatted) {
-          sendResponse({ formatted });
-        } else {
-          throw new Error('格式化失败');
-        }
-      } catch (error) {
-        console.error('Error formatting LaTeX:', error);
-        sendResponse({ error: error.message || '未知错误' });
+    // 转发请求到sidebar处理
+    chrome.runtime.sendMessage({
+      type: 'FORMAT_LATEX_REQUEST',
+      text: request.text
+    }, response => {
+      // 将sidebar的响应转发回content script
+      if (response && response.success) {
+        sendResponse({ formatted: response.formatted });
+      } else {
+        sendResponse({ error: response.error || '处理失败' });
       }
-    })();
+    });
     return true; // 保持消息通道开放以等待异步响应
   }
 
@@ -735,33 +517,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
-  const formatMessage = async (type, data, host, uname) => {
-    try {
-      let formatted;
-      if (type === 'FORMAT_QUESTION') {
-        formatted = await run_llm(host, uname, 'topic_format', data);
-      } else if (type === 'TOPIC_ANSWER') {
-        formatted = await run_llm(host, uname, 'topic_answer', data);
-      } else if (type === 'TOPIC_ANALYSIS') {
-        formatted = await run_llm(host, uname, 'topic_analysis', data)
-      } else if (type === 'TOPIC_COMPLETE') {
-        formatted = await run_llm(host, uname, 'topic_complete', data)
-      } else if (type === 'OCR') {
-        formatted = await ocr_text(data, host, uname);
-      } else if (type === 'TOPIC_SPLIT') {
-        formatted = await topic_split(data, host, uname);
-      }
-      sendResponse({ formatted });
-    } catch (error) {
-      sendResponse({ error: error.message });
-    }
-  };
-
-  if (['FORMAT_QUESTION', 'TOPIC_ANSWER', 'TOPIC_ANALYSIS', 'TOPIC_COMPLETE', 'OCR', 'TOPIC_SPLIT'].includes(request.type)) {
-    formatMessage(request.type, request.data, request.host, request.uname);
-    return true; // 保持消息通道开放以等待异步响应
-  }
-
   // 添加消息监听器处理快捷键更新
   if (request.type === 'UPDATE_SHORTCUTS') {
     // 向所有标签页转发快捷键更新消息
@@ -846,76 +601,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       action: "extracted_content",
       content: request.content
     });
-    return true;
-  }
-
-  // 处理内容审核请求
-  if (request.action === "start_content_review") {
-    const { text, host, uname } = request;
-    
-    if (!text || !host || !uname) {
-      chrome.runtime.sendMessage({
-        action: "content_review_error",
-        error: "参数不完整，缺少文本内容或服务器信息"
-      });
-      return true;
-    }
-
-    // 调用 content_review 函数处理内容并获取流式响应
-    const controller = content_review(
-      text,
-      host,
-      uname,
-      // 消息处理器 - 将接收到的每个数据块转发给扩展UI
-      (eventData) => {
-        try {
-          // 检查是否是结束标志 [DONE]
-          if (eventData === "[DONE]") {
-            console.log("收到审核流结束标志 [DONE]");
-            return; // 不处理这个数据块，直接返回
-          }
-          
-          let data;
-          let dataType = "content"; // 默认类型
-          
-          try {
-            data = JSON.parse(eventData);
-            
-            if (data.type === "reasoning") {
-              // 如果是思维链数据
-              dataType = "reasoning";
-            }
-          } catch {
-            data = eventData;
-          }
-          
-          chrome.runtime.sendMessage({
-            action: "content_review_message",
-            data: data,
-            dataType: dataType
-          });
-        } catch (error) {
-          console.error("处理审核数据时出错:", error);
-        }
-      },
-      // 错误处理器
-      (error) => {
-        console.error("内容审核出错:", error);
-        chrome.runtime.sendMessage({
-          action: "content_review_error",
-          error: error.message || "未知错误"
-        });
-      },
-      // 完成处理器
-      () => {
-        chrome.runtime.sendMessage({
-          action: "content_review_complete"
-        });
-      }
-    );
-    
-    // 储存控制器，以便在需要时可以中止请求
-    // 注意：由于background脚本的生命周期，并不需要特意管理中止逻辑
     return true;
   }
 

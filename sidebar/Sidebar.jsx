@@ -47,6 +47,16 @@ export default function Main() {
   const [site, setSite] = useState("");
   // 添加长连接引用
   const portRef = useRef(null);
+  
+  // 添加LaTeX格式化请求的节流控制
+  const latexRequestRef = useRef({
+    lastRequestTime: 0,
+    pendingRequests: new Map(),
+    isProcessing: false,
+    throttleTime: 3000, // 3秒节流时间
+    requestQueue: [], // 请求队列
+    requestHash: new Set() // 用于快速检查重复请求
+  });
 
   // 设置与background.js的长连接
   useEffect(() => {
@@ -214,6 +224,76 @@ export default function Main() {
           setIsImageQuestion(false);
           setSelectedImage(null);
         }
+      } else if (message.type === 'FORMAT_LATEX_REQUEST') {
+        // 获取当前时间和请求文本的哈希
+        const now = Date.now();
+        const requestText = message.text || '';
+        const requestHash = `latex-${requestText.substring(0, 50)}`; // 使用文本前50个字符作为请求哈希
+        const throttleData = latexRequestRef.current;
+        
+        // 检查是否存在完全相同的请求正在处理中
+        if (throttleData.requestHash.has(requestHash)) {
+          return true;
+        }
+        
+        // 检查是否在节流时间内
+        if (now - throttleData.lastRequestTime < throttleData.throttleTime && throttleData.isProcessing) {
+          return true;
+        }
+        
+        // 更新最后请求时间和处理状态
+        throttleData.lastRequestTime = now;
+        throttleData.isProcessing = true;
+        
+        // 添加请求到哈希集合
+        throttleData.requestHash.add(requestHash);
+        
+        // 添加超时检查，如果3秒内未收到响应，重置处理状态
+        const timeoutId = setTimeout(() => {
+          throttleData.isProcessing = false;
+          throttleData.requestHash.delete(requestHash); // 超时后移除请求哈希
+        }, throttleData.throttleTime);
+        
+        // 处理LaTeX格式化请求
+        (async () => {
+          try {
+            // 直接从Chrome存储获取最新配置，不依赖组件状态
+            const config = await new Promise(resolve => {
+              chrome.storage.sync.get(['host', 'name'], resolve);
+            });
+            
+            if (!config.host || !config.name) {
+              throw new Error('未找到服务器配置');
+            }
+            
+            console.log('使用配置处理LaTeX:', config);
+            
+            // 调用format_latex函数处理文本
+            const formatted = await format_latex(config.host, config.name, message.text);
+            
+            // 清除超时
+            clearTimeout(timeoutId);
+            // 重置处理状态
+            throttleData.isProcessing = false;
+            throttleData.requestHash.delete(requestHash); // 完成后移除请求哈希
+            
+            if (formatted) {
+              sendResponse({ success: true, formatted });
+            } else {
+              throw new Error('格式化失败');
+            }
+          } catch (error) {
+            // 清除超时
+            clearTimeout(timeoutId);
+            // 重置处理状态
+            throttleData.isProcessing = false;
+            throttleData.requestHash.delete(requestHash); // 出错时也移除请求哈希
+            
+            console.error('Error formatting LaTeX in sidebar:', error);
+            sendResponse({ success: false, error: error.message || '未知错误' });
+          }
+        })();
+        return true; // 保持消息通道开放以等待异步响应
       }
     });
   }, []);
