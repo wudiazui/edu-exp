@@ -2,6 +2,7 @@ import React from 'react';
 import { useDropzone } from 'react-dropzone';
 import CopyButton from './CopyButton.jsx';
 import { CozeService } from '../coze.js';
+import { ocr_text } from '../lib.js'; // 导入ocr_text函数
 
 const OcrComponent = ({ host, uname, serverType }) => {
   const [selectedImage, setSelectedImage] = React.useState(null);
@@ -158,27 +159,11 @@ const OcrComponent = ({ host, uname, serverType }) => {
             setRecognizedText('识别失败：未获取到识别结果');
           }
         } else {
-          // Official server logic wrapped in a Promise
-          const response = await new Promise((resolve, reject) => {
-            chrome.runtime.sendMessage(
-              {
-                type: 'OCR',
-                data: { 'image_data': selectedImage },
-                host,
-                uname
-              },
-              (response) => {
-                if (chrome.runtime.lastError) {
-                  reject(chrome.runtime.lastError);
-                } else {
-                  resolve(response);
-                }
-              }
-            );
-          });
-
-          if (response && response.formatted) {
-            setRecognizedText(response.formatted);
+          // 直接调用ocr_text函数而不是通过background.js
+          const formattedText = await ocr_text({ 'image_data': selectedImage }, host, uname);
+          
+          if (formattedText) {
+            setRecognizedText(formattedText);
           } else {
             setRecognizedText('识别失败：未获取到有效的识别结果');
           }

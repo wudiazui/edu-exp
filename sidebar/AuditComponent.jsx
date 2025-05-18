@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { content_review } from '../lib.js'; // 导入content_review函数
 
 const AuditComponent = ({ host, uname, serverType }) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -24,48 +25,6 @@ const AuditComponent = ({ host, uname, serverType }) => {
         setAuditResults(''); // 重置结果
         setThinkingChain(''); // 重置思维链
         startContentReview(message.html);
-      } else if (message.action === "content_review_message") {
-        try {
-          const data = message.data;
-          
-          // 处理新格式的响应数据
-          if (typeof data === 'object' && data !== null) {
-            if (data.type === "reasoning") {
-              // 思维链数据 - 保留换行符
-              const text = data.text || '';
-              setThinkingChain(prev => prev + text);
-            } else {
-              // 常规内容数据 - 保留换行符
-              const text = data.text || data.content || '';
-              setAuditResults(prev => prev + text);
-            }
-          } else if (typeof data === 'string') {
-            // 尝试解析字符串，可能是JSON格式
-            try {
-              const parsedData = JSON.parse(data);
-              if (parsedData.type === "reasoning") {
-                // 保留换行符
-                const text = parsedData.text || '';
-                setThinkingChain(prev => prev + text);
-              } else {
-                // 保留换行符
-                const text = parsedData.text || parsedData.content || '';
-                setAuditResults(prev => prev + text);
-              }
-            } catch {
-              // 无法解析为JSON，作为普通文本处理 - 保留换行符
-            setAuditResults(prev => prev + data);
-            }
-          }
-        } catch (e) {
-          console.error('处理审核消息出错:', e);
-        }
-      } else if (message.action === "content_review_error") {
-        console.error('内容审核错误:', message.error);
-        setAuditResults('审核过程中出错: ' + message.error);
-        setIsLoading(false);
-      } else if (message.action === "content_review_complete") {
-        setIsLoading(false);
       } else if (message.action === "audit_loading_state") {
         // 处理加载状态更新
         setIsLoading(message.isLoading);
@@ -88,15 +47,58 @@ const AuditComponent = ({ host, uname, serverType }) => {
   }, []);
 
   const startContentReview = (text) => {
-    if (!text || !portRef.current) return;
+    if (!text) return;
     
-    // 通过长连接发送消息
-    portRef.current.postMessage({
-      action: "start_content_review",
-      text: text,
-      host: host,
-      uname: uname
-    });
+    setIsLoading(true);
+    
+    // 直接调用content_review函数
+    content_review(
+      text,
+      host,
+      uname,
+      // 消息处理器
+      (eventData) => {
+        try {
+          // 检查是否是结束标志 [DONE]
+          if (eventData === "[DONE]") {
+            console.log("收到审核流结束标志 [DONE]");
+            return; // 不处理这个数据块，直接返回
+          }
+          
+          // 尝试解析数据
+          let data;
+          
+          try {
+            data = JSON.parse(eventData);
+            
+            if (data.type === "reasoning") {
+              // 思维链数据 - 保留换行符
+              const text = data.text || '';
+              setThinkingChain(prev => prev + text);
+            } else {
+              // 常规内容数据 - 保留换行符
+              const text = data.text || data.content || '';
+              setAuditResults(prev => prev + text);
+            }
+          } catch {
+            // 无法解析为JSON，作为普通文本处理 - 保留换行符
+            setAuditResults(prev => prev + eventData);
+          }
+        } catch (e) {
+          console.error('处理审核数据时出错:', e);
+        }
+      },
+      // 错误处理器
+      (error) => {
+        console.error("内容审核出错:", error);
+        setAuditResults('审核过程中出错: ' + (error.message || "未知错误"));
+        setIsLoading(false);
+      },
+      // 完成处理器
+      () => {
+        setIsLoading(false);
+      }
+    );
   };
 
   const handleAuditCheck = async () => {

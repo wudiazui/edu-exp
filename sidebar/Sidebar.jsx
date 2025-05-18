@@ -9,6 +9,8 @@ import DocumentationComponent from './DocumentationComponent'; // 引入文档�
 import MobileWebComponent from './MobileWebComponent'; // 引入手机网页端组件
 import AuditComponent from './AuditComponent'; // 引入审核组件
 import { CozeService } from '../coze.js';
+// 从lib.js导入需要的网络请求函数
+import { run_llm, run_llm_stream, ocr_text, topic_split, content_review, format_latex } from '../lib.js';
 
 export default function Main() {
   const [question, setQuestion] = React.useState('');
@@ -272,25 +274,77 @@ export default function Main() {
         }
         setIsFormatting(false);
       } else {
-        // 其他情况一律使用流式响应
+        // 修改为直接使用run_llm_stream函数
         console.log('使用流式响应处理题干整理');
         setQuestion(''); // 清空之前的结果
         
-        if (!portRef.current) {
-          console.error('长连接未建立，重新建立连接');
-          const port = chrome.runtime.connect({ name: 'solving-stream-channel' });
-          portRef.current = port;
-        }
-        
-        // 通过长连接发送消息
-        portRef.current.postMessage({
-          action: "start_stream_request",
-          type: 'FORMAT_QUESTION',
-          data: {'topic': question, 'discipline': subject},
-          host: host,
-          uname: name
-        });
-        // 不在这里设置 setIsFormatting(false)，会在流式响应完成时设置
+        // 直接调用run_llm_stream函数
+        run_llm_stream(
+          host,
+          name,
+          'topic_format',
+          {'topic': question, 'discipline': subject},
+          // 数据块处理函数
+          (chunk) => {
+            try {
+              // 检查是否是结束标志 [DONE]
+              if (chunk === "[DONE]") {
+                console.log("收到流结束标志 [DONE]");
+                return; // 不处理这个数据块，直接返回
+              }
+              
+              // 尝试解析数据，处理可能的JSON格式
+              let processedData;
+              let dataType = "content"; // 默认类型
+              
+              try {
+                const jsonData = JSON.parse(chunk);
+                
+                if (jsonData.type === "reasoning") {
+                  // 如果是思维链数据
+                  dataType = "reasoning";
+                  // 确保保留换行符
+                  processedData = jsonData.text || "";
+                } else {
+                  // 其他类型数据（内容）
+                  // 确保保留换行符
+                  if (jsonData.text !== undefined) {
+                    processedData = jsonData.text;
+                  } else if (jsonData.topic !== undefined) {
+                    processedData = jsonData.topic;
+                  } else if (jsonData.content !== undefined) {
+                    processedData = jsonData.content;
+                  } else if (typeof jsonData === 'object') {
+                    // 避免将整个对象直接转为字符串
+                    console.warn('收到不包含text/topic/content的对象:', jsonData);
+                    return; // 跳过这个数据块
+                  } else {
+                    processedData = jsonData;
+                  }
+                }
+              } catch {
+                // 如果不是有效的JSON，直接使用原始字符串
+                processedData = chunk;
+              }
+              
+              if (dataType !== "reasoning") {
+                // 添加数据到题干（非思维链）
+                setQuestion(prev => prev + processedData);
+              }
+            } catch (error) {
+              console.error("处理流式数据时出错:", error);
+            }
+          },
+          // 错误处理函数
+          (error) => {
+            console.error("流式请求出错:", error);
+            setIsFormatting(false);
+          },
+          // 完成处理函数
+          () => {
+            setIsFormatting(false);
+          }
+        );
       }
     } catch (error) {
       console.error('Error formatting question:', error);
@@ -333,25 +387,77 @@ export default function Main() {
         }
         setIsCompleteeing(false);
       } else {
-        // 其他情况一律使用流式响应
+        // 修改为直接使用run_llm_stream函数
         console.log('使用流式响应处理残题补全');
         setQuestion(''); // 清空之前的结果
         
-        if (!portRef.current) {
-          console.error('长连接未建立，重新建立连接');
-          const port = chrome.runtime.connect({ name: 'solving-stream-channel' });
-          portRef.current = port;
-        }
-        
-        // 通过长连接发送消息
-        portRef.current.postMessage({
-          action: "start_stream_request",
-          type: 'TOPIC_COMPLETE',
-          data: {'topic': question, 'discipline': subject},
-          host: host,
-          uname: name
-        });
-        // 不在这里设置 setIsCompleteeing(false)，会在流式响应完成时设置
+        // 直接调用run_llm_stream函数
+        run_llm_stream(
+          host,
+          name,
+          'topic_complete',
+          {'topic': question, 'discipline': subject},
+          // 数据块处理函数
+          (chunk) => {
+            try {
+              // 检查是否是结束标志 [DONE]
+              if (chunk === "[DONE]") {
+                console.log("收到流结束标志 [DONE]");
+                return; // 不处理这个数据块，直接返回
+              }
+              
+              // 尝试解析数据，处理可能的JSON格式
+              let processedData;
+              let dataType = "content"; // 默认类型
+              
+              try {
+                const jsonData = JSON.parse(chunk);
+                
+                if (jsonData.type === "reasoning") {
+                  // 如果是思维链数据
+                  dataType = "reasoning";
+                  // 确保保留换行符
+                  processedData = jsonData.text || "";
+                } else {
+                  // 其他类型数据（内容）
+                  // 确保保留换行符
+                  if (jsonData.text !== undefined) {
+                    processedData = jsonData.text;
+                  } else if (jsonData.topic !== undefined) {
+                    processedData = jsonData.topic;
+                  } else if (jsonData.content !== undefined) {
+                    processedData = jsonData.content;
+                  } else if (typeof jsonData === 'object') {
+                    // 避免将整个对象直接转为字符串
+                    console.warn('收到不包含text/topic/content的对象:', jsonData);
+                    return; // 跳过这个数据块
+                  } else {
+                    processedData = jsonData;
+                  }
+                }
+              } catch {
+                // 如果不是有效的JSON，直接使用原始字符串
+                processedData = chunk;
+              }
+              
+              if (dataType !== "reasoning") {
+                // 添加数据到题干（非思维链）
+                setQuestion(prev => prev + processedData);
+              }
+            } catch (error) {
+              console.error("处理流式数据时出错:", error);
+            }
+          },
+          // 错误处理函数
+          (error) => {
+            console.error("流式请求出错:", error);
+            setIsCompleteeing(false);
+          },
+          // 完成处理函数
+          () => {
+            setIsCompleteeing(false);
+          }
+        );
       }
     } catch (error) {
       console.error('Error completing topic:', error);
@@ -371,7 +477,6 @@ export default function Main() {
     setIsGeneratingAnswer(true);
     // 添加诊断日志
     console.log('生成解答时的服务器类型:', serverType);
-    console.log('长连接状态:', portRef.current ? '已连接' : '未连接');
     
     try {
       if (serverType === "扣子" && cozeService && kouziConfig) {
@@ -433,22 +538,17 @@ export default function Main() {
         }
         setIsGeneratingAnswer(false);
       } else {
-        // 其他情况一律使用流式响应
+        // 修改为直接使用run_llm_stream函数
         console.log('使用流式响应生成解答');
         setAnswer(''); // 清空之前的结果
         setAnswerThinkingChain(''); // 清空思维链数据
         
-        if (!portRef.current) {
-          console.error('长连接未建立，重新建立连接');
-          const port = chrome.runtime.connect({ name: 'solving-stream-channel' });
-          portRef.current = port;
-        }
-        
-        // 通过长连接发送消息
-        portRef.current.postMessage({
-          action: "start_stream_request",
-          type: 'TOPIC_ANSWER',
-          data: {
+        // 直接调用run_llm_stream函数
+        run_llm_stream(
+          host,
+          name,
+          'topic_answer',
+          {
             'topic': question, 
             'discipline': subject, 
             'image_data': selectedImage, 
@@ -457,10 +557,70 @@ export default function Main() {
             'site': site, 
             'analysis': analysis
           },
-          host: host,
-          uname: name
-        });
-        // 不在这里设置 setIsGeneratingAnswer(false)，会在流式响应完成时设置
+          // 数据块处理函数
+          (chunk) => {
+            try {
+              // 检查是否是结束标志 [DONE]
+              if (chunk === "[DONE]") {
+                console.log("收到流结束标志 [DONE]");
+                return; // 不处理这个数据块，直接返回
+              }
+              
+              // 尝试解析数据，处理可能的JSON格式
+              let processedData;
+              let dataType = "content"; // 默认类型
+              
+              try {
+                const jsonData = JSON.parse(chunk);
+                
+                if (jsonData.type === "reasoning") {
+                  // 如果是思维链数据
+                  dataType = "reasoning";
+                  // 确保保留换行符
+                  processedData = jsonData.text || "";
+                } else {
+                  // 其他类型数据（内容）
+                  // 确保保留换行符
+                  if (jsonData.text !== undefined) {
+                    processedData = jsonData.text;
+                  } else if (jsonData.topic !== undefined) {
+                    processedData = jsonData.topic;
+                  } else if (jsonData.content !== undefined) {
+                    processedData = jsonData.content;
+                  } else if (typeof jsonData === 'object') {
+                    // 避免将整个对象直接转为字符串
+                    console.warn('收到不包含text/topic/content的对象:', jsonData);
+                    return; // 跳过这个数据块
+                  } else {
+                    processedData = jsonData;
+                  }
+                }
+              } catch {
+                // 如果不是有效的JSON，直接使用原始字符串
+                processedData = chunk;
+              }
+              
+              if (dataType === "reasoning") {
+                // 思维链数据 - 保留换行符
+                setAnswerThinkingChain(prev => prev + processedData);
+              } else {
+                // 常规内容数据 - 保留换行符
+                setAnswer(prev => prev + processedData);
+              }
+            } catch (error) {
+              console.error("处理流式数据时出错:", error);
+            }
+          },
+          // 错误处理函数
+          (error) => {
+            console.error("流式请求出错:", error);
+            setIsGeneratingAnswer(false);
+          },
+          // 完成处理函数
+          () => {
+            setIsGeneratingAnswer(false);
+          }
+        );
       }
     } catch (error) {
       console.error('Error generating answer:', error);
@@ -536,22 +696,17 @@ export default function Main() {
         }
         setIsGeneratingAnalysis(false);
       } else {
-        // 其他情况一律使用流式响应
+        // 修改为直接使用run_llm_stream函数
         console.log('使用流式响应生成解析');
         setAnalysis(''); // 清空之前的结果
         setAnalysisThinkingChain(''); // 清空思维链数据
         
-        if (!portRef.current) {
-          console.error('长连接未建立，重新建立连接');
-          const port = chrome.runtime.connect({ name: 'solving-stream-channel' });
-          portRef.current = port;
-        }
-        
-        // 通过长连接发送消息
-        portRef.current.postMessage({
-          action: "start_stream_request",
-          type: 'TOPIC_ANALYSIS',
-          data: {
+        // 直接调用run_llm_stream函数
+        run_llm_stream(
+          host,
+          name,
+          'topic_analysis',
+          {
             'topic': question, 
             'answer': answer, 
             'analysis': analysis, 
@@ -561,10 +716,70 @@ export default function Main() {
             'school_level': gradeLevel, 
             'site': site
           },
-          host: host,
-          uname: name
-        });
-        // 不在这里设置 setIsGeneratingAnalysis(false)，会在流式响应完成时设置
+          // 数据块处理函数
+          (chunk) => {
+            try {
+              // 检查是否是结束标志 [DONE]
+              if (chunk === "[DONE]") {
+                console.log("收到流结束标志 [DONE]");
+                return; // 不处理这个数据块，直接返回
+              }
+              
+              // 尝试解析数据，处理可能的JSON格式
+              let processedData;
+              let dataType = "content"; // 默认类型
+              
+              try {
+                const jsonData = JSON.parse(chunk);
+                
+                if (jsonData.type === "reasoning") {
+                  // 如果是思维链数据
+                  dataType = "reasoning";
+                  // 确保保留换行符
+                  processedData = jsonData.text || "";
+                } else {
+                  // 其他类型数据（内容）
+                  // 确保保留换行符
+                  if (jsonData.text !== undefined) {
+                    processedData = jsonData.text;
+                  } else if (jsonData.topic !== undefined) {
+                    processedData = jsonData.topic;
+                  } else if (jsonData.content !== undefined) {
+                    processedData = jsonData.content;
+                  } else if (typeof jsonData === 'object') {
+                    // 避免将整个对象直接转为字符串
+                    console.warn('收到不包含text/topic/content的对象:', jsonData);
+                    return; // 跳过这个数据块
+                  } else {
+                    processedData = jsonData;
+                  }
+                }
+              } catch {
+                // 如果不是有效的JSON，直接使用原始字符串
+                processedData = chunk;
+              }
+              
+              if (dataType === "reasoning") {
+                // 思维链数据 - 保留换行符
+                setAnalysisThinkingChain(prev => prev + processedData);
+              } else {
+                // 常规内容数据 - 保留换行符
+                setAnalysis(prev => prev + processedData);
+              }
+            } catch (error) {
+              console.error("处理流式数据时出错:", error);
+            }
+          },
+          // 错误处理函数
+          (error) => {
+            console.error("流式请求出错:", error);
+            setIsGeneratingAnalysis(false);
+          },
+          // 完成处理函数
+          () => {
+            setIsGeneratingAnalysis(false);
+          }
+        );
       }
     } catch (error) {
       console.error('Error generating analysis:', error);

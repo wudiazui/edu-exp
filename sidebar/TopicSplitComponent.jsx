@@ -314,34 +314,19 @@ const TopicSplitComponent = ({ host, uname, serverType }) => {
                throw new Error("扣子服务配置不完整，请检查设置。"); // Prevent fallback
            }
 
-          // Official server logic (using chrome.runtime.sendMessage)
+          // 直接使用 topic_split 函数，而不是通过 background.js
           try {
-            // 发送消息到 background.js
-            const result = await new Promise((resolve, reject) => {
-              chrome.runtime.sendMessage({
-                type: 'TOPIC_SPLIT',
-                data: { 'image_data': processedImage },
-                host,
-                uname
-              }, response => {
-                if (chrome.runtime.lastError) {
-                  reject(new Error(chrome.runtime.lastError.message));
-                } else if (response.error) {
-                  reject(new Error(response.error));
-                } else {
-                  resolve(response.formatted);
-                }
-              });
-            });
+            // 直接调用 topic_split 函数
+            const result = await topic_split({ 'image_data': processedImage }, host, uname);
             
             if (result) {
-            // 处理新的响应格式，包含 text 和 list 字段
-            // 将结果转换为 JSON 字符串以便在文本区域中显示
-            const formattedResult = JSON.stringify({
-              text: result.text || '',
-              list: result.list || []
-            }, null, 2);
-            setSplitResult(formattedResult);
+              // 处理新的响应格式，包含 text 和 list 字段
+              // 将结果转换为 JSON 字符串以便在文本区域中显示
+              const formattedResult = JSON.stringify({
+                text: result.text || '',
+                list: result.list || []
+              }, null, 2);
+              setSplitResult(formattedResult);
             } else {
               setSplitResult('切割失败：未获取到切割结果');
             }
