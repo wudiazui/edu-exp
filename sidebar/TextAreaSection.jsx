@@ -172,7 +172,7 @@ const TextAreaSection = ({
           >
             清除
           </button>
-          <CopyButton text={displayMode ? renderedHtml : value} />
+          <CopyButton text={displayMode ? renderedHtml : removeEmptyLinesFromString(value, gradeLevel === "小学")} />
         </div>
       </div>
       {thinkingChain && (

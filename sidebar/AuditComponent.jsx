@@ -6,7 +6,9 @@ const AuditComponent = ({ host, uname, serverType }) => {
   const [auditResults, setAuditResults] = useState('');
   const [thinkingChain, setThinkingChain] = useState('');
   const [isThinkingExpanded, setIsThinkingExpanded] = useState(true);
+  const [isTextExpanded, setIsTextExpanded] = useState(false);
   const [displayMode, setDisplayMode] = useState(false);
+  const [extractedText, setExtractedText] = useState('');
   const portRef = useRef(null);
 
   // 设置与background.js的长连接
@@ -22,6 +24,7 @@ const AuditComponent = ({ host, uname, serverType }) => {
         setAuditResults(message.html);
         setIsLoading(false);
       } else if (message.action === "audit_content_extract" && message.html) {
+        setExtractedText(message.html);
         setAuditResults(''); // 重置结果
         setThinkingChain(''); // 重置思维链
         startContentReview(message.html);
@@ -140,6 +143,39 @@ const AuditComponent = ({ host, uname, serverType }) => {
             ) : '开始辅助审核检查'}
           </button>
         </div>
+
+        {/* 提取文本显示区域 - 可折叠 */}
+        {extractedText && (
+          <div className="mb-3 border rounded-lg overflow-hidden">
+            <div 
+              className="bg-base-200 p-1 flex justify-between items-center cursor-pointer"
+              onClick={() => setIsTextExpanded(!isTextExpanded)}
+            >
+              <h3 className="text-xs font-medium">提取的文本内容</h3>
+              <button className="btn btn-xs btn-ghost">
+                {isTextExpanded ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                )}
+              </button>
+            </div>
+            {isTextExpanded && (
+              <div className="p-2 bg-base-100 border-t">
+                <textarea
+                  className="w-full h-48 p-2 border border-gray-300 rounded-md text-sm"
+                  value={extractedText}
+                  readOnly
+                  style={{ resize: 'vertical' }}
+                />
+              </div>
+            )}
+          </div>
+        )}
 
         {/* 思维链显示区域 */}
         {thinkingChain && (
