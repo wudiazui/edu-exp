@@ -15,6 +15,9 @@ import { cleanPTags } from './textFormatModule.js';
 // 导入工具函数
 import { printCascaderInputValue, setAnswerInputValue, getSelectedRadioText, getAuditContentDetails, extractText, getFillInBlanksValues } from './domUtils.js';
 
+// 导入审核内容提取模块
+import { extractAuditContent } from './auditContentExtractor.js';
+
 // 初始化加载关键词
 loadKeywordsFromStorage();
 
@@ -484,36 +487,14 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   }
 
   if (request.action === "send_review_to_sidebar") {
-    // 获取选中的单选按钮文本
-    const selectedRadioText = getSelectedRadioText();
-    console.log('Selected radio text:', selectedRadioText);
-    
-    // 获取填空题数据
-    const fillInBlanksValues = getFillInBlanksValues();
-    console.log('Fill in blanks values:', fillInBlanksValues);
-    
-    // 获取审核内容详情
-    const auditContentDetails = getAuditContentDetails();
-    console.log('Audit content details:', auditContentDetails);
-    
-    // 组合文本内容
-    let contentText = '';
-    if (selectedRadioText) {
-      contentText += `审核内容: ${selectedRadioText}\n\n`;
-    }
-    if (auditContentDetails) {
-      contentText += `选项内容:\n${auditContentDetails}`;
-    }
-    // 添加填空内容
-    if (fillInBlanksValues) {
-      contentText += `\n\n填空内容: ${fillInBlanksValues}`;
-    }
+    const formattedText = extractAuditContent();
+    console.log('formattedText:', formattedText);
     
     // 如果至少有一个内容存在，发送到 background script
-    if (contentText) {
+    if (formattedText) {
       chrome.runtime.sendMessage({
         action: "store_topic_html",
-        html: contentText
+        html: formattedText
       });
     } else {
       console.log('没有找到选中的单选按钮或审核内容详情');
@@ -522,51 +503,19 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   }
 
   if (request.action === "start_audit_check") {
-    // 获取题目类型信息
-    const cascaderValue = printCascaderInputValue();
+    // 使用提取的函数获取审核内容
+    const formattedText = extractAuditContent();
+    console.log('formattedText:', formattedText);
     
-    // 查找题干、解答和解析的编辑区域
-    const stemElement = document.querySelector('[id^="stem-edit-"] .w-e-text');
-    const answerElement = document.querySelector('[id^="answer-edit-"] .w-e-text');
-    const analysisElement = document.querySelector('[id^="analyse-edit-"] .w-e-text');
-    
-    // 提取各个部分的内容 - 使用导入的extractText函数
-    const stemText = stemElement ? extractText(stemElement) : '未找到题干内容';
-    const answerText = answerElement ? extractText(answerElement) : '未找到解答内容';
-    const analysisText = analysisElement ? extractText(analysisElement) : '未找到解析内容';
-
-    // 组装审核内容
-    const auditContent = {
-      subject: cascaderValue || '未知学科',
-      stem: stemText,
-      answer: answerText,
-      analysis: analysisText
-    };
-
-    // 生成格式化的审核文本
-    const formattedAuditText = `
-【学科】: ${auditContent.subject}
-
-【题干】: 
-${auditContent.stem}
-
-【解答】: 
-${auditContent.answer}
-
-【解析】: 
-${auditContent.analysis}
-    `.trim();
-
     // 直接响应请求，避免通过background.js中转
     if (typeof sendResponse === 'function') {
-      sendResponse({ html: formattedAuditText, rawData: auditContent });
+      sendResponse({ html: formattedText });
     }
     
     // 同时发送到background script，以确保兼容性
     chrome.runtime.sendMessage({
       action: "audit_content_extract",
-      html: formattedAuditText,
-      rawData: auditContent
+      html: formattedText
     });
     
     return true;
@@ -1140,38 +1089,13 @@ ${auditContent.analysis}
   
   if (request.action === "extract_editor_content") {
     try {
-      // 查找题干、解答和解析的编辑区域
-      const stemElement = document.querySelector('[id^="stem-edit-"] .w-e-text');
-      const answerElement = document.querySelector('[id^="answer-edit-"] .w-e-text');
-      const analysisElement = document.querySelector('[id^="analyse-edit-"] .w-e-text');
-      
-      // 获取cascader值（科目信息）
-      const cascaderValue = printCascaderInputValue();
-
-      // 提取各个部分的内容 - 使用导入的extractText函数
-      const stemText = stemElement ? extractText(stemElement) : '';
-      const answerText = answerElement ? extractText(answerElement) : '';
-      const analysisText = analysisElement ? extractText(analysisElement) : '';
-
-      // 组装返回内容为纯文本格式
-      const editorContent = `
-【学科】: 
-${cascaderValue || '未知学科'}
-
-【题干】: 
-${stemText}
-
-【解答】: 
-${answerText}
-
-【解析】: 
-${analysisText}
-      `.trim();
+      // 使用提取的函数获取审核内容
+      const formattedText = extractAuditContent();
       
       // 发送提取的编辑器内容回背景脚本
       chrome.runtime.sendMessage({
         action: "extracted_editor_content",
-        content: editorContent
+        content: formattedText
       });
     } catch (error) {
       console.error('编辑器内容提取错误:', error);
