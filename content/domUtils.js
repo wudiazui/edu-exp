@@ -136,8 +136,6 @@ export function getAuditContentDetails() {
       contentResults.push(`${buttonText}. ${contentText}`);
     }
 
-
-
     // Add the content results to the main results array
     if (contentResults.length > 0) {
       results.push(contentResults.join('\n'));
@@ -228,4 +226,43 @@ export function extractText(element, seenTexts = new Set()) {
     }
   }
   return text;
+}
+
+/**
+ * Gets values from input fields with class="el-input__inner" inside elements 
+ * with class="c-margin-bottom-middle el-row" (excluding the last one)
+ * @returns {string} String of input values separated by '; ' or empty string if elements not found
+ */
+export function getFillInBlanksValues() {
+  // Find all elements with class="c-margin-bottom-middle el-row"
+  const rowElements = u('.c-margin-bottom-middle.el-row');
+  console.log('rowElements length:', rowElements.length);
+
+  if (rowElements.length === 0) {
+    console.log('No row elements found.');
+    return null;
+  }
+
+  // The array to store our results
+  let results = [];
+
+  // Loop through all row elements
+  for (let i = 0; i < rowElements.length; i++) {
+    const rowElement = rowElements.nodes[i];
+    
+    // Find the input element within this row
+    const inputElement = u(rowElement).find('.el-input__inner');
+    
+    if (inputElement.length > 0) {
+      // Get the input value
+      const value = inputElement.first().value || '';
+      console.log(`Input ${i} value:`, value);
+      results.push(value);
+    } else {
+      console.log(`No input element found in row ${i}`);
+    }
+  }
+
+  // Always return a string
+  return results.join('; ');
 }

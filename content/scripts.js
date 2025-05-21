@@ -13,7 +13,7 @@ import { showNotification, hideNotification } from './notificationModule.js';
 import { cleanPTags } from './textFormatModule.js';
 
 // 导入工具函数
-import { printCascaderInputValue, setAnswerInputValue, getSelectedRadioText, getAuditContentDetails, extractText } from './domUtils.js';
+import { printCascaderInputValue, setAnswerInputValue, getSelectedRadioText, getAuditContentDetails, extractText, getFillInBlanksValues } from './domUtils.js';
 
 // 初始化加载关键词
 loadKeywordsFromStorage();
@@ -488,6 +488,10 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     const selectedRadioText = getSelectedRadioText();
     console.log('Selected radio text:', selectedRadioText);
     
+    // 获取填空题数据
+    const fillInBlanksValues = getFillInBlanksValues();
+    console.log('Fill in blanks values:', fillInBlanksValues);
+    
     // 获取审核内容详情
     const auditContentDetails = getAuditContentDetails();
     console.log('Audit content details:', auditContentDetails);
@@ -499,6 +503,10 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     }
     if (auditContentDetails) {
       contentText += `选项内容:\n${auditContentDetails}`;
+    }
+    // 添加填空内容
+    if (fillInBlanksValues) {
+      contentText += `\n\n填空内容: ${fillInBlanksValues}`;
     }
     
     // 如果至少有一个内容存在，发送到 background script
