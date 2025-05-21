@@ -13,7 +13,7 @@ import { showNotification, hideNotification } from './notificationModule.js';
 import { cleanPTags } from './textFormatModule.js';
 
 // 导入工具函数
-import { printCascaderInputValue, setAnswerInputValue } from './domUtils.js';
+import { printCascaderInputValue, setAnswerInputValue, getSelectedRadioText, getAuditContentDetails, extractText } from './domUtils.js';
 
 // 初始化加载关键词
 loadKeywordsFromStorage();
@@ -471,51 +471,7 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
       const temp = document.createElement('div');
       temp.innerHTML = activeElement.innerHTML;
 
-      // 提取文本内容，保留特殊字符
-      const extractText = (element, seenTexts = new Set()) => {
-        let text = '';
-        const childNodes = element.childNodes;
-
-        for (const node of childNodes) {
-          if (node.nodeType === Node.TEXT_NODE) {
-            // 保留前后的空格
-            const content = node.textContent;
-            if (!seenTexts.has(content)) {
-              text += content; // 直接添加文本内容
-              seenTexts.add(content); // 记录已添加的文本
-            }
-          } else if (node.nodeType === Node.ELEMENT_NODE) {
-            // 对于 BR 标签，添加换行符
-            if (node.tagName.toLowerCase() === 'br') {
-              text += '\n'; // 添加换行符
-            } else if (node.tagName.toLowerCase() === 'p') {
-              // 逐行提取p标签的文本
-              text += extractText(node, seenTexts) + '\n'; // 添加换行符
-            } else if (node.tagName.toLowerCase() === 'img') {
-              // 提取data-math属性并用$包裹，进行URL解码
-              const mathValue = node.getAttribute('data-math');
-              if (mathValue) {
-                const decodedValue = decodeURIComponent(mathValue); // URL解码
-                if (!seenTexts.has(decodedValue)) {
-                  text += `$${decodedValue}$`; // 用$包裹
-                  seenTexts.add(decodedValue); // 记录已添加的文本
-                }
-              } else {
-                // 处理非公式图片，包含src属性
-                const imgSrc = node.getAttribute('src');
-                if (imgSrc && !seenTexts.has(imgSrc)) {
-                  text += `[图片: ${imgSrc}]`; // 添加图片链接
-                  seenTexts.add(imgSrc); // 记录已添加的文本
-                }
-              }
-            }
-            // 递归处理子元素
-            text += extractText(node, seenTexts);
-          }
-        }
-        return text;
-      };
-
+      // 提取文本内容 - 使用导入的extractText函数
       const cleanText = extractText(temp);
 
       // 发送到 background script
@@ -523,6 +479,36 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
         action: "store_topic_html",
         html: cleanText
       });
+    }
+    return true;
+  }
+
+  if (request.action === "send_review_to_sidebar") {
+    // 获取选中的单选按钮文本
+    const selectedRadioText = getSelectedRadioText();
+    console.log('Selected radio text:', selectedRadioText);
+    
+    // 获取审核内容详情
+    const auditContentDetails = getAuditContentDetails();
+    console.log('Audit content details:', auditContentDetails);
+    
+    // 组合文本内容
+    let contentText = '';
+    if (selectedRadioText) {
+      contentText += `审核内容: ${selectedRadioText}\n\n`;
+    }
+    if (auditContentDetails) {
+      contentText += `选项内容:\n${auditContentDetails}`;
+    }
+    
+    // 如果至少有一个内容存在，发送到 background script
+    if (contentText) {
+      chrome.runtime.sendMessage({
+        action: "store_topic_html",
+        html: contentText
+      });
+    } else {
+      console.log('没有找到选中的单选按钮或审核内容详情');
     }
     return true;
   }
@@ -536,54 +522,7 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     const answerElement = document.querySelector('[id^="answer-edit-"] .w-e-text');
     const analysisElement = document.querySelector('[id^="analyse-edit-"] .w-e-text');
     
-    // 提取文本内容的函数，保留特殊字符
-    const extractText = (element, seenTexts = new Set()) => {
-      if (!element) return '';
-      
-      let text = '';
-      const childNodes = element.childNodes;
-
-      for (const node of childNodes) {
-        if (node.nodeType === Node.TEXT_NODE) {
-          // 保留前后的空格
-          const content = node.textContent;
-          if (!seenTexts.has(content)) {
-            text += content; // 直接添加文本内容
-            seenTexts.add(content); // 记录已添加的文本
-          }
-        } else if (node.nodeType === Node.ELEMENT_NODE) {
-          // 对于 BR 标签，添加换行符
-          if (node.tagName.toLowerCase() === 'br') {
-            text += '\n'; // 添加换行符
-          } else if (node.tagName.toLowerCase() === 'p') {
-            // 逐行提取p标签的文本
-            text += extractText(node, seenTexts) + '\n'; // 添加换行符
-          } else if (node.tagName.toLowerCase() === 'img') {
-            // 提取data-math属性并用$包裹，进行URL解码
-            const mathValue = node.getAttribute('data-math');
-            if (mathValue) {
-              const decodedValue = decodeURIComponent(mathValue); // URL解码
-              if (!seenTexts.has(decodedValue)) {
-                text += `$${decodedValue}$`; // 用$包裹
-                seenTexts.add(decodedValue); // 记录已添加的文本
-              }
-            } else {
-              // 处理非公式图片，包含src属性
-              const imgSrc = node.getAttribute('src');
-              if (imgSrc && !seenTexts.has(imgSrc)) {
-                text += `[图片: ${imgSrc}]`; // 添加图片链接
-                seenTexts.add(imgSrc); // 记录已添加的文本
-              }
-            }
-          }
-          // 递归处理子元素
-          text += extractText(node, seenTexts);
-        }
-      }
-      return text;
-    };
-
-    // 提取各个部分的内容
+    // 提取各个部分的内容 - 使用导入的extractText函数
     const stemText = stemElement ? extractText(stemElement) : '未找到题干内容';
     const answerText = answerElement ? extractText(answerElement) : '未找到解答内容';
     const analysisText = analysisElement ? extractText(analysisElement) : '未找到解析内容';
@@ -1198,52 +1137,10 @@ ${auditContent.analysis}
       const answerElement = document.querySelector('[id^="answer-edit-"] .w-e-text');
       const analysisElement = document.querySelector('[id^="analyse-edit-"] .w-e-text');
       
-      // 提取文本内容的函数，保留特殊字符
-      const extractText = (element, seenTexts = new Set()) => {
-        if (!element) return '';
-        
-        let text = '';
-        const childNodes = element.childNodes;
-
-        for (const node of childNodes) {
-          if (node.nodeType === Node.TEXT_NODE) {
-            const content = node.textContent;
-            if (!seenTexts.has(content)) {
-              text += content;
-              seenTexts.add(content);
-            }
-          } else if (node.nodeType === Node.ELEMENT_NODE) {
-            if (node.tagName.toLowerCase() === 'br') {
-              text += '\n';
-            } else if (node.tagName.toLowerCase() === 'p') {
-              text += extractText(node, seenTexts) + '\n';
-            } else if (node.tagName.toLowerCase() === 'img') {
-              const mathValue = node.getAttribute('data-math');
-              if (mathValue) {
-                const decodedValue = decodeURIComponent(mathValue);
-                if (!seenTexts.has(decodedValue)) {
-                  text += `$${decodedValue}$`;
-                  seenTexts.add(decodedValue);
-                }
-              } else {
-                // 处理非公式图片，包含src属性
-                const imgSrc = node.getAttribute('src');
-                if (imgSrc && !seenTexts.has(imgSrc)) {
-                  text += `[图片: ${imgSrc}]`; // 添加图片链接
-                  seenTexts.add(imgSrc); // 记录已添加的文本
-                }
-              }
-            }
-            text += extractText(node, seenTexts);
-          }
-        }
-        return text;
-      };
-
       // 获取cascader值（科目信息）
       const cascaderValue = printCascaderInputValue();
 
-      // 提取各个部分的内容
+      // 提取各个部分的内容 - 使用导入的extractText函数
       const stemText = stemElement ? extractText(stemElement) : '';
       const answerText = answerElement ? extractText(answerElement) : '';
       const analysisText = analysisElement ? extractText(analysisElement) : '';

@@ -76,6 +76,12 @@ chrome.runtime.onInstalled.addListener(() => {
         contexts: ["all"]
       });
       chrome.contextMenus.create({
+        id: "send-review-to-sidebar",
+        title: "发送审核内容到侧边栏",
+        parentId: "baidu-submenu",
+        contexts: ["all"]
+      });
+      chrome.contextMenus.create({
         id: "format-math",
         title: "渲染数学公式",
         parentId: "baidu-submenu",
@@ -171,6 +177,9 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   }
   if (info.menuItemId === "send-topic") {
     chrome.tabs.sendMessage(tab.id, { action: "send_topic" });
+  }
+  if (info.menuItemId === "send-review-to-sidebar") {
+    chrome.tabs.sendMessage(tab.id, { action: "send_review_to_sidebar" });
   }
   if (info.menuItemId === "format-math") {
     chrome.tabs.sendMessage(tab.id, { action: "format_math" });
