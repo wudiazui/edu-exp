@@ -300,7 +300,7 @@ const TopicSplitComponent = ({ host, uname, serverType }) => {
                               // 发送当前题目项到浏览器，添加append参数
                               chrome.runtime.sendMessage({
                                 type: "documentassistant",
-                                text: item,
+                                text: item.trim(),
                                 append: appendMode // 根据开关状态决定是追加还是替换
                               });
                             } catch (error) {
@@ -372,7 +372,7 @@ const TopicSplitComponent = ({ host, uname, serverType }) => {
                   // 只发送text字段内容，添加append参数
                   chrome.runtime.sendMessage({
                     type: "documentassistant",
-                    text: parsedResult.text || '',
+                    text: (parsedResult.text || '').trim(),
                     append: appendMode // 根据开关状态决定是追加还是替换
                   });
                 } catch (error) {
@@ -380,7 +380,7 @@ const TopicSplitComponent = ({ host, uname, serverType }) => {
                   // 如果解析失败，则直接发送当前文本
                   chrome.runtime.sendMessage({
                     type: "documentassistant",
-                    text: splitResult,
+                    text: splitResult.trim(),
                     append: appendMode // 根据开关状态决定是追加还是替换
                   });
                 }

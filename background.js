@@ -77,7 +77,7 @@ chrome.runtime.onInstalled.addListener(() => {
       });
       chrome.contextMenus.create({
         id: "send-review-to-sidebar",
-        title: "发送审核内容到侧边栏",
+        title: "开始辅助审核",
         parentId: "baidu-submenu",
         contexts: ["all"]
       });
