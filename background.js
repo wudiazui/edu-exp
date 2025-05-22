@@ -275,6 +275,16 @@ chrome.runtime.onConnect.addListener((port) => {
     
     // 监听从侧边栏发来的消息
     port.onMessage.addListener((request) => {
+      // 处理心跳请求
+      if (request.action === "heartbeat") {
+        // 响应心跳，确认连接仍然活跃
+        port.postMessage({
+          action: "heartbeat_response",
+          timestamp: Date.now()
+        });
+        return;
+      }
+      
       // 处理审核开始请求
       if (request.action === "start_audit_check") {
         // 向侧边栏发送加载开始状态

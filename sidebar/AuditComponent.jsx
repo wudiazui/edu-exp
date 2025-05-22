@@ -9,41 +9,126 @@ const AuditComponent = ({ host, uname, serverType }) => {
   const [isTextExpanded, setIsTextExpanded] = useState(false);
   const [displayMode, setDisplayMode] = useState(false);
   const [extractedText, setExtractedText] = useState('');
+  const [connectionStatus, setConnectionStatus] = useState('connected'); // 添加连接状态
   const portRef = useRef(null);
+  const reconnectTimeoutRef = useRef(null);
+  const reconnectAttemptsRef = useRef(0);
+  const MAX_RECONNECT_ATTEMPTS = 5;
+  const RECONNECT_DELAY = 2000; // 2秒
 
   // 设置与background.js的长连接
   useEffect(() => {
-    // 创建与background.js的长连接
-    const port = chrome.runtime.connect({ name: 'audit-content-channel' });
-    portRef.current = port;
+    // 创建与background.js的长连接的函数
+    const setupConnection = () => {
+      try {
+        const port = chrome.runtime.connect({ name: 'audit-content-channel' });
+        portRef.current = port;
+        setConnectionStatus('connected');
+        reconnectAttemptsRef.current = 0; // 重置重连尝试次数
 
-    // 处理从background.js接收的消息
-    port.onMessage.addListener((message) => {
-      if (message.action === "audit_content_result" && message.html) {
-        console.log('message.html', message.html);
-        setAuditResults(message.html);
-        setIsLoading(false);
-      } else if (message.action === "audit_content_extract" && message.html) {
-        setExtractedText(message.html);
-        setAuditResults(''); // 重置结果
-        setThinkingChain(''); // 重置思维链
-        startContentReview(message.html);
-      } else if (message.action === "audit_loading_state") {
-        // 处理加载状态更新
-        setIsLoading(message.isLoading);
+        // 处理从background.js接收的消息
+        port.onMessage.addListener((message) => {
+          if (!message || typeof message !== 'object') {
+            console.error('收到无效消息格式');
+            return;
+          }
+
+          if (message.action === "heartbeat_response") {
+            // 收到心跳响应，连接正常
+            setConnectionStatus('connected');
+          } else if (message.action === "audit_content_result" && message.html) {
+            console.log('message.html', message.html);
+            setAuditResults(message.html);
+            setIsLoading(false);
+          } else if (message.action === "audit_content_extract" && message.html) {
+            setExtractedText(message.html);
+            setAuditResults(''); // 重置结果
+            setThinkingChain(''); // 重置思维链
+            startContentReview(message.html);
+          } else if (message.action === "audit_loading_state") {
+            // 处理加载状态更新
+            setIsLoading(message.isLoading);
+          }
+        });
+
+        // 处理连接断开
+        port.onDisconnect.addListener(() => {
+          console.log('与background的连接已断开');
+          setConnectionStatus('disconnected');
+          portRef.current = null;
+          
+          // 尝试重新连接，除非已达到最大尝试次数
+          if (reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
+            console.log(`尝试重新连接 (${reconnectAttemptsRef.current + 1}/${MAX_RECONNECT_ATTEMPTS})...`);
+            reconnectTimeoutRef.current = setTimeout(() => {
+              reconnectAttemptsRef.current++;
+              setupConnection();
+            }, RECONNECT_DELAY);
+          } else {
+            console.error('达到最大重连次数，停止重连');
+            setAuditResults(prev => prev + '\n\n连接已断开，请刷新页面重试。');
+          }
+        });
+      } catch (error) {
+        console.error('建立连接失败:', error);
+        setConnectionStatus('disconnected');
+        
+        // 尝试重新连接，除非已达到最大尝试次数
+        if (reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
+          reconnectTimeoutRef.current = setTimeout(() => {
+            reconnectAttemptsRef.current++;
+            setupConnection();
+          }, RECONNECT_DELAY);
+        }
       }
-    });
+    };
 
-    // 处理连接断开
-    port.onDisconnect.addListener(() => {
-      console.log('与background的连接已断开');
-      portRef.current = null;
-    });
+    // 初始建立连接
+    setupConnection();
 
-    // 组件卸载时断开连接
-    return () => {
+    // 设置心跳检测
+    const heartbeatInterval = setInterval(() => {
       if (portRef.current) {
-        portRef.current.disconnect();
+        try {
+          portRef.current.postMessage({ action: "heartbeat" });
+        } catch (e) {
+          console.error('心跳发送失败，连接可能已断开', e);
+          setConnectionStatus('disconnected');
+          // 连接可能已断开，但onDisconnect尚未触发，主动断开并重新连接
+          if (portRef.current) {
+            try {
+              portRef.current.disconnect();
+            } catch (err) {
+              console.error('断开连接失败:', err);
+            }
+            portRef.current = null;
+          }
+          
+          // 尝试重新连接
+          if (reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
+            reconnectTimeoutRef.current = setTimeout(() => {
+              reconnectAttemptsRef.current++;
+              setupConnection();
+            }, RECONNECT_DELAY);
+          }
+        }
+      }
+    }, 30000); // 30秒一次心跳
+
+    // 组件卸载时清理
+    return () => {
+      clearInterval(heartbeatInterval);
+      
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      
+      if (portRef.current) {
+        try {
+          portRef.current.disconnect();
+        } catch (e) {
+          console.error('断开连接失败:', e);
+        }
         portRef.current = null;
       }
     };
@@ -107,6 +192,7 @@ const AuditComponent = ({ host, uname, serverType }) => {
   const handleAuditCheck = async () => {
     if (!portRef.current) {
       console.error('未建立与background的连接');
+      setAuditResults('连接已断开，请刷新页面重试');
       return;
     }
 
@@ -123,24 +209,56 @@ const AuditComponent = ({ host, uname, serverType }) => {
       console.error('审核请求出错:', error);
       setAuditResults('审核失败：' + error.message);
       setIsLoading(false);
+      
+      // 连接可能已经断开，尝试重新连接
+      setConnectionStatus('disconnected');
+      if (portRef.current) {
+        try {
+          portRef.current.disconnect();
+        } catch (e) {
+          console.error('断开连接失败:', e);
+        }
+        portRef.current = null;
+      }
+      
+      // 尝试重新连接
+      if (reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
+        reconnectAttemptsRef.current++;
+        const port = chrome.runtime.connect({ name: 'audit-content-channel' });
+        portRef.current = port;
+        setConnectionStatus('connected');
+      }
     }
   };
 
   return (
     <div className="container mx-auto px-1 mt-2">
       <div className="px-2 pt-2 pb-3 mb-4">
-        <div className="mb-4">
+        <div className="mb-2">
           <button 
-            className={`btn btn-sm w-full btn-primary ${isLoading ? 'opacity-90' : ''}`}
+            className={`btn btn-sm w-full btn-primary ${isLoading ? 'opacity-90' : ''} relative`}
             onClick={handleAuditCheck}
-            disabled={isLoading}
+            disabled={isLoading || connectionStatus !== 'connected'}
           >
             {isLoading ? (
               <>
                 <span className="loading loading-spinner loading-xs mr-2"></span>
                 <span className="text-xs">审核中</span>
               </>
-            ) : '开始辅助审核检查'}
+            ) : connectionStatus !== 'connected' ? '连接已断开' : '开始辅助审核检查'}
+            
+            {/* 连接状态指示器 - 放在按钮内容右侧 */}
+            <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center">
+              {connectionStatus === 'connected' ? 
+                <span className="text-xs px-1.5 py-0.5 bg-green-200 text-green-900 rounded-full flex items-center ml-1">
+                  <span className="w-1.5 h-1.5 bg-green-600 rounded-full mr-0.5"></span>
+                  <span className="text-[10px]">正常</span>
+                </span> : 
+                <span className="text-xs px-1.5 py-0.5 bg-red-200 text-red-900 rounded-full flex items-center ml-1">
+                  <span className="w-1.5 h-1.5 bg-red-600 rounded-full mr-0.5"></span>
+                  <span className="text-[10px]">断开</span>
+                </span>}
+            </div>
           </button>
         </div>
 
