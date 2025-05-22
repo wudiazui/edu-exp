@@ -489,16 +489,10 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   if (request.action === "send_review_to_sidebar") {
     const formattedText = extractAuditContent();
     console.log('formattedText:', formattedText);
-    
-    // 如果至少有一个内容存在，发送到 background script
-    if (formattedText) {
-      chrome.runtime.sendMessage({
-        action: "store_topic_html",
-        html: formattedText
-      });
-    } else {
-      console.log('没有找到选中的单选按钮或审核内容详情');
-    }
+    chrome.runtime.sendMessage({
+      action: "audit_content_extract",
+      html: formattedText
+    });
     return true;
   }
 
@@ -506,13 +500,6 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     // 使用提取的函数获取审核内容
     const formattedText = extractAuditContent();
     console.log('formattedText:', formattedText);
-    
-    // 直接响应请求，避免通过background.js中转
-    if (typeof sendResponse === 'function') {
-      sendResponse({ html: formattedText });
-    }
-    
-    // 同时发送到background script，以确保兼容性
     chrome.runtime.sendMessage({
       action: "audit_content_extract",
       html: formattedText
