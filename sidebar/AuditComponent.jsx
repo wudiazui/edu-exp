@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { content_review } from '../lib.js'; // 导入content_review函数
+import { CozeService } from '../coze.js'; // 导入CozeService
 
 const AuditComponent = ({ host, uname, serverType }) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -7,14 +8,38 @@ const AuditComponent = ({ host, uname, serverType }) => {
   const [thinkingChain, setThinkingChain] = useState('');
   const [isThinkingExpanded, setIsThinkingExpanded] = useState(true);
   const [isTextExpanded, setIsTextExpanded] = useState(false);
-  const [displayMode, setDisplayMode] = useState(false);
   const [extractedText, setExtractedText] = useState('');
   const [connectionStatus, setConnectionStatus] = useState('connected'); // 添加连接状态
+  const [cozeService, setCozeService] = useState(null); // 添加cozeService状态
   const portRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const reconnectAttemptsRef = useRef(0);
   const MAX_RECONNECT_ATTEMPTS = 5;
   const RECONNECT_DELAY = 2000; // 2秒
+
+  // 初始化CozeService当服务器类型为"扣子"时
+  useEffect(() => {
+    console.log('CozeService useEffect triggered, serverType:', serverType);
+    if (serverType === "扣子") {
+      chrome.storage.sync.get(['kouziAccessKey', 'kouziReviewWorkflowId', 'kouziAppId'], (result) => {
+        console.log('Kouzi configuration loaded:', result);
+        if (result.kouziAccessKey && result.kouziReviewWorkflowId && result.kouziAppId) {
+          console.log('All Kouzi config present, initializing CozeService');
+          setCozeService(new CozeService(result.kouziAccessKey));
+        } else {
+          console.error('Missing required Kouzi configuration for audit:', {
+            hasAccessKey: !!result.kouziAccessKey,
+            hasReviewWorkflowId: !!result.kouziReviewWorkflowId,
+            hasAppId: !!result.kouziAppId
+          });
+          // Optionally show an error message to the user
+        }
+      });
+    } else {
+      console.log('Server type is not 扣子, clearing cozeService');
+      setCozeService(null);
+    }
+  }, [serverType]);
 
   // 设置与background.js的长连接
   useEffect(() => {
@@ -134,62 +159,204 @@ const AuditComponent = ({ host, uname, serverType }) => {
     };
   }, []);
 
-  const startContentReview = (text) => {
+  const startContentReview = async (text) => {
     if (!text) return;
     
     setIsLoading(true);
+    console.log('startContentReview called with serverType:', serverType, 'cozeService:', cozeService);
     
-    // 直接调用content_review函数
-    content_review(
-      text,
-      host,
-      uname,
-      // 消息处理器
-      (eventData) => {
-        try {
-          // 检查是否是结束标志 [DONE]
-          if (eventData === "[DONE]") {
-            console.log("收到审核流结束标志 [DONE]");
-            return; // 不处理这个数据块，直接返回
-          }
-          
-          // 尝试解析数据
-          let data;
-          
-          try {
-            data = JSON.parse(eventData);
-            
-            if (data.type === "reasoning") {
-              // 思维链数据 - 保留换行符
-              const text = data.text || '';
-              setThinkingChain(prev => prev + text);
-            } else {
-              // 常规内容数据 - 保留换行符
-              const text = data.text || data.content || '';
-              setAuditResults(prev => prev + text);
-            }
-          } catch {
-            // 无法解析为JSON，作为普通文本处理 - 保留换行符
-            setAuditResults(prev => prev + eventData);
-          }
-        } catch (e) {
-          console.error('处理审核数据时出错:', e);
+    // 判断服务器类型
+    if (serverType === "扣子") {
+      // 如果cozeService为null，尝试重新初始化
+      let currentCozeService = cozeService;
+      if (!currentCozeService) {
+        console.log('cozeService is null, attempting to reinitialize...');
+        const config = await new Promise((resolve) => {
+          chrome.storage.sync.get(['kouziAccessKey', 'kouziReviewWorkflowId', 'kouziAppId'], resolve);
+        });
+        
+        if (config.kouziAccessKey && config.kouziReviewWorkflowId && config.kouziAppId) {
+          currentCozeService = new CozeService(config.kouziAccessKey);
+          setCozeService(currentCozeService);
+          console.log('CozeService reinitialized successfully');
+        } else {
+          console.error('Cannot reinitialize CozeService, missing config:', config);
+          setAuditResults('扣子配置不完整，请检查设置页面');
+          setIsLoading(false);
+          return;
         }
-      },
-      // 错误处理器
-      (error) => {
-        console.error("内容审核出错:", error);
+      }
+      
+      if (currentCozeService) {
+      try {
+        // 读取审核工作流ID
+        const result = await new Promise((resolve) => {
+          chrome.storage.sync.get(['kouziReviewWorkflowId', 'kouziAppId'], resolve);
+        });
+
+        if (!result.kouziReviewWorkflowId || !result.kouziAppId) {
+          throw new Error('缺少扣子审核工作流配置');
+        }
+
+        // 清空之前的结果，准备接收流式数据
+        setAuditResults('');
+        setThinkingChain('');
+
+        // 调用扣子工作流（流式）
+        await currentCozeService.executeWorkflowStream(result.kouziReviewWorkflowId, {
+          app_id: result.kouziAppId,
+          parameters: {
+            text: text,
+          }
+        }, (streamData) => {
+          // 处理流式数据
+          try {
+            // 检查是否是结束标志
+            if (streamData === "[DONE]") {
+              console.log("收到扣子工作流结束标志 [DONE]");
+              return;
+            }
+
+            // 处理不同格式的流式数据
+            if (streamData && streamData.data) {
+              // 如果有data字段，尝试解析
+              try {
+                const parsedData = typeof streamData.data === 'string'
+                  ? JSON.parse(streamData.data)
+                  : streamData.data;
+
+                if (parsedData && parsedData.type === "reasoning") {
+                  // 思维链数据
+                  const text = parsedData.text || '';
+                  setThinkingChain(prev => prev + text);
+                } else if (parsedData && parsedData.result) {
+                  // 审核结果数据
+                  setAuditResults(prev => prev + parsedData.result);
+                } else {
+                  // 其他数据，追加到审核结果
+                  const text = parsedData.text || parsedData.content || streamData.data;
+                  setAuditResults(prev => prev + text);
+                }
+              } catch (parseError) {
+                // 解析失败，直接追加原始数据
+                setAuditResults(prev => prev + streamData.data);
+              }
+            } else if (streamData) {
+              // 直接处理streamData
+              try {
+                const parsedData = typeof streamData === 'string' 
+                  ? JSON.parse(streamData) 
+                  : streamData;
+
+                if (parsedData.type === "reasoning") {
+                  // 思维链数据
+                  const text = parsedData.text || '';
+                  setThinkingChain(prev => prev + text);
+                } else {
+                  // 常规内容数据
+                  const text = parsedData.text || parsedData.content || '';
+                  setAuditResults(prev => prev + text);
+                }
+              } catch (parseError) {
+                // 无法解析为JSON，作为普通文本处理
+                const dataToAppend = typeof streamData === 'string' ? streamData : JSON.stringify(streamData);
+                setAuditResults(prev => prev + dataToAppend);
+              }
+            }
+          } catch (error) {
+            console.error('处理扣子流式数据时出错:', error);
+            // 出错时也尝试显示数据
+            const dataToAppend = typeof streamData === 'string' ? streamData : JSON.stringify(streamData);
+            setAuditResults(prev => prev + dataToAppend);
+          }
+        });
+      } catch (error) {
+        console.error("扣子审核工作流出错:", error);
         setAuditResults('审核过程中出错: ' + (error.message || "未知错误"));
-        setIsLoading(false);
-      },
-      // 完成处理器
-      () => {
+      } finally {
         setIsLoading(false);
       }
-    );
+      }
+    } else {
+      // 直接调用content_review函数
+      content_review(
+        text,
+        host,
+        uname,
+        // 消息处理器
+        (eventData) => {
+          try {
+            // 检查是否是结束标志 [DONE]
+            if (eventData === "[DONE]") {
+              console.log("收到审核流结束标志 [DONE]");
+              return; // 不处理这个数据块，直接返回
+            }
+            
+            // 尝试解析数据
+            let data;
+            
+            try {
+              data = JSON.parse(eventData);
+              
+              if (data.type === "reasoning") {
+                // 思维链数据 - 保留换行符
+                const text = data.text || '';
+                setThinkingChain(prev => prev + text);
+              } else {
+                // 常规内容数据 - 保留换行符
+                const text = data.text || data.content || '';
+                setAuditResults(prev => prev + text);
+              }
+            } catch {
+              // 无法解析为JSON，作为普通文本处理 - 保留换行符
+              setAuditResults(prev => prev + eventData);
+            }
+          } catch (e) {
+            console.error('处理审核数据时出错:', e);
+          }
+        },
+        // 错误处理器
+        (error) => {
+          console.error("内容审核出错:", error);
+          setAuditResults('审核过程中出错: ' + (error.message || "未知错误"));
+          setIsLoading(false);
+        },
+        // 完成处理器
+        () => {
+          setIsLoading(false);
+        }
+      );
+    }
   };
 
   const handleAuditCheck = async () => {
+    // 清空之前的结果
+    setAuditResults('');
+    setThinkingChain(''); // 清空思维链
+    
+    // 如果是扣子服务器，直接调用startContentReview
+    if (serverType === "扣子") {
+      if (!extractedText) {
+        // 如果没有提取文本，先通过background.js提取
+        if (!portRef.current) {
+          setAuditResults('连接已断开，无法提取页面内容，请刷新页面重试');
+          return;
+        }
+        try {
+          portRef.current.postMessage({
+            action: "start_audit_check"
+          });
+          return;
+        } catch (error) {
+          setAuditResults('提取页面内容失败：' + error.message);
+          return;
+        }
+      }
+      await startContentReview(extractedText);
+      return;
+    }
+
+    // 官方服务器需要通过background.js
     if (!portRef.current) {
       console.error('未建立与background的连接');
       setAuditResults('连接已断开，请刷新页面重试');
