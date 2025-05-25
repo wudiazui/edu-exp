@@ -1,4 +1,4 @@
-import { printCascaderInputValue, extractText, getSelectedRadioText, getAuditContentDetails, getFillInBlanksValues } from './domUtils.js';
+import { printCascaderInputValue, extractText, getSelectedRadioText, getAuditContentDetails, getFillInBlanksValues, getMaterialContent, getReferenceAnswer } from './domUtils.js';
 
 /**
  * Extracts audit content from the current page's editor elements
@@ -20,6 +20,8 @@ export function extractAuditContent() {
 
   // 组装主题信息
   const subject = cascaderValue || '未知学科';
+  const materialContent = getMaterialContent();
+  const referenceAnswer = getReferenceAnswer();
   
   // 检查是否为单选或填空题，如果是则添加相应内容
   const questionType = getSelectedRadioText();
@@ -40,15 +42,24 @@ export function extractAuditContent() {
   }
 
   // 生成格式化的审核文本
+  const materialSection = materialContent && materialContent.trim() ? `
+【材料】: 
+${materialContent.trim()}
+
+` : '';
+
   return `
 【学科】: ${subject.trim()}
-
+【题型】: ${questionType.trim()}
+${materialSection}
 【题干】: 
 ${stemText.trim()}
-
+${referenceAnswer ? `
+【参考答案】: 
+${referenceAnswer.trim()}
+` : ''}
 【解答】: 
 ${answerText.trim()}
-
 【解析】: 
 ${analysisText}
   `.trim();

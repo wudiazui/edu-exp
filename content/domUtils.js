@@ -256,7 +256,6 @@ export function getFillInBlanksValues() {
     if (inputElement.length > 0) {
       // Get the input value
       const value = inputElement.first().value || '';
-      console.log(`Input ${i} value:`, value);
       results.push(value);
     } else {
       console.log(`No input element found in row ${i}`);
@@ -265,4 +264,115 @@ export function getFillInBlanksValues() {
 
   // Always return a string
   return results.join('; ');
+}
+
+/**
+ * Gets material content from the second large margin element.
+ * Extracts content from edit-wang elements, specifically the w-e-text content.
+ * @returns {string|null} Concatenated material content or null if not found.
+ */
+export function getMaterialContent() {
+  // Get the main container with class="el-main c-padding-bottom100"
+  const mainContainer = u('.el-main.c-padding-bottom100');
+
+  if (mainContainer.length === 0) {
+    console.log('Main container not found.');
+    return null;
+  }
+
+  // Find all elements with class="c-margin-bottom-large" inside the main container
+  const largeMarginElements = mainContainer.find('.c-margin-bottom-large');
+
+  if (largeMarginElements.length < 3) {
+    console.log('Less than 3 c-margin-bottom-large elements found.');
+    return null;
+  }
+
+  // Get the 2nd element (index 1 since it's 0-based)
+  const secondElement = largeMarginElements.nodes[2];
+
+  if (!secondElement) {
+    console.log('Second large margin element not found.');
+    return null;
+  }
+
+  // Find all edit-wang elements inside the 2nd large margin element
+  const editWangElements = u(secondElement).find('.edit-wang');
+
+  if (editWangElements.length === 0) {
+    console.log('No edit-wang elements found.');
+    return null;
+  }
+
+  // The array to store our results
+  let results = [];
+
+  // Loop through all edit-wang elements
+  for (let i = 0; i < editWangElements.length; i++) {
+    const editWangElement = editWangElements.nodes[i];
+    
+    // Find the w-e-text element within this edit-wang element
+    const textElement = u(editWangElement).find('.w-e-text');
+    
+    if (textElement.length > 0) {
+      // Extract text content using the existing extractText function
+      const textContent = extractText(textElement.nodes[0]).trim();
+      if (textContent) {
+        results.push(textContent);
+      }
+    }
+  }
+
+  // Return concatenated content
+  return results.join('\n\n');
+}
+
+/**
+ * Gets reference answer content from the fifth large margin element.
+ * Extracts content from the first edit-wang element, specifically the w-e-text content.
+ * @returns {string|null} Reference answer content or null if not found.
+ */
+export function getReferenceAnswer() {
+  // Get the main container with class="el-main c-padding-bottom100"
+  const mainContainer = u('.el-main.c-padding-bottom100');
+
+  if (mainContainer.length === 0) {
+    console.log('Main container not found.');
+    return null;
+  }
+
+  // Find all elements with class="c-margin-bottom-large" inside the main container
+  const largeMarginElements = mainContainer.find('.c-margin-bottom-large');
+
+  if (largeMarginElements.length < 5) {
+    console.log('Less than 5 c-margin-bottom-large elements found.');
+    return null;
+  }
+
+  // Get the 5th element (index 4 since it's 0-based)
+  const fifthElement = largeMarginElements.nodes[4];
+
+  if (!fifthElement) {
+    console.log('Fifth large margin element not found.');
+    return null;
+  }
+
+  // Find the first edit-wang element inside the 5th large margin element
+  const editWangElement = u(fifthElement).find('.edit-wang').first();
+
+  if (!editWangElement) {
+    console.log('No edit-wang element found.');
+    return null;
+  }
+
+  // Find the w-e-text element within this edit-wang element
+  const textElement = u(editWangElement).find('.w-e-text');
+  
+  if (textElement.length > 0) {
+    // Extract text content using the existing extractText function
+    const textContent = extractText(textElement.nodes[0]).trim();
+    return textContent || null;
+  }
+
+  return null;
 }
