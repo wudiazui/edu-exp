@@ -217,8 +217,20 @@ const AuditComponent = ({ host, uname, serverType }) => {
               return;
             }
 
+            // 忽略 SSE 的 "event: Done" 事件
+            if (typeof streamData === 'string' && streamData.includes('event: Done')) {
+              console.log("忽略 SSE event: Done 事件");
+              return;
+            }
+
             // 处理不同格式的流式数据
             if (streamData && streamData.data) {
+              // 忽略 data 字段中包含 "event: Done" 的数据
+              if (typeof streamData.data === 'string' && streamData.data.includes('event: Done')) {
+                console.log("忽略 data 中的 event: Done 事件");
+                return;
+              }
+
               // 如果有data字段，尝试解析
               try {
                 const parsedData = typeof streamData.data === 'string'
@@ -238,6 +250,11 @@ const AuditComponent = ({ host, uname, serverType }) => {
                   setAuditResults(prev => prev + text);
                 }
               } catch (parseError) {
+                // 解析失败时，再次检查是否包含 "event: Done"
+                if (typeof streamData.data === 'string' && streamData.data.includes('event: Done')) {
+                  console.log("解析失败时忽略 event: Done 事件");
+                  return;
+                }
                 // 解析失败，直接追加原始数据
                 setAuditResults(prev => prev + streamData.data);
               }
@@ -265,9 +282,11 @@ const AuditComponent = ({ host, uname, serverType }) => {
             }
           } catch (error) {
             console.error('处理扣子流式数据时出错:', error);
-            // 出错时也尝试显示数据
+            // 出错时也尝试显示数据，但先检查是否包含 "event: Done"
             const dataToAppend = typeof streamData === 'string' ? streamData : JSON.stringify(streamData);
-            setAuditResults(prev => prev + dataToAppend);
+            if (!dataToAppend.includes('event: Done')) {
+              setAuditResults(prev => prev + dataToAppend);
+            }
           }
         });
       } catch (error) {
@@ -334,26 +353,22 @@ const AuditComponent = ({ host, uname, serverType }) => {
     setAuditResults('');
     setThinkingChain(''); // 清空思维链
     
-    // 如果是扣子服务器，直接调用startContentReview
+    // 如果是扣子服务器，也需要重新提取页面内容
     if (serverType === "扣子") {
-      if (!extractedText) {
-        // 如果没有提取文本，先通过background.js提取
-        if (!portRef.current) {
-          setAuditResults('连接已断开，无法提取页面内容，请刷新页面重试');
-          return;
-        }
-        try {
-          portRef.current.postMessage({
-            action: "start_audit_check"
-          });
-          return;
-        } catch (error) {
-          setAuditResults('提取页面内容失败：' + error.message);
-          return;
-        }
+      // 每次都重新提取页面内容，不使用缓存的extractedText
+      if (!portRef.current) {
+        setAuditResults('连接已断开，无法提取页面内容，请刷新页面重试');
+        return;
       }
-      await startContentReview(extractedText);
-      return;
+      try {
+        portRef.current.postMessage({
+          action: "start_audit_check"
+        });
+        return;
+      } catch (error) {
+        setAuditResults('提取页面内容失败：' + error.message);
+        return;
+      }
     }
 
     // 官方服务器需要通过background.js
@@ -436,7 +451,7 @@ const AuditComponent = ({ host, uname, serverType }) => {
               className="bg-base-200 p-1 flex justify-between items-center cursor-pointer"
               onClick={() => setIsTextExpanded(!isTextExpanded)}
             >
-              <h3 className="text-xs font-medium">提取的文本内容</h3>
+              <h3 className="text-xs font-medium text-purple-800">审核内容</h3>
               <button className="btn btn-xs btn-ghost">
                 {isTextExpanded ? (
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
