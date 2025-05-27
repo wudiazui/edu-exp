@@ -333,7 +333,8 @@ export default function Main() {
           parameters: {
             type: 'format',
             topic: question,
-            discipline: subject
+            discipline: subject,
+            site: site
           }
         });
 
@@ -446,7 +447,8 @@ export default function Main() {
           parameters: {
             type: 'complete',
             topic: question,
-            discipline: subject
+            discipline: subject,
+            site: site
           }
         });
 
@@ -592,6 +594,7 @@ export default function Main() {
             discipline: subject,
             topic_type: selectedValue,
             school_level: gradeLevel,
+            site: site,
             ...(imageFileId && {
               image: {
                 type: "image",
@@ -750,6 +753,7 @@ export default function Main() {
             discipline: subject,
             topic_type: selectedValue,
             school_level: gradeLevel,
+            site: site,
             ...(imageFileId && {
               image: {
                 type: "image",
