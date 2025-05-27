@@ -153,6 +153,9 @@ const TextAreaSection = ({
                 // 当site为bc时，使用渲染后的HTML内容
                 if (['bc', 'bc-no-cot'].includes(site) && renderedHtml) {
                   onFill(renderedHtml);
+                } else if (site === 'bc') {
+                  // 当site为bc但没有渲染内容时，直接使用原始value
+                  onFill(value);
                 } else {
                   onFill(removeEmptyLinesFromString(value, gradeLevel === "小学"));
                 }
@@ -172,7 +175,7 @@ const TextAreaSection = ({
           >
             清除
           </button>
-          <CopyButton text={displayMode ? renderedHtml : removeEmptyLinesFromString(value, gradeLevel === "小学")} />
+          <CopyButton text={displayMode ? renderedHtml : (site === 'bc' ? value : removeEmptyLinesFromString(value, gradeLevel === "小学"))} />
         </div>
       </div>
       {thinkingChain && (
@@ -228,7 +231,7 @@ const TextAreaSection = ({
         />
       ) : (
         <textarea
-          value={removeEmptyLinesFromString(value, gradeLevel === "小学")}
+          value={site === 'bc' ? value : removeEmptyLinesFromString(value, gradeLevel === "小学")}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           className="textarea textarea-bordered textarea-lg w-full h-full min-h-40 p-4 text-sm"
