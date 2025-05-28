@@ -537,17 +537,24 @@ export function content_review(text, host, uname, onMessage, onError, onComplete
 }
 
 export async function replaceLatexWithImages(text) {
+   console.log("replaceLatexWithImages:\n",text);
   // Convert \( and \) to $
   text = text.replace(/\\\(/g, '$').replace(/\\\)/g, '$')
     .replace(/\\\[/g, '$').replace(/\\\]/g, '$');
 
-  const regex = /\$([^$]+)\$/g;
+  // 使用 dotAll 标志 (s) 来匹配包括换行符在内的任意字符
+  // [^$]*? 使用非贪婪匹配，避免跨越多个数学表达式
+  const regex = /\$([\s\S]*?)\$/g;
   let result = text;
   const matches = [...text.matchAll(regex)];
 
   for (const match of matches) {
     const fullMatch = match[0];
     let expression = match[1];
+    
+    // 清理表达式：移除首尾的空白字符（包括换行符）
+    expression = expression.trim();
+    
     // 替换 HTML 符号为文本符号
     expression = expression
       .replace(/&lt;/g, '<')
@@ -563,6 +570,7 @@ export async function replaceLatexWithImages(text) {
       .replace(/<\/span>/g,'')
       .replace(/<span>/g, '')
       .replace(/<br>/g, '');
+    
     const imgElement = await math2img(expression);
     result = result.replace(fullMatch, imgElement.outerHTML);
   }
@@ -575,26 +583,128 @@ export async function replaceLatexWithImagesInHtml(htmlText) {
   const tempDiv = document.createElement('div');
   tempDiv.innerHTML = htmlText;
 
-  // Function to process text nodes containing LaTeX
-  async function processTextNode(node) {
-    const text = node.textContent;
+  // First, try to process the entire content as a whole to handle cross-element LaTeX
+  const fullTextContent = tempDiv.textContent || tempDiv.innerText || '';
+  
+  // Convert \( and \) to $, \[ and \] to $
+  let processedFullText = fullTextContent.replace(/\\\(/g, '$').replace(/\\\)/g, '$')
+    .replace(/\\\[/g, '$').replace(/\\\]/g, '$');
 
-    // Convert \( and \) to $
-    let processedText = text.replace(/\\\(/g, '$').replace(/\\\)/g, '$')
+  // Check if there are cross-element LaTeX expressions
+  const regex = /\$([\s\S]*?)\$/g;
+  const crossElementMatches = [...processedFullText.matchAll(regex)];
+  
+  if (crossElementMatches.length > 0) {
+    // Found cross-element LaTeX, process the entire HTML as text first
+    let processedHtml = htmlText;
+    
+    // Convert \( and \) to $, \[ and \] to $ in the raw HTML
+    processedHtml = processedHtml.replace(/\\\(/g, '$').replace(/\\\)/g, '$')
+      .replace(/\\\[/g, '$').replace(/\\\]/g, '$');
+    
+    // Find LaTeX expressions in the HTML, allowing for HTML tags in between
+    // This regex allows HTML tags between the $ delimiters
+    const htmlLatexRegex = /\$(((?!<script|<style)[^$]|<[^>]*>)*?)\$/gs;
+    const htmlMatches = [...processedHtml.matchAll(htmlLatexRegex)];
+    
+    for (const match of htmlMatches) {
+      const fullMatch = match[0];
+      let expression = match[1];
+      
+      // Remove HTML tags from the expression but preserve the math content
+      expression = expression
+        .replace(/<br\s*\/?>/gi, ' ')          // Replace <br> with space
+        .replace(/<\/p>\s*<p[^>]*>/gi, ' ')    // Replace </p><p> with space
+        .replace(/<[^>]*>/g, '')               // Remove all other HTML tags
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&')
+        .replace(/&quot;/g, '"')
+        .replace(/&apos;/g, "'")
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&copy;/g, '©')
+        .replace(/&reg;/g, '®')
+        .replace(/&euro;/g, '€')
+        .replace(/&yen;/g, '¥');
+      
+      // Clean up the expression
+      expression = expression.trim();
+      
+      // Skip empty expressions
+      if (!expression) continue;
+      
+      // Get the image element
+      const imgElement = await math2img(expression);
+      if (imgElement) {
+        // Replace the entire LaTeX block (including HTML tags) with the image
+        processedHtml = processedHtml.replace(fullMatch, imgElement.outerHTML);
+      }
+    }
+    
+    return processedHtml;
+  }
+  
+  // No cross-element LaTeX found, use the original element-by-element processing
+  // Function to get all text content from an element, preserving the structure for LaTeX detection
+  function getElementTextContent(element) {
+    let textContent = '';
+    
+    function traverse(node) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        textContent += node.textContent;
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        // For br tags, add a space to separate text nodes
+        if (node.tagName === 'BR') {
+          textContent += ' ';
+        }
+        // Traverse child nodes
+        for (let child of node.childNodes) {
+          traverse(child);
+        }
+      }
+    }
+    
+    traverse(element);
+    return textContent;
+  }
+
+  // Function to process an element that might contain LaTeX
+  async function processElement(element) {
+    // Skip script and style elements
+    if (element.tagName === 'SCRIPT' || element.tagName === 'STYLE') {
+      return;
+    }
+
+    // Get the combined text content
+    const textContent = getElementTextContent(element);
+    
+    // Convert \( and \) to $, \[ and \] to $
+    let processedText = textContent.replace(/\\\(/g, '$').replace(/\\\)/g, '$')
       .replace(/\\\[/g, '$').replace(/\\\]/g, '$');
 
-    const regex = /\$([^$]+)\$/g;
+    // 使用 [\s\S]*? 来匹配包括换行符在内的任意字符，使用非贪婪匹配
+    const regex = /\$([\s\S]*?)\$/g;
     const matches = [...processedText.matchAll(regex)];
 
-    if (matches.length === 0) return;
+    if (matches.length === 0) {
+      // No LaTeX found, process child elements recursively
+      const childElements = Array.from(element.children);
+      for (const childElement of childElements) {
+        await processElement(childElement);
+      }
+      return;
+    }
 
-    // Create a document fragment to hold processed content
+    // Found LaTeX, replace the entire element content
     const fragment = document.createDocumentFragment();
     let lastIndex = 0;
 
     for (const match of matches) {
       const fullMatch = match[0];
       let expression = match[1];
+
+      // 清理表达式：移除首尾的空白字符，但保留内部的空白和换行
+      expression = expression.trim();
 
       // Replace HTML entities
       expression = expression
@@ -611,7 +721,10 @@ export async function replaceLatexWithImagesInHtml(htmlText) {
 
       // Add text before the LaTeX
       if (match.index > lastIndex) {
-        fragment.appendChild(document.createTextNode(processedText.slice(lastIndex, match.index)));
+        const beforeText = processedText.slice(lastIndex, match.index);
+        if (beforeText.trim()) {
+          fragment.appendChild(document.createTextNode(beforeText));
+        }
       }
 
       // Get and append the image
@@ -625,33 +738,22 @@ export async function replaceLatexWithImagesInHtml(htmlText) {
 
     // Add remaining text after the last LaTeX
     if (lastIndex < processedText.length) {
-      fragment.appendChild(document.createTextNode(processedText.slice(lastIndex)));
-    }
-
-    // Replace the original text node with the processed fragment
-    node.parentNode.replaceChild(fragment, node);
-  }
-
-  // Function to traverse the DOM tree
-  async function traverseNode(node) {
-    if (node.nodeType === Node.TEXT_NODE) {
-      await processTextNode(node);
-    } else if (node.nodeType === Node.ELEMENT_NODE) {
-      // Skip script and style elements
-      if (node.tagName === 'SCRIPT' || node.tagName === 'STYLE') {
-        return;
-      }
-
-      // Process child nodes
-      const childNodes = Array.from(node.childNodes);
-      for (const childNode of childNodes) {
-        await traverseNode(childNode);
+      const afterText = processedText.slice(lastIndex);
+      if (afterText.trim()) {
+        fragment.appendChild(document.createTextNode(afterText));
       }
     }
+
+    // Replace the element's content with the processed fragment
+    element.innerHTML = '';
+    element.appendChild(fragment);
   }
 
-  // Process all nodes in the temporary div
-  await traverseNode(tempDiv);
+  // Process all direct child elements
+  const childElements = Array.from(tempDiv.children);
+  for (const childElement of childElements) {
+    await processElement(childElement);
+  }
 
   // Return the processed HTML
   return tempDiv.innerHTML;

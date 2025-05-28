@@ -190,7 +190,10 @@ function removeEmptyLinesFromString(text, shouldFormatEquations = true) {
     
     return processedText
         .split('\n')
-        .filter(line => line.trim() !== '')
+        .filter(line => {
+            const trimmedLine = line.trim();
+            return trimmedLine !== '' && trimmedLine !== '$$';
+        })
         .join('\n');
 }
 
