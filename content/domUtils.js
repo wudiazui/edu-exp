@@ -153,7 +153,7 @@ export function getAuditContentDetails() {
     for (let j = 0; j < radioGroups.length; j++) {
       const radioGroup = radioGroups.nodes[j];
       // Find radios with tabindex="0" and role="radio"
-      const selectedRadio = u(radioGroup).find('[tabindex="0"][role="radio"]');
+      const selectedRadio = u(radioGroup).find('[aria-checked="true"]');
 
       if (selectedRadio.length > 0) {
         // Get the text from the radio label

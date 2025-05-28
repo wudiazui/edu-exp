@@ -54,7 +54,7 @@ ${materialContent.trim()}
 ${materialSection}
 【题干】: 
 ${stemText.trim()}
-${referenceAnswer ? `
+${referenceAnswer && questionType && questionType.trim() === "问答" ? `
 【参考答案】: 
 ${referenceAnswer.trim()}
 ` : ''}

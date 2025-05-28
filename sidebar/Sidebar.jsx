@@ -322,14 +322,18 @@ export default function Main() {
   const handleFormat = async () => {
     setIsFormatting(true);
     try {
-      if (serverType === "扣子" && cozeService) {
+      if (serverType === "扣子") {
+        // 检查扣子服务器的必要组件是否已初始化
+        if (!cozeService || !kouziConfig) {
+          console.error('扣子服务器配置未完成初始化');
+          setQuestion('扣子服务器配置未完成，请检查设置页面的扣子配置');
+          setIsFormatting(false);
+          return;
+        }
+        
         // 扣子服务器处理逻辑保持不变
-        const result = await new Promise((resolve) => {
-          chrome.storage.sync.get(['kouziSolveWorkflowId', 'kouziAppId'], resolve);
-        });
-
-        const workflowResult = await cozeService.executeWorkflow(result.kouziSolveWorkflowId, {
-          app_id: result.kouziAppId,
+        const workflowResult = await cozeService.executeWorkflow(kouziConfig.workflowId, {
+          app_id: kouziConfig.appId,
           parameters: {
             type: 'format',
             topic: question,
@@ -436,14 +440,18 @@ export default function Main() {
   const handleComplete = async () => {
     setIsCompleteeing(true);
     try {
-      if (serverType === "扣子" && cozeService) {
+      if (serverType === "扣子") {
+        // 检查扣子服务器的必要组件是否已初始化
+        if (!cozeService || !kouziConfig) {
+          console.error('扣子服务器配置未完成初始化');
+          setQuestion('扣子服务器配置未完成，请检查设置页面的扣子配置');
+          setIsCompleteeing(false);
+          return;
+        }
+        
         // 扣子服务器处理逻辑保持不变
-        const result = await new Promise((resolve) => {
-          chrome.storage.sync.get(['kouziSolveWorkflowId', 'kouziAppId'], resolve);
-        });
-
-        const workflowResult = await cozeService.executeWorkflow(result.kouziSolveWorkflowId, {
-          app_id: result.kouziAppId,
+        const workflowResult = await cozeService.executeWorkflow(kouziConfig.workflowId, {
+          app_id: kouziConfig.appId,
           parameters: {
             type: 'complete',
             topic: question,
@@ -559,9 +567,20 @@ export default function Main() {
     setIsGeneratingAnswer(true);
     // 添加诊断日志
     console.log('生成解答时的服务器类型:', serverType);
+    console.log('CozeService状态:', cozeService);
+    console.log('KouziConfig状态:', kouziConfig);
     
     try {
-      if (serverType === "扣子" && cozeService && kouziConfig) {
+      if (serverType === "扣子") {
+        // 检查扣子服务器的必要组件是否已初始化
+        if (!cozeService || !kouziConfig) {
+          console.error('扣子服务器配置未完成初始化，切换到官方服务器逻辑');
+          // 如果扣子服务器配置未完成，显示错误信息
+          setAnswer('扣子服务器配置未完成，请检查设置页面的扣子配置');
+          setIsGeneratingAnswer(false);
+          return;
+        }
+        
         // 扣子服务器处理逻辑保持不变
         let imageFileId = null;
         if (selectedImage) {
@@ -714,12 +733,16 @@ export default function Main() {
   const handleGenerateAnalysis = async () => {
     setIsGeneratingAnalysis(true);
     try {
-      if (serverType === "扣子" && cozeService) {
+      if (serverType === "扣子") {
+        // 检查扣子服务器的必要组件是否已初始化
+        if (!cozeService) {
+          console.error('扣子服务器配置未完成初始化');
+          setAnalysis('扣子服务器配置未完成，请检查设置页面的扣子配置');
+          setIsGeneratingAnalysis(false);
+          return;
+        }
+        
         // 扣子服务器处理逻辑保持不变
-        const result = await new Promise((resolve) => {
-          chrome.storage.sync.get(['kouziSolveWorkflowId', 'kouziAppId'], resolve);
-        });
-
         let imageFileId = null;
         if (selectedImage) {
           // Convert base64 to blob
@@ -743,8 +766,8 @@ export default function Main() {
           imageFileId = uploadResult.id;
         }
 
-        const workflowResult = await cozeService.executeWorkflow(result.kouziSolveWorkflowId, {
-          app_id: result.kouziAppId,
+        const workflowResult = await cozeService.executeWorkflow(kouziConfig.workflowId, {
+          app_id: kouziConfig.appId,
           parameters: {
             type: 'analysis',
             topic: question,
@@ -1001,6 +1024,10 @@ export default function Main() {
           // Optionally show an error message to the user
         }
       });
+    } else {
+      // 当切换到非扣子服务器时，清理相关状态
+      setCozeService(null);
+      setKouziConfig(null);
     }
   }, [serverType]);
 
