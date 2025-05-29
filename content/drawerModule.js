@@ -898,40 +898,6 @@ function createDataTab() {
     }
   }, { passive: false });
   
-  // 添加滚动指示器
-  const scrollIndicator = document.createElement('div');
-  scrollIndicator.className = 'text-xs text-gray-400 text-center py-1';
-  scrollIndicator.id = 'scroll-indicator';
-  scrollIndicator.textContent = '使用鼠标滚轮或拖拽滚动条查看更多数据';
-  
-  // 监听滚动事件更新指示器
-  tableContainer.addEventListener('scroll', () => {
-    const { scrollTop, scrollHeight, clientHeight } = tableContainer;
-    const { scrollLeft, scrollWidth, clientWidth } = tableContainer;
-    
-    if (scrollHeight > clientHeight || scrollWidth > clientWidth) {
-      const verticalProgress = scrollHeight > clientHeight ? 
-        Math.round((scrollTop / (scrollHeight - clientHeight)) * 100) : 0;
-      const horizontalProgress = scrollWidth > clientWidth ? 
-        Math.round((scrollLeft / (scrollWidth - clientWidth)) * 100) : 0;
-      
-      let message = '';
-      if (scrollHeight > clientHeight && scrollWidth > clientWidth) {
-        message = `垂直: ${verticalProgress}% | 水平: ${horizontalProgress}%`;
-      } else if (scrollHeight > clientHeight) {
-        message = `滚动进度: ${verticalProgress}%`;
-      } else if (scrollWidth > clientWidth) {
-        message = `水平滚动: ${horizontalProgress}%`;
-      }
-      
-      scrollIndicator.textContent = message || '使用鼠标滚轮或拖拽滚动条查看更多数据';
-      scrollIndicator.style.opacity = '1';
-    } else {
-      scrollIndicator.textContent = '所有数据已显示';
-      scrollIndicator.style.opacity = '0.6';
-    }
-  });
-  
   // 翻页按钮组
   const paginationContainer = document.createElement('div');
   paginationContainer.className = 'flex justify-center mb-2';
@@ -958,7 +924,6 @@ function createDataTab() {
   
   container.appendChild(statsContainer);
   container.appendChild(tableContainer);
-  container.appendChild(scrollIndicator);
   container.appendChild(paginationContainer);
   container.appendChild(nextButtonContainer);
   
@@ -1013,7 +978,6 @@ function adjustTableHeight() {
   // 计算其他元素的高度
   const header = drawerContent.querySelector('.card-header');
   const statsContainer = drawerContent.querySelector('#data-stats').closest('div');
-  const scrollIndicator = document.getElementById('scroll-indicator');
   const paginationContainer = drawerContent.querySelector('.btn-group').closest('div');
   const nextButtonContainer = drawerContent.querySelector('.btn-primary.btn-wide').closest('div');
   
@@ -1022,7 +986,6 @@ function adjustTableHeight() {
   // 计算已使用的高度
   if (header) usedHeight += header.offsetHeight;
   if (statsContainer) usedHeight += statsContainer.offsetHeight;
-  if (scrollIndicator) usedHeight += scrollIndicator.offsetHeight;
   if (paginationContainer) usedHeight += paginationContainer.offsetHeight;
   if (nextButtonContainer) usedHeight += nextButtonContainer.offsetHeight;
   
