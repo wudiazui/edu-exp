@@ -93,12 +93,21 @@ async function loadTableData(page = 1) {
               API函数未初始化
             </div>
             <div class="text-sm text-gray-500 mb-4">无法加载数据，请检查扩展配置</div>
-            <button class="btn btn-sm btn-primary" onclick="loadTableData(${page})">
+            <button class="btn btn-sm btn-primary" data-action="retry-load" data-page="${page}">
               重试
             </button>
           </td>
         </tr>
       `;
+      
+      // 为重试按钮添加事件监听器
+      const retryBtn = tbody.querySelector('[data-action="retry-load"]');
+      if (retryBtn) {
+        retryBtn.addEventListener('click', () => {
+          const retryPage = parseInt(retryBtn.dataset.page) || 1;
+          loadTableData(retryPage);
+        });
+      }
       return;
     }
   }
@@ -143,18 +152,36 @@ async function loadTableData(page = 1) {
       // 渲染数据
       if (currentData.length > 0) {
         tbody.innerHTML = currentData.map(item => `
-          <tr class="hover:bg-base-200">
+          <tr class="hover:bg-base-200" data-task-id="${item.taskID}" data-clue-id="${item.clueID}">
             <td class="font-mono text-sm">${item.clueID}</td>
             <td class="font-medium max-w-xs truncate" title="${item.brief.replace(/\n/g, ' ')}">${item.brief.replace(/\n/g, ' ').substring(0, 50)}${item.brief.length > 50 ? '...' : ''}</td>
             <td class="text-sm">${item.stepName}</td>
             <td class="text-sm">${item.subjectName}</td>
             <td>
-              <button class="btn btn-primary btn-sm" onclick="auditTask(${item.taskID})">
+              <button class="btn btn-primary btn-sm" data-action="audit-task" data-task-id="${item.taskID}">
                 审核
               </button>
             </td>
           </tr>
         `).join('');
+        
+        // 为审核按钮添加事件监听器
+        const auditButtons = tbody.querySelectorAll('[data-action="audit-task"]');
+        auditButtons.forEach(btn => {
+          btn.addEventListener('click', () => {
+            const taskId = btn.dataset.taskId;
+            auditTask(taskId);
+          });
+        });
+        
+        // 为表格行添加点击事件，用于选择
+        const tableRows = tbody.querySelectorAll('tr[data-task-id]');
+        tableRows.forEach(row => {
+          row.addEventListener('click', () => {
+            const taskId = row.dataset.taskId;
+            selectQuestion(taskId);
+          });
+        });
       } else {
         tbody.innerHTML = `
           <tr>
@@ -189,12 +216,21 @@ async function loadTableData(page = 1) {
             加载失败
           </div>
           <div class="text-sm text-gray-500 mb-4">${error.message}</div>
-          <button class="btn btn-sm btn-primary" onclick="loadTableData(${page})">
+          <button class="btn btn-sm btn-primary" data-action="reload" data-page="${page}">
             重新加载
           </button>
         </td>
       </tr>
     `;
+    
+    // 为重新加载按钮添加事件监听器
+    const reloadBtn = tbody.querySelector('[data-action="reload"]');
+    if (reloadBtn) {
+      reloadBtn.addEventListener('click', () => {
+        const reloadPage = parseInt(reloadBtn.dataset.page) || 1;
+        loadTableData(reloadPage);
+      });
+    }
   }
 }
 
@@ -232,15 +268,13 @@ function auditTask(taskID) {
   }, 1500);
 }
 
-window.goToNextQuestion = goToNextQuestion;
-
 // 更新翻页按钮状态
 function updatePagination() {
   const paginationContainer = document.querySelector('.btn-group');
   if (!paginationContainer) return;
   
   // 重新生成分页按钮
-  let paginationHTML = `<button class="btn btn-sm" onclick="changePage('prev')">«</button>`;
+  let paginationHTML = `<button class="btn btn-sm" data-action="page-prev">«</button>`;
   
   // 计算显示的页码范围
   let startPage = Math.max(1, currentPage - 2);
@@ -253,7 +287,7 @@ function updatePagination() {
   
   // 如果不是从第1页开始，显示第1页和省略号
   if (startPage > 1) {
-    paginationHTML += `<button class="btn btn-sm" data-page="1" onclick="changePage(1)">1</button>`;
+    paginationHTML += `<button class="btn btn-sm" data-action="page-number" data-page="1">1</button>`;
     if (startPage > 2) {
       paginationHTML += `<button class="btn btn-sm btn-disabled">...</button>`;
     }
@@ -262,7 +296,7 @@ function updatePagination() {
   // 显示页码按钮
   for (let i = startPage; i <= endPage; i++) {
     const activeClass = i === currentPage ? 'btn-active' : '';
-    paginationHTML += `<button class="btn btn-sm ${activeClass}" data-page="${i}" onclick="changePage(${i})">${i}</button>`;
+    paginationHTML += `<button class="btn btn-sm ${activeClass}" data-action="page-number" data-page="${i}">${i}</button>`;
   }
   
   // 如果不是到最后一页，显示省略号和最后一页
@@ -270,16 +304,32 @@ function updatePagination() {
     if (endPage < totalPages - 1) {
       paginationHTML += `<button class="btn btn-sm btn-disabled">...</button>`;
     }
-    paginationHTML += `<button class="btn btn-sm" data-page="${totalPages}" onclick="changePage(${totalPages})">${totalPages}</button>`;
+    paginationHTML += `<button class="btn btn-sm" data-action="page-number" data-page="${totalPages}">${totalPages}</button>`;
   }
   
-  paginationHTML += `<button class="btn btn-sm" onclick="changePage('next')">»</button>`;
+  paginationHTML += `<button class="btn btn-sm" data-action="page-next">»</button>`;
   
   paginationContainer.innerHTML = paginationHTML;
   
+  // 为分页按钮添加事件监听器
+  const pageButtons = paginationContainer.querySelectorAll('button[data-action]');
+  pageButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const action = btn.dataset.action;
+      if (action === 'page-prev') {
+        changePage('prev');
+      } else if (action === 'page-next') {
+        changePage('next');
+      } else if (action === 'page-number') {
+        const page = parseInt(btn.dataset.page);
+        changePage(page);
+      }
+    });
+  });
+  
   // 更新前后翻页按钮状态
-  const prevBtn = paginationContainer.querySelector('button[onclick*="prev"]');
-  const nextBtn = paginationContainer.querySelector('button[onclick*="next"]');
+  const prevBtn = paginationContainer.querySelector('[data-action="page-prev"]');
+  const nextBtn = paginationContainer.querySelector('[data-action="page-next"]');
   
   if (prevBtn) {
     prevBtn.disabled = currentPage === 1;
@@ -308,14 +358,15 @@ function changePage(page) {
 }
 
 // 选择题目
-function selectQuestion(questionId) {
-  console.log('选择题目:', questionId);
+function selectQuestion(taskId) {
+  console.log('选择任务:', taskId);
   
   // 高亮选中的行
   const rows = document.querySelectorAll('#data-table-body tr');
   rows.forEach(row => row.classList.remove('bg-primary', 'text-primary-content'));
   
-  const selectedRow = document.querySelector(`#data-table-body tr[onclick*="${questionId}"]`);
+  // 通过data属性查找对应的行
+  const selectedRow = document.querySelector(`#data-table-body tr[data-task-id="${taskId}"]`);
   if (selectedRow) {
     selectedRow.classList.add('bg-primary', 'text-primary-content');
   }
@@ -323,7 +374,7 @@ function selectQuestion(questionId) {
   // 更新下一题按钮状态
   const nextButton = document.querySelector('.btn-primary.btn-wide');
   if (nextButton) {
-    nextButton.textContent = `处理题目 ${questionId} →`;
+    nextButton.textContent = `处理任务 ${taskId} →`;
     nextButton.classList.remove('btn-disabled');
   }
 }
@@ -332,32 +383,62 @@ function selectQuestion(questionId) {
 function goToNextQuestion() {
   const selectedRow = document.querySelector('#data-table-body tr.bg-primary');
   if (!selectedRow) {
-    alert('请先选择一个题目');
+    // 如果没有选中的行，尝试获取第一行数据
+    const firstRow = document.querySelector('#data-table-body tr');
+    if (!firstRow) {
+      alert('暂无数据可处理');
+      return;
+    }
+    
+    // 获取第一行的任务ID
+    const firstTaskButton = firstRow.querySelector('[data-action="audit-task"]');
+    if (firstTaskButton) {
+      const taskId = firstTaskButton.dataset.taskId;
+      console.log('处理第一个任务:', taskId);
+      auditTask(taskId);
+      return;
+    }
+    
+    alert('无法获取任务信息');
     return;
   }
   
-  const currentQuestionId = selectedRow.onclick.toString().match(/'(\d+)'/)?.[1];
-  console.log('处理题目:', currentQuestionId);
+  // 从选中行获取任务ID
+  const auditButton = selectedRow.querySelector('[data-action="audit-task"]');
+  if (auditButton) {
+    const currentTaskId = auditButton.dataset.taskId;
+    console.log('处理选中的任务:', currentTaskId);
+    auditTask(currentTaskId);
+  } else {
+    alert('无法获取任务信息');
+  }
+}
+
+// 刷新数据
+function refreshData() {
+  loadTableData(currentPage);
+}
+
+// 关闭抽屉
+function closeDrawer() {
+  if (drawerContainer) {
+    drawerContainer.classList.remove('drawer-open');
+    
+    // 强制设置抽屉隐藏到右侧外部
+    const drawerContent = drawerContainer.querySelector('.drawer-content');
+    if (drawerContent) {
+      drawerContent.style.right = '-400px';
+      drawerContent.style.left = 'auto';
+    }
+  }
+  isDrawerOpen = false;
   
-  // 模拟跳转到下一题
-  const toast = document.createElement('div');
-  toast.className = 'toast toast-top toast-center z-50';
-  toast.innerHTML = `
-    <div class="alert alert-success">
-      <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-      <span>正在处理题目 ${currentQuestionId}...</span>
-    </div>
-  `;
-  
-  document.body.appendChild(toast);
-  
-  setTimeout(() => {
-    toast.remove();
-    // 这里可以添加实际的页面跳转逻辑
-    console.log(`跳转到题目 ${currentQuestionId} 的编辑页面`);
-  }, 2000);
+  // 更新按钮状态
+  const button = document.getElementById('drawer-float-button');
+  if (button) {
+    button.classList.remove('active');
+    button.style.transform = 'scale(1)';
+  }
 }
 
 // 检查URL并添加圆形按钮
@@ -451,12 +532,19 @@ function createDrawerHeader(config) {
   header.innerHTML = `
     <div class="w-1 h-12 bg-base-300 rounded-full absolute top-1/2 left-2 transform -translate-y-1/2"></div>
     <h3 class="card-title text-lg font-bold text-primary">${config.title || '数据面板'}</h3>
-    <button class="btn btn-sm btn-circle btn-ghost hover:btn-error" onclick="window.closeDrawer()">
+    <button class="btn btn-sm btn-circle btn-ghost hover:btn-error" data-action="close-drawer">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
       </svg>
     </button>
   `;
+  
+  // 为关闭按钮添加事件监听器
+  const closeBtn = header.querySelector('[data-action="close-drawer"]');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeDrawer);
+  }
+  
   return header;
 }
 
@@ -503,13 +591,19 @@ function createDataTab() {
     <div id="data-stats">
       总计: <span id="total-records">0</span> 条记录
     </div>
-    <button class="btn btn-sm btn-ghost" onclick="refreshData()" title="刷新数据">
+    <button class="btn btn-sm btn-ghost" data-action="refresh-data" title="刷新数据">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
       </svg>
       刷新
     </button>
   `;
+  
+  // 为刷新按钮添加事件监听器
+  const refreshBtn = statsContainer.querySelector('[data-action="refresh-data"]');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', refreshData);
+  }
   
   // 表格容器
   const tableContainer = document.createElement('div');
@@ -551,10 +645,10 @@ function createDataTab() {
   const nextButton = document.createElement('button');
   nextButton.className = 'btn btn-primary btn-wide';
   nextButton.innerHTML = '下一题 →';
-  nextButton.onclick = () => {
+  nextButton.addEventListener('click', () => {
     console.log('下一题按钮被点击');
-    window.goToNextQuestion();
-  };
+    goToNextQuestion();
+  });
   
   nextButtonContainer.appendChild(nextButton);
   
@@ -569,11 +663,6 @@ function createDataTab() {
   }, 100);
   
   return container;
-}
-
-// 刷新数据
-function refreshData() {
-  loadTableData(currentPage);
 }
 
 // 更新数据统计信息
@@ -639,28 +728,6 @@ function openDrawer() {
   if (button) {
     button.classList.add('active');
     button.style.transform = 'scale(1.05) rotate(45deg)';
-  }
-}
-
-// 关闭抽屉
-function closeDrawer() {
-  if (drawerContainer) {
-    drawerContainer.classList.remove('drawer-open');
-    
-    // 强制设置抽屉隐藏到右侧外部
-    const drawerContent = drawerContainer.querySelector('.drawer-content');
-    if (drawerContent) {
-      drawerContent.style.right = '-400px';
-      drawerContent.style.left = 'auto';
-    }
-  }
-  isDrawerOpen = false;
-  
-  // 更新按钮状态
-  const button = document.getElementById('drawer-float-button');
-  if (button) {
-    button.classList.remove('active');
-    button.style.transform = 'scale(1)';
   }
 }
 
@@ -935,5 +1002,18 @@ export {
   closeDrawer,
   removeDrawerElements
 }; 
+
+// 将关键函数暴露到全局作用域，确保可以在HTML中调用
+window.closeDrawer = closeDrawer;
+window.refreshData = refreshData;
+window.goToNextQuestion = goToNextQuestion;
+window.changePage = changePage;
+window.auditTask = auditTask;
+window.loadTableData = loadTableData;
+window.toggleDrawer = toggleDrawer;
+window.openDrawer = openDrawer;
+window.removeDrawerElements = removeDrawerElements;
+window.checkURLAndAddDrawerButton = checkURLAndAddDrawerButton;
+window.selectQuestion = selectQuestion;
 
 console.log('✅ 抽屉模块函数已添加到全局作用域'); 
