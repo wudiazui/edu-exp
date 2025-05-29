@@ -49,6 +49,10 @@ let pageSize = 20;
 // 存储当前数据
 let currentData = [];
 
+// 存储两种状态的数据统计
+let state1Records = 0;
+let state4Records = 0;
+
 // 获取状态对应的样式类
 function getStatusBadgeClass(status) {
   const statusMap = {
@@ -125,42 +129,89 @@ async function loadTableData(page = 1) {
   try {
     console.log('🔄 开始请求数据...', { page, pageSize });
     
-    // 调用API获取数据
-    const response = await getMyAuditTaskList({
-      pn: page,
-      rn: pageSize,
-      clueID: '',
-      clueType: '',
-      step: '',
-      subject: '',
-      state: 1
-    });
+    // 同时请求state为1和state为4的数据
+    const [response1, response4] = await Promise.all([
+      getMyAuditTaskList({
+        pn: page,
+        rn: pageSize,
+        clueID: '',
+        clueType: '',
+        step: '',
+        subject: '',
+        state: 1
+      }),
+      getMyAuditTaskList({
+        pn: page,
+        rn: pageSize,
+        clueID: '',
+        clueType: '',
+        step: '',
+        subject: '',
+        state: 4
+      })
+    ]);
     
-    console.log('📡 API响应:', response);
+    console.log('📡 State 1 API响应:', response1);
+    console.log('📡 State 4 API响应:', response4);
     
-    if (response && response.errno === 0 && response.data) {
-      const { total, list } = response.data;
+    // 验证两个响应都是有效的
+    if ((response1 && response1.errno === 0 && response1.data) ||
+        (response4 && response4.errno === 0 && response4.data)) {
+      
+      // 提取数据列表
+      const list1 = (response1 && response1.errno === 0 && response1.data) ? response1.data.list || [] : [];
+      const list4 = (response4 && response4.errno === 0 && response4.data) ? response4.data.list || [] : [];
+      
+      // 合并两个状态的数据
+      const combinedList = [...list1, ...list4];
+      
+      // 为数据项添加状态标识，便于区分
+      const processedList = combinedList.map(item => ({
+        ...item,
+        originalState: list1.includes(item) ? 1 : 4
+      }));
+      
+      // 计算总记录数（两个状态的数据总和）
+      const total1 = (response1 && response1.errno === 0 && response1.data) ? response1.data.total || 0 : 0;
+      const total4 = (response4 && response4.errno === 0 && response4.data) ? response4.data.total || 0 : 0;
+      const combinedTotal = total1 + total4;
       
       // 更新分页信息
-      totalRecords = total;
-      totalPages = Math.ceil(total / pageSize);
-      currentData = list || [];
+      totalRecords = combinedTotal;
+      totalPages = Math.ceil(combinedTotal / pageSize);
+      currentData = processedList;
       currentPage = page;
       
-      console.log('📊 数据统计:', { totalRecords, totalPages, currentPage, dataLength: currentData.length });
+      // 更新状态统计信息
+      state1Records = total1;
+      state4Records = total4;
+      
+      console.log('📊 合并数据统计:', { 
+        total1, 
+        total4, 
+        combinedTotal, 
+        totalPages, 
+        currentPage, 
+        dataLength: currentData.length 
+      });
       
       // 渲染数据
       if (currentData.length > 0) {
         tbody.innerHTML = currentData.map(item => `
-          <tr class="hover:bg-base-200" data-task-id="${item.taskID}" data-clue-id="${item.clueID}">
+          <tr class="hover:bg-base-200" data-task-id="${item.taskID}" data-clue-id="${item.clueID}" data-state="${item.originalState}">
             <td class="font-mono text-sm">${item.clueID}</td>
             <td class="font-medium max-w-xs truncate" title="${item.brief.replace(/\n/g, ' ')}">${item.brief.replace(/\n/g, ' ').substring(0, 50)}${item.brief.length > 50 ? '...' : ''}</td>
             <td class="text-sm">${item.stepName}</td>
             <td class="text-sm">${item.subjectName}</td>
             <td>
-              <button class="btn btn-primary btn-sm" data-action="audit-task" data-task-id="${item.taskID}">
-                审核
-              </button>
+              <div class="flex items-center gap-2">
+                <span class="badge badge-xs ${item.originalState === 1 ? 'badge-primary' : 'badge-secondary'}" title="状态: ${item.originalState}">
+                  ${item.originalState === 1 ? 'S1' : 'S4'}
+                </span>
+                <button class="btn btn-primary btn-sm" data-action="audit-task" data-task-id="${item.taskID}">
+                  审核
+                </button>
+              </div>
             </td>
           </tr>
         `).join('');
@@ -199,7 +250,7 @@ async function loadTableData(page = 1) {
       updateDataStats();
       
     } else {
-      throw new Error(response?.errmsg || '数据格式错误');
+      throw new Error('两个状态的数据都请求失败');
     }
     
   } catch (error) {
@@ -599,8 +650,12 @@ function createDataTab() {
   const statsContainer = document.createElement('div');
   statsContainer.className = 'flex justify-between items-center mb-4 text-sm text-gray-600';
   statsContainer.innerHTML = `
-    <div id="data-stats">
-      总计: <span id="total-records">0</span> 条记录
+    <div id="data-stats" class="flex flex-col gap-1">
+      <div>总计: <span id="total-records">0</span> 条记录</div>
+      <div class="flex gap-4 text-xs">
+        <span>状态1: <span id="state1-records" class="text-primary font-medium">0</span> 条</span>
+        <span>状态4: <span id="state4-records" class="text-secondary font-medium">0</span> 条</span>
+      </div>
     </div>
     <button class="btn btn-sm btn-ghost" data-action="refresh-data" title="刷新数据">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -618,7 +673,14 @@ function createDataTab() {
   
   // 表格容器
   const tableContainer = document.createElement('div');
-  tableContainer.className = 'overflow-x-auto flex-1 mb-4';
+  tableContainer.className = 'overflow-auto flex-1 mb-4 max-h-96';
+  tableContainer.style.cssText = `
+    max-height: 400px;
+    overflow-y: auto;
+    overflow-x: auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+  `;
   
   const table = document.createElement('table');
   table.className = 'table table-compact table-zebra w-full';
@@ -638,6 +700,77 @@ function createDataTab() {
   `;
   
   tableContainer.appendChild(table);
+  
+  // 添加鼠标滚轮事件处理，优化滚动体验
+  tableContainer.addEventListener('wheel', (e) => {
+    // 防止滚动事件冒泡到父容器
+    e.stopPropagation();
+    
+    // 确保在表格内部滚动
+    const { scrollTop, scrollHeight, clientHeight } = tableContainer;
+    const { scrollLeft, scrollWidth, clientWidth } = tableContainer;
+    
+    // 垂直滚动处理
+    if (e.deltaY !== 0) {
+      const atTop = scrollTop === 0;
+      const atBottom = scrollTop + clientHeight >= scrollHeight - 1;
+      
+      // 如果不在边界，阻止默认行为，让容器内部滚动
+      if (!atTop && !atBottom) {
+        e.preventDefault();
+      } else if (atTop && e.deltaY < 0) {
+        // 在顶部且向上滚动，阻止默认行为
+        e.preventDefault();
+      } else if (atBottom && e.deltaY > 0) {
+        // 在底部且向下滚动，阻止默认行为
+        e.preventDefault();
+      }
+    }
+    
+    // 水平滚动处理
+    if (e.deltaX !== 0) {
+      const atLeft = scrollLeft === 0;
+      const atRight = scrollLeft + clientWidth >= scrollWidth - 1;
+      
+      if (!atLeft && !atRight) {
+        e.preventDefault();
+      }
+    }
+  }, { passive: false });
+  
+  // 添加滚动指示器
+  const scrollIndicator = document.createElement('div');
+  scrollIndicator.className = 'text-xs text-gray-400 text-center py-1';
+  scrollIndicator.id = 'scroll-indicator';
+  scrollIndicator.textContent = '使用鼠标滚轮或拖拽滚动条查看更多数据';
+  
+  // 监听滚动事件更新指示器
+  tableContainer.addEventListener('scroll', () => {
+    const { scrollTop, scrollHeight, clientHeight } = tableContainer;
+    const { scrollLeft, scrollWidth, clientWidth } = tableContainer;
+    
+    if (scrollHeight > clientHeight || scrollWidth > clientWidth) {
+      const verticalProgress = scrollHeight > clientHeight ? 
+        Math.round((scrollTop / (scrollHeight - clientHeight)) * 100) : 0;
+      const horizontalProgress = scrollWidth > clientWidth ? 
+        Math.round((scrollLeft / (scrollWidth - clientWidth)) * 100) : 0;
+      
+      let message = '';
+      if (scrollHeight > clientHeight && scrollWidth > clientWidth) {
+        message = `垂直: ${verticalProgress}% | 水平: ${horizontalProgress}%`;
+      } else if (scrollHeight > clientHeight) {
+        message = `滚动进度: ${verticalProgress}%`;
+      } else if (scrollWidth > clientWidth) {
+        message = `水平滚动: ${horizontalProgress}%`;
+      }
+      
+      scrollIndicator.textContent = message || '使用鼠标滚轮或拖拽滚动条查看更多数据';
+      scrollIndicator.style.opacity = '1';
+    } else {
+      scrollIndicator.textContent = '所有数据已显示';
+      scrollIndicator.style.opacity = '0.6';
+    }
+  });
   
   // 翻页按钮组
   const paginationContainer = document.createElement('div');
@@ -665,6 +798,7 @@ function createDataTab() {
   
   container.appendChild(statsContainer);
   container.appendChild(tableContainer);
+  container.appendChild(scrollIndicator);
   container.appendChild(paginationContainer);
   container.appendChild(nextButtonContainer);
   
@@ -679,8 +813,19 @@ function createDataTab() {
 // 更新数据统计信息
 function updateDataStats() {
   const totalRecordsElement = document.getElementById('total-records');
+  const state1RecordsElement = document.getElementById('state1-records');
+  const state4RecordsElement = document.getElementById('state4-records');
+  
   if (totalRecordsElement) {
     totalRecordsElement.textContent = totalRecords;
+  }
+  
+  if (state1RecordsElement) {
+    state1RecordsElement.textContent = state1Records;
+  }
+  
+  if (state4RecordsElement) {
+    state4RecordsElement.textContent = state4Records;
   }
 }
 
@@ -938,27 +1083,48 @@ function addDrawerStyles() {
       cursor: pointer !important;
     }
     
-    /* 表格滚动优化 - 补充DaisyUI */
-    .overflow-x-auto {
+    /* 表格滚动优化 - 支持垂直和水平滚动 */
+    .overflow-auto, .overflow-x-auto {
       scrollbar-width: thin;
       scrollbar-color: rgba(0,0,0,0.2) transparent;
+      scroll-behavior: smooth;
     }
     
-    .overflow-x-auto::-webkit-scrollbar {
+    /* 水平滚动条样式 */
+    .overflow-auto::-webkit-scrollbar, .overflow-x-auto::-webkit-scrollbar {
       height: 6px;
+      width: 6px;
     }
     
-    .overflow-x-auto::-webkit-scrollbar-track {
+    .overflow-auto::-webkit-scrollbar-track, .overflow-x-auto::-webkit-scrollbar-track {
       background: transparent;
+      border-radius: 3px;
     }
     
-    .overflow-x-auto::-webkit-scrollbar-thumb {
+    .overflow-auto::-webkit-scrollbar-thumb, .overflow-x-auto::-webkit-scrollbar-thumb {
       background: rgba(0,0,0,0.2);
       border-radius: 3px;
     }
     
-    .overflow-x-auto::-webkit-scrollbar-thumb:hover {
+    .overflow-auto::-webkit-scrollbar-thumb:hover, .overflow-x-auto::-webkit-scrollbar-thumb:hover {
       background: rgba(0,0,0,0.3);
+    }
+    
+    /* 表格容器特殊优化 */
+    .overflow-auto {
+      /* 确保平滑滚动 */
+      -webkit-overflow-scrolling: touch;
+      /* 鼠标滚轮滚动优化 */
+      scroll-behavior: smooth;
+    }
+    
+    /* 表格固定头部 */
+    .overflow-auto table thead th {
+      position: sticky;
+      top: 0;
+      background: white;
+      z-index: 10;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     
     /* 确保抽屉内容不被其他元素遮挡 */
