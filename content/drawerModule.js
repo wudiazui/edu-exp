@@ -384,6 +384,11 @@ async function loadTableData(page = 1) {
         loadTableData(reloadPage);
       });
     }
+    
+    // 即使加载失败也调整高度
+    setTimeout(() => {
+      adjustTableHeight();
+    }, 100);
   }
 }
 
@@ -625,7 +630,7 @@ function checkURLAndAddDrawerButton() {
   if (currentURL.includes('/edu-shop-web/#/question-task/audit-pool-edit')) {
     currentRouteName = 'audit-pool-edit';
     currentRouteConfig = {
-      title: '题目数据面板',
+      title: 'edu-exp',
       position: { bottom: 30, right: 30 }
     };
     
@@ -709,17 +714,26 @@ function createDrawer() {
   
   // 更新时间
   updateLastUpdateTime();
+  
+  // 添加窗口大小改变的监听器
+  if (!window.drawerResizeListener) {
+    window.drawerResizeListener = () => {
+      if (isDrawerOpen) {
+        adjustTableHeight();
+      }
+    };
+    window.addEventListener('resize', window.drawerResizeListener);
+  }
 }
 
 // 创建抽屉头部
 function createDrawerHeader(config) {
   const header = document.createElement('div');
-  header.className = 'card-header flex items-center justify-between p-4 border-b border-base-300';
+  header.className = 'card-header flex items-center justify-between px-3 py-2 border-b border-base-300';
   header.innerHTML = `
-    <div class="w-1 h-12 bg-base-300 rounded-full absolute top-1/2 left-2 transform -translate-y-1/2"></div>
-    <h3 class="card-title text-lg font-bold text-primary">${config.title || '数据面板'}</h3>
-    <button class="btn btn-sm btn-circle btn-ghost hover:btn-error" data-action="close-drawer">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <h3 class="card-title text-base font-bold text-primary">${config.title || '数据面板'}</h3>
+    <button class="btn btn-xs btn-circle btn-ghost hover:btn-error" data-action="close-drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
       </svg>
     </button>
@@ -737,31 +751,13 @@ function createDrawerHeader(config) {
 // 创建抽屉主体
 function createDrawerBody(config) {
   const body = document.createElement('div');
-  body.className = 'card-body p-4 flex flex-col h-full';
+  body.className = 'card-body px-3 py-2 flex flex-col h-full';
   
-  // 创建 Tab 导航
-  const tabNav = document.createElement('div');
-  tabNav.className = 'tabs tabs-bordered mb-4';
-  tabNav.innerHTML = `
-    <a class="tab tab-active" data-tab="data">数据表格</a>
-  `;
+  // 直接创建数据表格内容，不使用标签导航
+  const dataContent = createDataTab();
+  dataContent.className = 'flex-1 flex flex-col';
   
-  // 创建 Tab 内容容器
-  const tabContent = document.createElement('div');
-  tabContent.className = 'tab-content flex-1 flex flex-col';
-  
-  // 数据表格 Tab
-  const dataTab = createDataTab();
-  dataTab.className = 'tab-pane active flex-1 flex flex-col';
-  dataTab.id = 'tab-data';
-  
-  tabContent.appendChild(dataTab);
-  
-  body.appendChild(tabNav);
-  body.appendChild(tabContent);
-  
-  // 添加 Tab 切换事件
-  addTabEvents(tabNav);
+  body.appendChild(dataContent);
   
   return body;
 }
@@ -772,7 +768,7 @@ function createDataTab() {
   
   // 数据统计信息
   const statsContainer = document.createElement('div');
-  statsContainer.className = 'flex justify-between items-center mb-4 text-sm text-gray-600';
+  statsContainer.className = 'flex justify-between items-center mb-2 text-sm text-gray-600';
   statsContainer.innerHTML = `
     <div id="data-stats" class="flex flex-col gap-1">
       <div>总计: <span id="total-records">0</span> 条记录</div>
@@ -781,8 +777,8 @@ function createDataTab() {
         <span>状态4: <span id="state4-records" class="text-secondary font-medium">0</span> 条</span>
       </div>
     </div>
-    <button class="btn btn-sm btn-ghost" data-action="refresh-data" title="刷新数据">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <button class="btn btn-xs btn-ghost" data-action="refresh-data" title="刷新数据">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
       </svg>
       刷新
@@ -797,9 +793,8 @@ function createDataTab() {
   
   // 表格容器
   const tableContainer = document.createElement('div');
-  tableContainer.className = 'overflow-auto flex-1 mb-4 max-h-96';
+  tableContainer.className = 'overflow-auto flex-1 mb-2';
   tableContainer.style.cssText = `
-    max-height: 400px;
     overflow-y: auto;
     overflow-x: auto;
     border: 1px solid #e5e7eb;
@@ -898,7 +893,7 @@ function createDataTab() {
   
   // 翻页按钮组
   const paginationContainer = document.createElement('div');
-  paginationContainer.className = 'flex justify-center mb-4';
+  paginationContainer.className = 'flex justify-center mb-2';
   
   const pagination = document.createElement('div');
   pagination.className = 'btn-group';
@@ -957,31 +952,49 @@ function updateDataStats() {
   if (state4RecordsElement) {
     state4RecordsElement.textContent = state4Records;
   }
+  
+  // 调整表格高度
+  adjustTableHeight();
 }
 
-// 添加 Tab 切换事件
-function addTabEvents(tabNav) {
-  const tabs = tabNav.querySelectorAll('.tab');
-  tabs.forEach(tab => {
-    tab.addEventListener('click', (e) => {
-      e.preventDefault();
-      
-      // 移除所有活动状态
-      tabs.forEach(t => t.classList.remove('tab-active'));
-      document.querySelectorAll('.tab-pane').forEach(pane => {
-        pane.classList.add('hidden');
-        pane.classList.remove('active');
-      });
-      
-      // 添加当前活动状态
-      tab.classList.add('tab-active');
-      const targetTab = document.getElementById(`tab-${tab.dataset.tab}`);
-      if (targetTab) {
-        targetTab.classList.remove('hidden');
-        targetTab.classList.add('active');
-      }
-    });
-  });
+// 动态调整表格高度
+function adjustTableHeight() {
+  const tableContainer = document.querySelector('.overflow-auto.flex-1.mb-2');
+  if (!tableContainer) return;
+  
+  // 获取视窗高度
+  const viewportHeight = window.innerHeight;
+  
+  // 获取抽屉容器
+  const drawerContent = document.querySelector('.drawer-content');
+  if (!drawerContent) return;
+  
+  // 计算其他元素的高度
+  const header = drawerContent.querySelector('.card-header');
+  const statsContainer = drawerContent.querySelector('#data-stats').closest('div');
+  const scrollIndicator = document.getElementById('scroll-indicator');
+  const paginationContainer = drawerContent.querySelector('.btn-group').closest('div');
+  const nextButtonContainer = drawerContent.querySelector('.btn-primary.btn-wide').closest('div');
+  
+  let usedHeight = 0;
+  
+  // 计算已使用的高度
+  if (header) usedHeight += header.offsetHeight;
+  if (statsContainer) usedHeight += statsContainer.offsetHeight;
+  if (scrollIndicator) usedHeight += scrollIndicator.offsetHeight;
+  if (paginationContainer) usedHeight += paginationContainer.offsetHeight;
+  if (nextButtonContainer) usedHeight += nextButtonContainer.offsetHeight;
+  
+  // 添加一些padding和margin的估算
+  usedHeight += 60; // 预留空间用于各种padding、margin和边框
+  
+  // 计算可用于表格的最大高度（留出一些缓冲空间）
+  const maxTableHeight = Math.max(300, viewportHeight - usedHeight - 100);
+  
+  // 设置表格容器的最大高度
+  tableContainer.style.maxHeight = `${maxTableHeight}px`;
+  
+  console.log(`📐 动态调整表格高度: ${maxTableHeight}px (视窗高度: ${viewportHeight}px, 已用高度: ${usedHeight}px)`);
 }
 
 // 切换抽屉状态
@@ -1020,6 +1033,11 @@ function openDrawer() {
     button.style.opacity = '1';
     button.style.pointerEvents = 'auto';
   }
+  
+  // 延迟调整表格高度，确保DOM元素已经渲染完成
+  setTimeout(() => {
+    adjustTableHeight();
+  }, 100);
 }
 
 // 移除抽屉相关元素
@@ -1481,6 +1499,7 @@ window.getCurrentTaskInfo = getCurrentTaskInfo;
 window.highlightCurrentTask = highlightCurrentTask;
 window.navigateToCurrentTask = navigateToCurrentTask;
 window.findCurrentTaskPage = findCurrentTaskPage;
+window.adjustTableHeight = adjustTableHeight;
 
 console.log('✅ 抽屉模块函数已添加到全局作用域'); 
 
@@ -1497,4 +1516,4 @@ export {
   highlightCurrentTask,
   navigateToCurrentTask,
   findCurrentTaskPage
-}; 
+};
