@@ -538,39 +538,27 @@ function selectQuestion(taskId) {
     selectedRow.classList.add('bg-primary', 'text-primary-content');
   }
   
-  // 更新下一题按钮状态
+  // 下一题按钮始终显示"下一题"，不再根据是否为当前任务改变文本
   const nextButton = document.querySelector('.btn-primary.btn-wide');
   if (nextButton) {
-    const currentTaskInfo = getCurrentTaskInfo();
-    
-    // 检查选中的任务是否为当前任务
-    const isCurrentTask = (currentTaskInfo.hasTaskId && taskId === currentTaskInfo.taskId) ||
-                         (currentTaskInfo.hasClueId && selectedRow && selectedRow.getAttribute('data-clue-id') === currentTaskInfo.clueId);
-    
-    if (isCurrentTask) {
-      nextButton.textContent = `当前任务 ${taskId} ✓`;
-      nextButton.classList.add('btn-success');
-      nextButton.classList.remove('btn-primary');
-    } else {
-      nextButton.textContent = `处理任务 ${taskId} →`;
-      nextButton.classList.remove('btn-disabled', 'btn-success');
-      nextButton.classList.add('btn-primary');
-    }
+    nextButton.textContent = '下一题 →';
+    nextButton.classList.remove('btn-disabled', 'btn-success');
+    nextButton.classList.add('btn-primary');
   }
 }
 
-// 下一题功能
+// 下一题功能 - 修改为找到当前任务的下一个任务
 function goToNextQuestion() {
-  const selectedRow = document.querySelector('#data-table-body tr.bg-primary');
-  if (!selectedRow) {
-    // 如果没有选中的行，尝试获取第一行数据
-    const firstRow = document.querySelector('#data-table-body tr');
+  const currentTaskInfo = getCurrentTaskInfo();
+  
+  // 如果没有当前任务信息，选择第一个任务
+  if (!currentTaskInfo.hasTaskId && !currentTaskInfo.hasClueId) {
+    const firstRow = document.querySelector('#data-table-body tr[data-task-id]');
     if (!firstRow) {
       alert('暂无数据可处理');
       return;
     }
     
-    // 获取第一行的任务ID
     const firstTaskButton = firstRow.querySelector('[data-action="audit-task"]');
     if (firstTaskButton) {
       const taskId = firstTaskButton.dataset.taskId;
@@ -583,14 +571,67 @@ function goToNextQuestion() {
     return;
   }
   
-  // 从选中行获取任务ID
-  const auditButton = selectedRow.querySelector('[data-action="audit-task"]');
-  if (auditButton) {
-    const currentTaskId = auditButton.dataset.taskId;
-    console.log('处理选中的任务:', currentTaskId);
-    auditTask(currentTaskId);
-  } else {
+  // 找到当前任务在列表中的位置
+  let currentTaskRow = null;
+  if (currentTaskInfo.hasTaskId) {
+    currentTaskRow = document.querySelector(`#data-table-body tr[data-task-id="${currentTaskInfo.taskId}"]`);
+  } else if (currentTaskInfo.hasClueId) {
+    currentTaskRow = document.querySelector(`#data-table-body tr[data-clue-id="${currentTaskInfo.clueId}"]`);
+  }
+  
+  if (!currentTaskRow) {
+    // 如果当前任务不在当前页面，选择第一个任务
+    const firstRow = document.querySelector('#data-table-body tr[data-task-id]');
+    if (!firstRow) {
+      alert('暂无数据可处理');
+      return;
+    }
+    
+    const firstTaskButton = firstRow.querySelector('[data-action="audit-task"]');
+    if (firstTaskButton) {
+      const taskId = firstTaskButton.dataset.taskId;
+      console.log('当前任务不在此页面，处理第一个任务:', taskId);
+      auditTask(taskId);
+      return;
+    }
+    
     alert('无法获取任务信息');
+    return;
+  }
+  
+  // 找到下一个任务
+  const nextTaskRow = currentTaskRow.nextElementSibling;
+  if (nextTaskRow && nextTaskRow.hasAttribute('data-task-id')) {
+    // 如果有下一个任务，处理下一个任务
+    const nextTaskButton = nextTaskRow.querySelector('[data-action="audit-task"]');
+    if (nextTaskButton) {
+      const nextTaskId = nextTaskButton.dataset.taskId;
+      console.log('处理下一个任务:', nextTaskId);
+      auditTask(nextTaskId);
+      return;
+    }
+  }
+  
+  // 如果当前任务是最后一个，尝试翻到下一页
+  if (currentPage < totalPages) {
+    console.log('当前任务是最后一个，翻到下一页');
+    // 翻到下一页后，处理第一个任务
+    loadTableData(currentPage + 1).then(() => {
+      setTimeout(() => {
+        const firstRowInNewPage = document.querySelector('#data-table-body tr[data-task-id]');
+        if (firstRowInNewPage) {
+          const firstTaskButton = firstRowInNewPage.querySelector('[data-action="audit-task"]');
+          if (firstTaskButton) {
+            const taskId = firstTaskButton.dataset.taskId;
+            console.log('下一页第一个任务:', taskId);
+            auditTask(taskId);
+          }
+        }
+      }, 100);
+    });
+  } else {
+    // 如果已经是最后一页的最后一个任务，提示用户
+    alert('已经是最后一个任务了');
   }
 }
 
