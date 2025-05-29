@@ -483,7 +483,12 @@ function createDrawer() {
   // 创建遮罩层
   const overlay = document.createElement('div');
   overlay.className = 'drawer-overlay';
-  overlay.addEventListener('click', closeDrawer);
+  overlay.addEventListener('click', (e) => {
+    // 确保点击的不是浮动按钮
+    if (e.target === overlay) {
+      closeDrawer();
+    }
+  });
   
   // 创建抽屉内容 - 右侧抽屉
   const drawer = document.createElement('div');
@@ -498,7 +503,7 @@ function createDrawer() {
     width: 400px !important;
     height: 100vh !important;
     background: white !important;
-    z-index: 100001 !important;
+    z-index: 100002 !important;
     transition: right 0.3s ease !important;
     border-left: 1px solid #e5e7eb !important;
     box-shadow: -4px 0 15px rgba(0, 0, 0, 0.1) !important;
@@ -520,6 +525,12 @@ function createDrawer() {
   drawerContainer.appendChild(drawer);
   
   document.body.appendChild(drawerContainer);
+  
+  // 确保浮动按钮在抽屉之后添加，保持在最上层
+  const floatButton = document.getElementById('drawer-float-button');
+  if (floatButton) {
+    document.body.appendChild(floatButton);
+  }
   
   // 更新时间
   updateLastUpdateTime();
@@ -723,11 +734,16 @@ function openDrawer() {
     drawerContent.style.left = 'auto';
   }
   
-  // 更新按钮状态
+  // 更新按钮状态，确保按钮保持可见
   const button = document.getElementById('drawer-float-button');
   if (button) {
     button.classList.add('active');
     button.style.transform = 'scale(1.05) rotate(45deg)';
+    // 强制确保按钮可见性
+    button.style.zIndex = '999999';
+    button.style.visibility = 'visible';
+    button.style.opacity = '1';
+    button.style.pointerEvents = 'auto';
   }
 }
 
@@ -811,6 +827,7 @@ function addDrawerStyles() {
       background: rgba(0, 0, 0, 0.5);
       opacity: 0;
       transition: opacity 0.3s ease;
+      z-index: 100001;
     }
     
     .drawer-container.drawer-open .drawer-overlay {
@@ -834,7 +851,7 @@ function addDrawerStyles() {
       background: white !important;
       box-shadow: -4px 0 15px rgba(0, 0, 0, 0.1) !important;
       transition: right 0.3s ease !important;
-      z-index: 100001 !important;
+      z-index: 100002 !important;
       margin-left: auto !important;
       margin-right: 0 !important;
       transform: translateX(0) !important;
@@ -897,11 +914,24 @@ function addDrawerStyles() {
     /* 确保浮动按钮始终可见 - 关键样式 */
     #drawer-float-button {
       position: fixed !important;
+      z-index: 999999 !important;
       pointer-events: auto !important;
       user-select: none !important;
       -webkit-user-select: none !important;
       -moz-user-select: none !important;
       -ms-user-select: none !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      display: flex !important;
+    }
+    
+    /* 确保按钮在抽屉打开时也保持可见 */
+    .drawer-container.drawer-open ~ #drawer-float-button,
+    .drawer-container.drawer-open + #drawer-float-button {
+      z-index: 999999 !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      pointer-events: auto !important;
     }
     
     #drawer-float-button:hover {
@@ -955,6 +985,12 @@ function addDrawerButton(config) {
     height: 60px !important;
     background: #667eea !important;
     border: 2px solid rgba(255, 255, 255, 0.2) !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    pointer-events: auto !important;
   `;
   
   floatButton.innerHTML = `
