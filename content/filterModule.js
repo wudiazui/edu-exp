@@ -67,21 +67,18 @@ function addFilterUI(filterBox) {
   // 创建容器
   const container = document.createElement('div');
   container.id = 'keyword-filter-container';
-  container.className = 'filter-container';
-  // 添加上下边距，使UI与周围组件有间隔
-  container.style.marginTop = '1px';
-  container.style.marginBottom = '1px';
-  container.style.paddingTop = '1px';
-  container.style.paddingBottom = '3px';
+  container.className = 'card card-compact bg-base-100 border border-base-300 mt-0.5 mb-0.5';
+  container.style.paddingTop = '0px';
+  container.style.paddingBottom = '2px';
   
   // 创建一个flex容器来放置所有元素在同一行
   const flexContainer = document.createElement('div');
-  flexContainer.className = 'flex-container';
+  flexContainer.className = 'flex items-center justify-between gap-0 flex-wrap';
   container.appendChild(flexContainer);
   
   // 创建左侧输入区域容器
   const inputsContainer = document.createElement('div');
-  inputsContainer.className = 'inputs-container';
+  inputsContainer.className = 'flex items-center gap-0 flex-grow';
   flexContainer.appendChild(inputsContainer);
   
   // 创建包含关键词输入区域
@@ -94,20 +91,20 @@ function addFilterUI(filterBox) {
   
   // 创建按钮容器
   const buttonContainer = document.createElement('div');
-  buttonContainer.style.padding = '8px 12px';
+  buttonContainer.className = 'p-1';
   flexContainer.appendChild(buttonContainer);
   
   // 创建搜索按钮
   const filterBtn = document.createElement('button');
   filterBtn.textContent = '应用过滤';
-  filterBtn.className = 'filter-button';
+  filterBtn.className = 'btn btn-primary btn-xs';
   filterBtn.onclick = () => applyFilter('apply');
   buttonContainer.appendChild(filterBtn);
   
   // 创建关闭过滤按钮
   const closeFilterBtn = document.createElement('button');
   closeFilterBtn.textContent = '关闭过滤';
-  closeFilterBtn.className = 'close-filter-button';
+  closeFilterBtn.className = 'btn btn-outline btn-xs ml-1';
   closeFilterBtn.onclick = function() {
     // 关闭过滤但保留关键词
     filterState.active = false;
@@ -118,7 +115,7 @@ function addFilterUI(filterBox) {
   // 创建重置按钮
   const resetBtn = document.createElement('button');
   resetBtn.textContent = '重置';
-  resetBtn.className = 'reset-button';
+  resetBtn.className = 'btn btn-ghost btn-xs ml-1';
   resetBtn.onclick = function() {
     // 清空关键词
     includeKeywords = [];
@@ -150,31 +147,24 @@ function addFilterUI(filterBox) {
 // 创建输入组
 function createInputGroup(label, inputId, listId, keywordsArray) {
   const groupContainer = document.createElement('div');
-  groupContainer.className = 'input-group';
+  groupContainer.className = 'flex items-center flex-grow border-r border-base-300 p-1 relative';
   
   // 标签
   const labelElem = document.createElement('label');
   labelElem.textContent = label + ':';
-  labelElem.className = 'input-label';
+  labelElem.className = 'label-text text-xs mr-1 whitespace-nowrap';
   labelElem.htmlFor = inputId;
   groupContainer.appendChild(labelElem);
   
   // 创建关键词和输入区域的容器
   const keywordInputContainer = document.createElement('div');
-  keywordInputContainer.style.display = 'flex';
-  keywordInputContainer.style.alignItems = 'center';
-  keywordInputContainer.style.flexWrap = 'wrap';
-  keywordInputContainer.style.gap = '4px';
+  keywordInputContainer.className = 'flex items-center flex-wrap gap-0.5';
   groupContainer.appendChild(keywordInputContainer);
   
   // 关键词列表 - 放在输入框前面
   const keywordsList = document.createElement('div');
   keywordsList.id = listId;
-  keywordsList.className = 'keywords-list';
-  keywordsList.style.display = 'flex';
-  keywordsList.style.flexWrap = 'wrap';
-  keywordsList.style.gap = '4px';
-  keywordsList.style.alignItems = 'center';
+  keywordsList.className = 'flex flex-wrap gap-0.5 items-center mr-1';
   keywordInputContainer.appendChild(keywordsList);
   
   // 添加已有关键词
@@ -185,22 +175,21 @@ function createInputGroup(label, inputId, listId, keywordsArray) {
   
   // 输入区域容器
   const inputContainer = document.createElement('div');
-  inputContainer.style.display = 'flex';
-  inputContainer.style.alignItems = 'center';
+  inputContainer.className = 'flex items-center';
   keywordInputContainer.appendChild(inputContainer);
   
   // 输入框
   const input = document.createElement('input');
   input.type = 'text';
   input.id = inputId;
-  input.className = 'input-field';
+  input.className = 'input input-bordered input-xs w-32';
   input.placeholder = '请选择';
   inputContainer.appendChild(input);
   
   // 添加按钮
   const addBtn = document.createElement('button');
   addBtn.textContent = '添加';
-  addBtn.className = 'add-button';
+  addBtn.className = 'btn btn-outline btn-xs ml-1';
   addBtn.dataset.target = inputId;
   addBtn.dataset.list = listId;
   inputContainer.appendChild(addBtn);
@@ -211,19 +200,18 @@ function createInputGroup(label, inputId, listId, keywordsArray) {
 // 创建关键词标签
 function createKeywordTag(keyword, listId) {
   const tag = document.createElement('div');
-  tag.className = 'keyword-tag';
+  tag.className = 'badge badge-neutral badge-xs gap-0.5 px-1';
   
   // 关键词文本
   const keywordText = document.createElement('span');
-  keywordText.className = 'keyword-text';
+  keywordText.className = 'text-xs';
   keywordText.textContent = keyword;
-  keywordText.style.fontSize = '14px'; // 稍微大一点的字体
   tag.appendChild(keywordText);
   
   // 删除按钮
   const removeBtn = document.createElement('span');
   removeBtn.innerHTML = '&times;';
-  removeBtn.className = 'keyword-remove';
+  removeBtn.className = 'cursor-pointer hover:text-error font-bold text-xs';
   removeBtn.onclick = function() {
     // 从关键词数组中移除
     if (listId === 'include-keywords-list') {
@@ -321,23 +309,17 @@ function saveKeywordsToStorage() {
 
 // 应用过滤
 function applyFilter(state) {
-  console.log('应用过滤，包含关键词:', includeKeywords);
-  console.log('应用过滤，排除关键词:', excludeKeywords);
-  
   // 过滤状态逻辑
   if (state === 'apply') {
     // 应用过滤时激活过滤功能
     filterState.enabled = true;
     filterState.active = true;
-    console.log('应用过滤');
   } else if (state === undefined) {
     // 不改变状态，只根据当前状态执行过滤
-    console.log('根据当前状态执行过滤: ' + (filterState.active ? '激活' : '未激活'));
   }
   
   // 保留此检查以支持重置功能
   if (!filterState.enabled) {
-    console.log('过滤功能未启用，跳过过滤');
     return;
   }
   
@@ -371,42 +353,20 @@ function applyFilter(state) {
     // 使用 UmbrellaJS 找到特定列 (el-table_1_column_4)
     const targetCell = u(row).find('.el-table_1_column_4');
     if (targetCell.length === 0) {
-      console.log(`行 ${index}: 未找到目标列 el-table_1_column_4`);
       return;
     }
     
     // 获取文本内容 (从子元素)
     const cellText = targetCell.text().trim();
-    console.log(`行 ${index}: 单元格文本 = "${cellText}"`);
     
     // 使用工具函数检查是否匹配关键词条件
     const result = filterByKeywords(cellText, includeKeywords, excludeKeywords);
     
-    // 为了保持日志输出一致，我们仍然计算includeMatch和excludeMatch
-    const includeMatch = includeKeywords.length === 0 || 
-      includeKeywords.some(keyword => {
-        const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        return new RegExp(escapedKeyword, 'i').test(cellText);
-      });
-    
-    const excludeMatch = excludeKeywords.length > 0 && 
-      excludeKeywords.some(keyword => {
-        const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        return new RegExp(escapedKeyword, 'i').test(cellText);
-      });
-    
-    console.log(`行 ${index}: 包含关键词匹配 = ${includeMatch}`, 
-      includeKeywords.length > 0 ? `(关键词: ${includeKeywords.join(', ')})` : '(无包含关键词)');
-    console.log(`行 ${index}: 排除关键词匹配 = ${excludeMatch}`, 
-      excludeKeywords.length > 0 ? `(关键词: ${excludeKeywords.join(', ')})` : '(无排除关键词)');
-    
     // 根据匹配结果显示或隐藏行 - 使用filterByKeywords函数的结果
     if (result) {
-      console.log(`行 ${index}: 显示此行`);
       u(row).attr('style', '');
       filteredCount++;
     } else {
-      console.log(`行 ${index}: 隐藏此行`);
       u(row).attr('style', 'display: none;');
     }
   });
@@ -428,7 +388,6 @@ function setupEventListeners() {
       if (!element.hasAttribute('filter-listener')) {
         element.setAttribute('filter-listener', 'true');
         element.addEventListener('click', function(event) {
-          console.log('分页元素被点击，重新应用过滤');
           // 给一点延迟，确保分页完成后再应用过滤
           setTimeout(() => {
             // 如果过滤状态为激活状态，则重新应用过滤
@@ -445,7 +404,6 @@ function setupEventListeners() {
       if (!element.hasAttribute('filter-listener')) {
         element.setAttribute('filter-listener', 'true');
         element.addEventListener('click', function(event) {
-          console.log('表单元素被点击，重新应用过滤');
           // 给一点延迟，确保表单操作完成后再应用过滤
           setTimeout(() => {
             // 如果过滤状态为激活状态，则重新应用过滤
@@ -472,7 +430,6 @@ function setupEventListeners() {
     if (!element.hasAttribute('filter-listener')) {
       element.setAttribute('filter-listener', 'true');
       element.addEventListener('click', function(event) {
-        console.log('分页元素被点击，重新应用过滤');
         setTimeout(() => {
           // 如果过滤状态为激活状态，则重新应用过滤
           if (filterState.active) {
@@ -487,7 +444,6 @@ function setupEventListeners() {
     if (!element.hasAttribute('filter-listener')) {
       element.setAttribute('filter-listener', 'true');
       element.addEventListener('click', function(event) {
-        console.log('表单元素被点击，重新应用过滤');
         setTimeout(() => {
           // 如果过滤状态为激活状态，则重新应用过滤
           if (filterState.active) {
