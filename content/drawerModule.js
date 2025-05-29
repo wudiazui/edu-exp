@@ -292,8 +292,8 @@ function auditTask(taskID) {
   // 修改当前访问路径
   const newPath = `/edu-shop-web/#/question-task/audit-pool-edit?taskid=${taskID}`;
   
-  // 更新浏览器地址栏
-  window.history.pushState({}, '', newPath);
+  // 先关闭抽屉，提升用户体验
+  closeDrawer();
   
   // 显示提示信息
   const toast = document.createElement('div');
@@ -309,14 +309,19 @@ function auditTask(taskID) {
   
   document.body.appendChild(toast);
   
+  // 延迟一小段时间显示提示，然后强制刷新页面
   setTimeout(() => {
     toast.remove();
-    // 这里可以添加实际的页面跳转逻辑或触发页面重新加载
-    console.log(`已跳转到审核页面: ${newPath}`);
+    console.log(`跳转到审核页面: ${newPath}`);
     
-    // 如果需要实际重新加载页面，可以使用：
-    // window.location.href = newPath;
-  }, 1500);
+    // 先替换URL到新页面
+    window.location.replace(newPath);
+    
+    // 然后执行强制刷新，确保页面完全重新加载
+    setTimeout(() => {
+      window.location.reload();
+    }, 100); // 短暂延迟确保URL替换完成
+  }, 800); // 减少等待时间，提升用户体验
 }
 
 // 更新翻页按钮状态
