@@ -1,3 +1,6 @@
+// 动态导入全局CSS文件以启用Tailwind CSS和daisyUI
+import("../css/main.css");
+
 import { claimAuditTask, getAuditTaskList, getAuditTaskLabel, replaceLatexWithImages, replacePunctuation, img_upload, replaceLatexWithImagesInHtml} from "../lib.js";
 import {generateVerticalArithmeticImage} from "../src/index.js";
 import { CozeService } from "../coze.js";
@@ -18,6 +21,9 @@ import { printCascaderInputValue, setAnswerInputValue, getSelectedRadioText, get
 // 导入审核内容提取模块
 import { extractAuditContent } from './auditContentExtractor.js';
 
+// 导入抽屉模块
+import { checkURLAndAddDrawerButton } from './drawerModule.js';
+
 // 初始化加载关键词
 loadKeywordsFromStorage();
 
@@ -31,10 +37,12 @@ let copiedHTML = '';
 // 页面加载和URL变化时检查
 window.addEventListener('load', () => {
   checkURLAndAddFilterUI();
+  checkURLAndAddDrawerButton();
   setupEventListeners();
 });
 window.addEventListener('hashchange', () => {
   checkURLAndAddFilterUI();
+  checkURLAndAddDrawerButton();
   setupEventListeners();
 });
 
@@ -98,6 +106,9 @@ function handleRouteChange() {
   
   // 检查URL并添加过滤UI
   checkURLAndAddFilterUI();
+  
+  // 检查URL并添加抽屉按钮
+  checkURLAndAddDrawerButton();
   
   // 设置事件监听器
   setupEventListeners();

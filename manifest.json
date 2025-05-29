@@ -32,7 +32,7 @@
         "content/scripts.js"
       ],
       "css": [
-        "css/filter-ui.css"
+        "./css/main.css"
       ]
     },
     {
