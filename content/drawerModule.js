@@ -223,7 +223,25 @@ function createDrawer() {
   
   // 创建抽屉内容 - 右侧抽屉
   const drawer = document.createElement('div');
-  drawer.className = 'drawer-content card bg-base-100 shadow-xl border-l-4 border-primary';
+  drawer.className = 'drawer-content';
+  
+  // 强制设置右侧定位样式
+  drawer.style.cssText = `
+    position: fixed !important;
+    top: 0 !important;
+    right: -400px !important;
+    left: auto !important;
+    width: 400px !important;
+    height: 100vh !important;
+    background: white !important;
+    z-index: 100001 !important;
+    transition: right 0.3s ease !important;
+    border-left: 1px solid #e5e7eb !important;
+    box-shadow: -4px 0 15px rgba(0, 0, 0, 0.1) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  `;
   
   // 创建抽屉头部
   const header = createDrawerHeader(currentRouteConfig);
@@ -400,15 +418,18 @@ function openDrawer() {
   drawerContainer.classList.add('drawer-open');
   isDrawerOpen = true;
   
+  // 强制设置抽屉位置到右侧
+  const drawerContent = drawerContainer.querySelector('.drawer-content');
+  if (drawerContent) {
+    drawerContent.style.right = '0px';
+    drawerContent.style.left = 'auto';
+  }
+  
   // 更新按钮状态
   const button = document.getElementById('drawer-float-button');
   if (button) {
     button.classList.add('active');
-    // 强制更新激活状态样式
-    button.style.transform = 'scale(1.1) rotate(45deg)';
-    button.style.background = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
-    button.style.boxShadow = '0 12px 40px rgba(245, 87, 108, 0.6), 0 0 0 8px rgba(245, 87, 108, 0.1)';
-    button.style.animation = 'none';
+    button.style.transform = 'scale(1.05) rotate(45deg)';
   }
 }
 
@@ -416,6 +437,13 @@ function openDrawer() {
 function closeDrawer() {
   if (drawerContainer) {
     drawerContainer.classList.remove('drawer-open');
+    
+    // 强制设置抽屉隐藏到右侧外部
+    const drawerContent = drawerContainer.querySelector('.drawer-content');
+    if (drawerContent) {
+      drawerContent.style.right = '-400px';
+      drawerContent.style.left = 'auto';
+    }
   }
   isDrawerOpen = false;
   
@@ -423,11 +451,7 @@ function closeDrawer() {
   const button = document.getElementById('drawer-float-button');
   if (button) {
     button.classList.remove('active');
-    // 恢复默认状态样式
     button.style.transform = 'scale(1)';
-    button.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-    button.style.boxShadow = '0 8px 32px rgba(102, 126, 234, 0.4), 0 0 0 0 rgba(102, 126, 234, 0.7)';
-    button.style.animation = 'pulse-glow 2s infinite';
   }
 }
 
@@ -469,34 +493,19 @@ function addDrawerStyles() {
   const styles = document.createElement('style');
   styles.id = 'drawer-styles';
   styles.textContent = `
-    /* 浮动按钮激活状态 */
+    /* 浮动按钮激活状态 - 静态样式 */
     .drawer-float-button.active {
-      transform: scale(1.1) rotate(45deg) !important;
-      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;
-      box-shadow: 0 12px 40px rgba(245, 87, 108, 0.6), 0 0 0 8px rgba(245, 87, 108, 0.1) !important;
+      transform: scale(1.05) rotate(45deg) !important;
+      background: #f5576c !important;
+    }
+    
+    /* 禁用所有动画 */
+    .drawer-float-button.no-animation,
+    .drawer-float-button:not(.active) {
       animation: none !important;
     }
     
-    .drawer-float-button.active svg {
-      transform: rotate(-45deg);
-      transition: transform 0.3s ease;
-    }
-    
-    /* 脉动动画关键帧 */
-    @keyframes pulse-glow {
-      0%, 100% {
-        box-shadow: 0 8px 32px rgba(102, 126, 234, 0.4), 0 0 0 0 rgba(102, 126, 234, 0.7);
-      }
-      50% {
-        box-shadow: 0 8px 32px rgba(102, 126, 234, 0.6), 0 0 0 4px rgba(102, 126, 234, 0.3);
-      }
-    }
-    
-    .drawer-float-button:not(.active) {
-      animation: pulse-glow 2s infinite;
-    }
-    
-    /* 抽屉容器样式 */
+    /* 抽屉容器样式 - 固定在整个视窗 */
     .drawer-container {
       position: fixed;
       top: 0;
@@ -506,12 +515,14 @@ function addDrawerStyles() {
       z-index: 100000;
       pointer-events: none;
       opacity: 0;
-      transition: opacity 0.3s ease;
+      visibility: hidden;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
     }
     
     .drawer-container.drawer-open {
       pointer-events: all;
       opacity: 1;
+      visibility: visible;
     }
     
     /* 遮罩层样式 */
@@ -524,148 +535,63 @@ function addDrawerStyles() {
       background: rgba(0, 0, 0, 0.5);
       opacity: 0;
       transition: opacity 0.3s ease;
-      backdrop-filter: blur(3px);
     }
     
     .drawer-container.drawer-open .drawer-overlay {
       opacity: 1;
     }
     
-    /* 右侧抽屉样式 */
+    /* 右侧抽屉样式 - 强制右侧定位 */
     .drawer-content {
-      position: absolute;
-      top: 0;
-      right: 0;
-      transform: translateX(100%);
-      width: 400px;
-      height: 100vh;
-      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-      border-radius: 0;
+      position: fixed !important;
+      top: 0 !important;
+      right: -400px !important;
+      left: auto !important;
+      width: 400px !important;
+      height: 100vh !important;
+      border-radius: 0 !important;
       overflow: hidden;
       display: flex;
       flex-direction: column;
+      border-left: 1px solid #e5e7eb;
+      border-right: none !important;
+      background: white !important;
+      box-shadow: -4px 0 15px rgba(0, 0, 0, 0.1) !important;
+      transition: right 0.3s ease !important;
+      z-index: 100001 !important;
+      margin-left: auto !important;
+      margin-right: 0 !important;
+      transform: translateX(0) !important;
     }
     
     .drawer-container.drawer-open .drawer-content {
-      transform: translateX(0);
+      right: 0 !important;
+      left: auto !important;
+      transform: translateX(0) !important;
     }
     
-    /* Tab 样式优化 */
-    .tabs {
-      border-bottom: 1px solid #e5e7eb;
+    /* 额外确保右侧定位的样式 */
+    .drawer-container .drawer-content {
+      right: -400px !important;
+      left: auto !important;
+      margin-left: auto !important;
+      margin-right: 0 !important;
     }
     
-    .tab {
-      border-bottom: 2px solid transparent;
-      transition: all 0.2s ease;
+    .drawer-container.drawer-open .drawer-content {
+      right: 0 !important;
+      left: auto !important;
     }
     
-    .tab:hover {
-      background-color: #f3f4f6;
-    }
-    
-    .tab.tab-active {
-      border-bottom-color: #667eea;
-      background-color: #f8fafc;
-      color: #667eea;
-      font-weight: 600;
-    }
-    
-    /* Tab 内容样式 */
-    .tab-content {
-      flex: 1;
-      overflow: hidden;
-    }
-    
-    .tab-pane {
-      height: 100%;
-    }
-    
-    .tab-pane.hidden {
-      display: none;
-    }
-    
-    /* 表格样式优化 */
-    .table {
-      border-collapse: separate;
-      border-spacing: 0;
-    }
-    
-    .table th {
-      background-color: #f8fafc;
-      font-weight: 600;
-      color: #374151;
-      border-bottom: 2px solid #e5e7eb;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-    }
-    
-    .table td {
-      border-bottom: 1px solid #f3f4f6;
-    }
-    
-    .table tbody tr:hover {
-      background-color: #f9fafb;
-    }
-    
-    /* 翻页按钮样式 */
-    .btn-group .btn {
-      margin: 0 1px;
-    }
-    
-    .btn-group .btn:first-child {
-      border-top-right-radius: 0;
-      border-bottom-right-radius: 0;
-    }
-    
-    .btn-group .btn:last-child {
-      border-top-left-radius: 0;
-      border-bottom-left-radius: 0;
-    }
-    
-    .btn-group .btn:not(:first-child):not(:last-child) {
-      border-radius: 0;
-    }
-    
-    /* 下一题按钮样式 */
-    .btn-wide {
-      min-width: 200px;
-      font-weight: 600;
-      font-size: 1rem;
-    }
-    
-    /* 统计卡片样式 */
-    .stats .stat {
-      padding: 1rem;
-      text-align: center;
-    }
-    
-    .stat-value {
-      font-size: 2rem;
-      font-weight: 700;
-      line-height: 1;
-    }
-    
-    .stat-title {
-      font-size: 0.875rem;
-      opacity: 0.7;
-      margin-bottom: 0.5rem;
-    }
-    
-    /* 拖拽句柄样式增强 */
-    .card-header div[class*="w-1"] {
-      background: linear-gradient(180deg, transparent, rgba(0,0,0,0.2), transparent);
-    }
-    
-    /* 响应式设计 */
+    /* 响应式设计 - 确保在小屏幕上也在右侧 */
     @media (max-width: 768px) {
       .drawer-content {
-        width: calc(100% - 2rem);
-        right: 1rem;
-        height: calc(100vh - 2rem);
-        top: 1rem;
-        border-radius: 1rem;
+        width: calc(100% - 2rem) !important;
+        right: calc(-100% + 2rem) !important;
+      }
+      
+      .drawer-container.drawer-open .drawer-content {
+        right: 0 !important;
       }
       
       .drawer-float-button {
@@ -683,14 +609,16 @@ function addDrawerStyles() {
     
     @media (max-width: 480px) {
       .drawer-content {
-        width: calc(100% - 1rem);
-        right: 0.5rem;
-        height: calc(100vh - 1rem);
-        top: 0.5rem;
+        width: 100% !important;
+        right: -100% !important;
+      }
+      
+      .drawer-container.drawer-open .drawer-content {
+        right: 0 !important;
       }
     }
     
-    /* 确保按钮始终可见 */
+    /* 确保浮动按钮始终可见 - 关键样式 */
     #drawer-float-button {
       position: fixed !important;
       pointer-events: auto !important;
@@ -700,16 +628,11 @@ function addDrawerStyles() {
       -ms-user-select: none !important;
     }
     
-    /* 防止按钮被其他元素遮挡 */
-    body {
-      position: relative;
-    }
-    
     #drawer-float-button:hover {
       cursor: pointer !important;
     }
     
-    /* 表格滚动优化 */
+    /* 表格滚动优化 - 补充DaisyUI */
     .overflow-x-auto {
       scrollbar-width: thin;
       scrollbar-color: rgba(0,0,0,0.2) transparent;
@@ -732,30 +655,10 @@ function addDrawerStyles() {
       background: rgba(0,0,0,0.3);
     }
     
-    /* 卡片主体布局优化 */
-    .card-body {
-      overflow: hidden;
-    }
-    
-    /* Badge 样式优化 */
-    .badge {
-      font-size: 0.75rem;
-      font-weight: 500;
-    }
-    
-    /* 表单控件样式 */
-    .form-control {
-      margin-bottom: 1rem;
-    }
-    
-    .label {
-      padding: 0.5rem 0;
-    }
-    
-    /* Alert 样式 */
-    .alert {
-      border-radius: 0.5rem;
-      padding: 1rem;
+    /* 确保抽屉内容不被其他元素遮挡 */
+    .drawer-content * {
+      position: relative;
+      z-index: 1;
     }
   `;
   
@@ -767,17 +670,15 @@ function addDrawerButton(config) {
   // 创建浮动按钮
   const floatButton = document.createElement('div');
   floatButton.id = 'drawer-float-button';
-  floatButton.className = 'btn btn-circle btn-primary fixed shadow-2xl hover:shadow-3xl transition-all duration-300 animate-pulse hover:animate-none';
+  floatButton.className = 'btn btn-circle btn-primary fixed shadow-lg no-animation';
   
-  // 设置更高的z-index和更明显的样式
+  // 设置按钮的基本样式
   floatButton.style.cssText = `
     z-index: 999999 !important;
     width: 60px !important;
     height: 60px !important;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-    border: 3px solid rgba(255, 255, 255, 0.3) !important;
-    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.4), 0 0 0 0 rgba(102, 126, 234, 0.7) !important;
-    backdrop-filter: blur(10px) !important;
+    background: #667eea !important;
+    border: 2px solid rgba(255, 255, 255, 0.2) !important;
   `;
   
   floatButton.innerHTML = `
@@ -797,16 +698,14 @@ function addDrawerButton(config) {
   // 添加点击事件
   floatButton.addEventListener('click', toggleDrawer);
   
-  // 添加悬停效果
+  // 添加简单的悬停效果
   floatButton.addEventListener('mouseenter', () => {
-    floatButton.style.transform = 'scale(1.1) translateY(-2px)';
-    floatButton.style.boxShadow = '0 12px 40px rgba(102, 126, 234, 0.6), 0 0 0 8px rgba(102, 126, 234, 0.1)';
+    floatButton.style.transform = 'scale(1.05)';
   });
   
   floatButton.addEventListener('mouseleave', () => {
     if (!floatButton.classList.contains('active')) {
       floatButton.style.transform = 'scale(1)';
-      floatButton.style.boxShadow = '0 8px 32px rgba(102, 126, 234, 0.4), 0 0 0 0 rgba(102, 126, 234, 0.7)';
     }
   });
   
