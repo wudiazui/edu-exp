@@ -1,7 +1,7 @@
 // 动态导入全局CSS文件以启用Tailwind CSS和daisyUI
 import("../css/main.css");
 
-import { claimAuditTask, getAuditTaskList, getAuditTaskLabel, replaceLatexWithImages, replacePunctuation, img_upload, replaceLatexWithImagesInHtml} from "../lib.js";
+import { claimAuditTask, getAuditTaskList, getAuditTaskLabel, replaceLatexWithImages, replacePunctuation, img_upload, replaceLatexWithImagesInHtml, getMyAuditTaskList } from "../lib.js";
 import {generateVerticalArithmeticImage} from "../src/index.js";
 import { CozeService } from "../coze.js";
 import u from "umbrellajs";
@@ -1462,3 +1462,11 @@ async function handleAutoFillOptions() {
     showNotification(`自动填入选项失败: ${error.message}`, 'error');
   }
 }
+
+// 将API函数添加到全局作用域，供其他模块使用
+window.getMyAuditTaskList = getMyAuditTaskList;
+window.getAuditTaskList = getAuditTaskList;
+window.getAuditTaskLabel = getAuditTaskLabel;
+window.claimAuditTask = claimAuditTask;
+
+console.log('✅ API函数已添加到全局作用域');

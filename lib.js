@@ -97,6 +97,39 @@ export async function getAuditTaskList({
   }
 }
 
+export async function getMyAuditTaskList({
+  pn = 1,
+  rn = 20,
+  clueID = '',
+  clueType = '',
+  step = '',
+  subject = '',
+  state = 1
+} = {}) {
+  try {
+    const queryParams = new URLSearchParams({
+      pn,
+      rn,
+      clueID,
+      clueType,
+      step,
+      subject,
+      state
+    });
+
+    const response = await fetch(`/edushop/question/myaudittask/list?${queryParams}`);
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching my audit task list:', error);
+    throw error;
+  }
+}
+
 export async function claimAuditTask(taskIDs, taskType = 'audittask') {
   const commitType = taskType === 'producetask' ? 'producetaskcommit' : 'audittaskcommit';
   try {

@@ -1,5 +1,38 @@
 // drawerModule.js - 抽屉功能模块
 
+// 动态导入API函数，避免静态导入在内容脚本中的问题
+let getMyAuditTaskList = null;
+
+// 初始化API函数
+async function initializeAPI() {
+  try {
+    // 优先从全局作用域获取API函数
+    if (window.getMyAuditTaskList) {
+      getMyAuditTaskList = window.getMyAuditTaskList;
+      console.log('✅ 从全局作用域获取API函数成功');
+      return;
+    }
+    
+    // 如果全局作用域没有，尝试动态导入
+    const libModule = await import('../lib.js');
+    getMyAuditTaskList = libModule.getMyAuditTaskList;
+    console.log('✅ 动态导入API函数成功');
+  } catch (error) {
+    console.error('❌ API函数初始化失败:', error);
+  }
+}
+
+// 立即初始化API
+initializeAPI();
+
+// 添加延迟初始化，确保全局函数已设置
+setTimeout(() => {
+  if (!getMyAuditTaskList) {
+    console.log('🔄 延迟重新初始化API函数...');
+    initializeAPI();
+  }
+}, 1000);
+
 let drawerContainer = null;
 let isDrawerOpen = false;
 
@@ -9,32 +42,12 @@ let currentRouteName = null;
 
 // 数据管理和功能实现
 let currentPage = 1;
-let totalPages = 3;
+let totalPages = 1;
+let totalRecords = 0;
+let pageSize = 20;
 
-// 模拟题目数据
-const mockData = {
-  1: [
-    { id: '001', title: '数学题目一', status: 'approved', type: '选择题' },
-    { id: '002', title: '物理题目二', status: 'pending', type: '填空题' },
-    { id: '003', title: '化学题目三', status: 'rejected', type: '解答题' },
-    { id: '004', title: '英语题目四', status: 'draft', type: '阅读题' },
-    { id: '005', title: '语文题目五', status: 'approved', type: '作文题' }
-  ],
-  2: [
-    { id: '006', title: '数学题目六', status: 'pending', type: '选择题' },
-    { id: '007', title: '物理题目七', status: 'approved', type: '计算题' },
-    { id: '008', title: '化学题目八', status: 'draft', type: '实验题' },
-    { id: '009', title: '英语题目九', status: 'rejected', type: '翻译题' },
-    { id: '010', title: '语文题目十', status: 'pending', type: '阅读题' }
-  ],
-  3: [
-    { id: '011', title: '数学题目十一', status: 'approved', type: '证明题' },
-    { id: '012', title: '物理题目十二', status: 'approved', type: '应用题' },
-    { id: '013', title: '化学题目十三', status: 'pending', type: '分析题' },
-    { id: '014', title: '英语题目十四', status: 'draft', type: '写作题' },
-    { id: '015', title: '语文题目十五', status: 'rejected', type: '古文题' }
-  ]
-};
+// 存储当前数据
+let currentData = [];
 
 // 获取状态对应的样式类
 function getStatusBadgeClass(status) {
@@ -59,44 +72,214 @@ function getStatusText(status) {
 }
 
 // 加载表格数据
-function loadTableData(page) {
+async function loadTableData(page = 1) {
   const tbody = document.getElementById('data-table-body');
   if (!tbody) return;
   
-  const data = mockData[page] || [];
+  // 检查API函数是否可用
+  if (!getMyAuditTaskList) {
+    console.warn('⚠️ API函数未初始化，尝试重新初始化...');
+    await initializeAPI();
+    
+    // 如果仍然不可用，显示错误
+    if (!getMyAuditTaskList) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" class="text-center py-8">
+            <div class="text-error mb-2">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              API函数未初始化
+            </div>
+            <div class="text-sm text-gray-500 mb-4">无法加载数据，请检查扩展配置</div>
+            <button class="btn btn-sm btn-primary" onclick="loadTableData(${page})">
+              重试
+            </button>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+  }
   
-  tbody.innerHTML = data.map(item => `
-    <tr class="hover:bg-base-200 cursor-pointer" onclick="window.selectQuestion('${item.id}')">
-      <td class="font-mono text-sm">${item.id}</td>
-      <td class="font-medium">${item.title}</td>
-      <td>
-        <span class="badge ${getStatusBadgeClass(item.status)} badge-sm">
-          ${getStatusText(item.status)}
-        </span>
+  // 显示加载状态
+  tbody.innerHTML = `
+    <tr>
+      <td colspan="5" class="text-center py-8">
+        <div class="loading loading-spinner loading-md"></div>
+        <div class="mt-2">正在加载数据...</div>
       </td>
-      <td class="text-sm text-gray-600">${item.type}</td>
     </tr>
-  `).join('');
+  `;
   
-  currentPage = page;
-  updatePagination();
+  try {
+    console.log('🔄 开始请求数据...', { page, pageSize });
+    
+    // 调用API获取数据
+    const response = await getMyAuditTaskList({
+      pn: page,
+      rn: pageSize,
+      clueID: '',
+      clueType: '',
+      step: '',
+      subject: '',
+      state: 1
+    });
+    
+    console.log('📡 API响应:', response);
+    
+    if (response && response.errno === 0 && response.data) {
+      const { total, list } = response.data;
+      
+      // 更新分页信息
+      totalRecords = total;
+      totalPages = Math.ceil(total / pageSize);
+      currentData = list || [];
+      currentPage = page;
+      
+      console.log('📊 数据统计:', { totalRecords, totalPages, currentPage, dataLength: currentData.length });
+      
+      // 渲染数据
+      if (currentData.length > 0) {
+        tbody.innerHTML = currentData.map(item => `
+          <tr class="hover:bg-base-200">
+            <td class="font-mono text-sm">${item.clueID}</td>
+            <td class="font-medium max-w-xs truncate" title="${item.brief.replace(/\n/g, ' ')}">${item.brief.replace(/\n/g, ' ').substring(0, 50)}${item.brief.length > 50 ? '...' : ''}</td>
+            <td class="text-sm">${item.stepName}</td>
+            <td class="text-sm">${item.subjectName}</td>
+            <td>
+              <button class="btn btn-primary btn-sm" onclick="auditTask(${item.taskID})">
+                审核
+              </button>
+            </td>
+          </tr>
+        `).join('');
+      } else {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5" class="text-center py-8 text-gray-500">
+              暂无数据
+            </td>
+          </tr>
+        `;
+      }
+      
+      // 更新分页控件
+      updatePagination();
+      
+      // 更新数据统计信息
+      updateDataStats();
+      
+    } else {
+      throw new Error(response?.errmsg || '数据格式错误');
+    }
+    
+  } catch (error) {
+    console.error('❌ 加载数据失败:', error);
+    
+    // 显示错误状态
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5" class="text-center py-8">
+          <div class="text-error mb-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            加载失败
+          </div>
+          <div class="text-sm text-gray-500 mb-4">${error.message}</div>
+          <button class="btn btn-sm btn-primary" onclick="loadTableData(${page})">
+            重新加载
+          </button>
+        </td>
+      </tr>
+    `;
+  }
 }
+
+// 审核任务功能
+function auditTask(taskID) {
+  console.log('审核任务:', taskID);
+  
+  // 修改当前访问路径
+  const newPath = `/edu-shop-web/#/question-task/audit-pool-edit?taskid=${taskID}`;
+  
+  // 更新浏览器地址栏
+  window.history.pushState({}, '', newPath);
+  
+  // 显示提示信息
+  const toast = document.createElement('div');
+  toast.className = 'toast toast-top toast-center z-50';
+  toast.innerHTML = `
+    <div class="alert alert-info">
+      <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span>正在跳转到审核页面 (任务ID: ${taskID})...</span>
+    </div>
+  `;
+  
+  document.body.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.remove();
+    // 这里可以添加实际的页面跳转逻辑或触发页面重新加载
+    console.log(`已跳转到审核页面: ${newPath}`);
+    
+    // 如果需要实际重新加载页面，可以使用：
+    // window.location.href = newPath;
+  }, 1500);
+}
+
+window.goToNextQuestion = goToNextQuestion;
 
 // 更新翻页按钮状态
 function updatePagination() {
-  const buttons = document.querySelectorAll('.btn-group .btn[data-page]');
-  buttons.forEach(btn => {
-    const page = parseInt(btn.dataset.page);
-    if (page === currentPage) {
-      btn.classList.add('btn-active');
-    } else {
-      btn.classList.remove('btn-active');
+  const paginationContainer = document.querySelector('.btn-group');
+  if (!paginationContainer) return;
+  
+  // 重新生成分页按钮
+  let paginationHTML = `<button class="btn btn-sm" onclick="changePage('prev')">«</button>`;
+  
+  // 计算显示的页码范围
+  let startPage = Math.max(1, currentPage - 2);
+  let endPage = Math.min(totalPages, startPage + 4);
+  
+  // 如果结束页码不足5个，调整开始页码
+  if (endPage - startPage < 4) {
+    startPage = Math.max(1, endPage - 4);
+  }
+  
+  // 如果不是从第1页开始，显示第1页和省略号
+  if (startPage > 1) {
+    paginationHTML += `<button class="btn btn-sm" data-page="1" onclick="changePage(1)">1</button>`;
+    if (startPage > 2) {
+      paginationHTML += `<button class="btn btn-sm btn-disabled">...</button>`;
     }
-  });
+  }
+  
+  // 显示页码按钮
+  for (let i = startPage; i <= endPage; i++) {
+    const activeClass = i === currentPage ? 'btn-active' : '';
+    paginationHTML += `<button class="btn btn-sm ${activeClass}" data-page="${i}" onclick="changePage(${i})">${i}</button>`;
+  }
+  
+  // 如果不是到最后一页，显示省略号和最后一页
+  if (endPage < totalPages) {
+    if (endPage < totalPages - 1) {
+      paginationHTML += `<button class="btn btn-sm btn-disabled">...</button>`;
+    }
+    paginationHTML += `<button class="btn btn-sm" data-page="${totalPages}" onclick="changePage(${totalPages})">${totalPages}</button>`;
+  }
+  
+  paginationHTML += `<button class="btn btn-sm" onclick="changePage('next')">»</button>`;
+  
+  paginationContainer.innerHTML = paginationHTML;
   
   // 更新前后翻页按钮状态
-  const prevBtn = document.querySelector('.btn-group .btn[onclick*="prev"]');
-  const nextBtn = document.querySelector('.btn-group .btn[onclick*="next"]');
+  const prevBtn = paginationContainer.querySelector('button[onclick*="prev"]');
+  const nextBtn = paginationContainer.querySelector('button[onclick*="next"]');
   
   if (prevBtn) {
     prevBtn.disabled = currentPage === 1;
@@ -313,6 +496,21 @@ function createDrawerBody(config) {
 function createDataTab() {
   const container = document.createElement('div');
   
+  // 数据统计信息
+  const statsContainer = document.createElement('div');
+  statsContainer.className = 'flex justify-between items-center mb-4 text-sm text-gray-600';
+  statsContainer.innerHTML = `
+    <div id="data-stats">
+      总计: <span id="total-records">0</span> 条记录
+    </div>
+    <button class="btn btn-sm btn-ghost" onclick="refreshData()" title="刷新数据">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+      </svg>
+      刷新
+    </button>
+  `;
+  
   // 表格容器
   const tableContainer = document.createElement('div');
   tableContainer.className = 'overflow-x-auto flex-1 mb-4';
@@ -322,10 +520,11 @@ function createDataTab() {
   table.innerHTML = `
     <thead>
       <tr>
-        <th>ID</th>
-        <th>标题</th>
-        <th>状态</th>
-        <th>类型</th>
+        <th>线索ID</th>
+        <th>线索内容</th>
+        <th>学段</th>
+        <th>学科</th>
+        <th>操作</th>
       </tr>
     </thead>
     <tbody id="data-table-body">
@@ -341,13 +540,7 @@ function createDataTab() {
   
   const pagination = document.createElement('div');
   pagination.className = 'btn-group';
-  pagination.innerHTML = `
-    <button class="btn btn-sm" onclick="window.changePage('prev')">«</button>
-    <button class="btn btn-sm btn-active" data-page="1" onclick="window.changePage(1)">1</button>
-    <button class="btn btn-sm" data-page="2" onclick="window.changePage(2)">2</button>
-    <button class="btn btn-sm" data-page="3" onclick="window.changePage(3)">3</button>
-    <button class="btn btn-sm" onclick="window.changePage('next')">»</button>
-  `;
+  // 分页按钮将由 updatePagination 函数动态生成
   
   paginationContainer.appendChild(pagination);
   
@@ -365,14 +558,30 @@ function createDataTab() {
   
   nextButtonContainer.appendChild(nextButton);
   
+  container.appendChild(statsContainer);
   container.appendChild(tableContainer);
   container.appendChild(paginationContainer);
   container.appendChild(nextButtonContainer);
   
-  // 初始化表格数据
-  loadTableData(1);
+  // 延迟初始化表格数据，确保API函数已经初始化
+  setTimeout(() => {
+    loadTableData(1);
+  }, 100);
   
   return container;
+}
+
+// 刷新数据
+function refreshData() {
+  loadTableData(currentPage);
+}
+
+// 更新数据统计信息
+function updateDataStats() {
+  const totalRecordsElement = document.getElementById('total-records');
+  if (totalRecordsElement) {
+    totalRecordsElement.textContent = totalRecords;
+  }
 }
 
 // 添加 Tab 切换事件
@@ -726,3 +935,5 @@ export {
   closeDrawer,
   removeDrawerElements
 }; 
+
+console.log('✅ 抽屉模块函数已添加到全局作用域'); 
