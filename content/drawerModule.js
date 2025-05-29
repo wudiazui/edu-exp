@@ -75,6 +75,99 @@ function getStatusText(status) {
   return statusMap[status] || '未知';
 }
 
+// 获取URL中的查询参数
+function getUrlParameter(name) {
+  const urlParams = new URLSearchParams(window.location.search);
+  const hashParams = new URLSearchParams(window.location.hash.split('?')[1]);
+  return urlParams.get(name) || hashParams.get(name);
+}
+
+// 获取当前任务ID
+function getCurrentTaskId() {
+  return getUrlParameter('taskid');
+}
+
+// 获取当前线索ID (如果URL中有的话)
+function getCurrentClueId() {
+  return getUrlParameter('clueID');
+}
+
+// 获取当前任务的完整信息
+function getCurrentTaskInfo() {
+  const taskId = getCurrentTaskId();
+  const clueId = getCurrentClueId();
+  return {
+    taskId,
+    clueId,
+    hasTaskId: !!taskId,
+    hasClueId: !!clueId
+  };
+}
+
+// 高亮当前任务 - 增强版本，支持 taskId 和 clueID 双重匹配
+function highlightCurrentTask(taskInfo = null) {
+  // 如果没有传入参数，自动获取当前任务信息
+  if (!taskInfo) {
+    taskInfo = getCurrentTaskInfo();
+  }
+  
+  // 如果既没有 taskId 也没有 clueId，直接返回
+  if (!taskInfo.hasTaskId && !taskInfo.hasClueId) {
+    console.log('📋 未检测到 taskid 或 clueID 参数，将显示所有数据');
+    return false;
+  }
+  
+  // 移除之前的高亮
+  const previousHighlight = document.querySelector('#data-table-body tr.current-task');
+  if (previousHighlight) {
+    previousHighlight.classList.remove('current-task');
+  }
+  
+  let currentTaskRow = null;
+  let matchCriteria = '';
+  
+  // 优先使用 taskId 匹配，然后使用 clueId 匹配
+  if (taskInfo.hasTaskId) {
+    currentTaskRow = document.querySelector(`#data-table-body tr[data-task-id="${taskInfo.taskId}"]`);
+    matchCriteria = `taskId: ${taskInfo.taskId}`;
+    
+    // 如果同时有 clueId，验证是否匹配
+    if (currentTaskRow && taskInfo.hasClueId) {
+      const rowClueId = currentTaskRow.getAttribute('data-clue-id');
+      if (rowClueId && rowClueId !== taskInfo.clueId) {
+        console.warn(`⚠️ 任务ID ${taskInfo.taskId} 匹配，但线索ID不匹配: 期望 ${taskInfo.clueId}, 实际 ${rowClueId}`);
+        // 可以选择是否继续高亮，这里选择继续，但给出警告
+      }
+      matchCriteria += `, clueId: ${taskInfo.clueId}`;
+    }
+  } else if (taskInfo.hasClueId) {
+    // 如果只有 clueId，通过 clueId 匹配
+    currentTaskRow = document.querySelector(`#data-table-body tr[data-clue-id="${taskInfo.clueId}"]`);
+    matchCriteria = `clueId: ${taskInfo.clueId}`;
+  }
+  
+  if (currentTaskRow) {
+    currentTaskRow.classList.add('current-task');
+    
+    // 滚动到当前任务位置
+    const tableContainer = currentTaskRow.closest('.overflow-auto');
+    if (tableContainer) {
+      setTimeout(() => {
+        currentTaskRow.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+      }, 100);
+    }
+    
+    console.log(`✅ 高亮当前任务 (${matchCriteria})`);
+    return true;
+  }
+  
+  console.log(`📋 当前页面未找到匹配任务 (${matchCriteria})，显示所有数据`);
+  return false;
+}
+
 // 加载表格数据
 async function loadTableData(page = 1) {
   const tbody = document.getElementById('data-table-body');
@@ -233,6 +326,15 @@ async function loadTableData(page = 1) {
             selectQuestion(taskId);
           });
         });
+        
+        // 高亮当前任务（从URL获取taskid和clueID）
+        const currentTaskInfo = getCurrentTaskInfo();
+        if (currentTaskInfo.hasTaskId || currentTaskInfo.hasClueId) {
+          console.log(`🎯 检测到当前任务信息:`, currentTaskInfo);
+          setTimeout(() => {
+            highlightCurrentTask(currentTaskInfo);
+          }, 100);
+        }
       } else {
         tbody.innerHTML = `
           <tr>
@@ -417,21 +519,38 @@ function changePage(page) {
 function selectQuestion(taskId) {
   console.log('选择任务:', taskId);
   
-  // 高亮选中的行
+  // 移除之前的选中状态（但保留当前任务的高亮）
   const rows = document.querySelectorAll('#data-table-body tr');
-  rows.forEach(row => row.classList.remove('bg-primary', 'text-primary-content'));
+  rows.forEach(row => {
+    if (!row.classList.contains('current-task')) {
+      row.classList.remove('bg-primary', 'text-primary-content');
+    }
+  });
   
-  // 通过data属性查找对应的行
+  // 高亮选中的行（如果不是当前任务）
   const selectedRow = document.querySelector(`#data-table-body tr[data-task-id="${taskId}"]`);
-  if (selectedRow) {
+  if (selectedRow && !selectedRow.classList.contains('current-task')) {
     selectedRow.classList.add('bg-primary', 'text-primary-content');
   }
   
   // 更新下一题按钮状态
   const nextButton = document.querySelector('.btn-primary.btn-wide');
   if (nextButton) {
-    nextButton.textContent = `处理任务 ${taskId} →`;
-    nextButton.classList.remove('btn-disabled');
+    const currentTaskInfo = getCurrentTaskInfo();
+    
+    // 检查选中的任务是否为当前任务
+    const isCurrentTask = (currentTaskInfo.hasTaskId && taskId === currentTaskInfo.taskId) ||
+                         (currentTaskInfo.hasClueId && selectedRow && selectedRow.getAttribute('data-clue-id') === currentTaskInfo.clueId);
+    
+    if (isCurrentTask) {
+      nextButton.textContent = `当前任务 ${taskId} ✓`;
+      nextButton.classList.add('btn-success');
+      nextButton.classList.remove('btn-primary');
+    } else {
+      nextButton.textContent = `处理任务 ${taskId} →`;
+      nextButton.classList.remove('btn-disabled', 'btn-success');
+      nextButton.classList.add('btn-primary');
+    }
   }
 }
 
@@ -809,7 +928,13 @@ function createDataTab() {
   
   // 延迟初始化表格数据，确保API函数已经初始化
   setTimeout(() => {
-    loadTableData(1);
+    const currentTaskInfo = getCurrentTaskInfo();
+    if (currentTaskInfo.hasTaskId || currentTaskInfo.hasClueId) {
+      console.log(`🎯 检测到当前任务信息:`, currentTaskInfo, `，尝试导航到对应页面`);
+      navigateToCurrentTask();
+    } else {
+      loadTableData(1);
+    }
   }, 100);
   
   return container;
@@ -1132,6 +1257,20 @@ function addDrawerStyles() {
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     
+    /* 当前任务高亮样式 - 简化版本，只改变背景色 */
+    #data-table-body tr.current-task {
+      background: #fef3c7 !important;
+      color: inherit !important;
+    }
+    
+    #data-table-body tr.current-task:hover {
+      background: #fde68a !important;
+    }
+    
+    #data-table-body tr.current-task td {
+      color: inherit !important;
+    }
+    
     /* 确保抽屉内容不被其他元素遮挡 */
     .drawer-content * {
       position: relative;
@@ -1201,14 +1340,128 @@ function addDrawerButton(config) {
   console.log('✅ 浮动按钮已添加到页面');
 }
 
-// 导出模块函数
-export {
-  checkURLAndAddDrawerButton,
-  toggleDrawer,
-  openDrawer,
-  closeDrawer,
-  removeDrawerElements
-}; 
+// 查找当前任务所在的页面 - 增强版本，支持 taskId 和 clueID 匹配
+async function findCurrentTaskPage(taskInfo = null) {
+  // 如果没有传入参数，自动获取当前任务信息
+  if (!taskInfo) {
+    taskInfo = getCurrentTaskInfo();
+  }
+  
+  // 如果既没有 taskId 也没有 clueId，直接返回
+  if (!taskInfo.hasTaskId && !taskInfo.hasClueId) {
+    console.log('📋 未检测到 taskid 或 clueID 参数，将显示所有数据');
+    return null;
+  }
+  
+  console.log(`🔍 查找任务所在页面...`, taskInfo);
+  
+  // 检查当前页面是否包含该任务
+  const currentTaskRow = document.querySelector(`#data-table-body tr[data-task-id="${taskInfo.taskId}"], #data-table-body tr[data-clue-id="${taskInfo.clueId}"]`);
+  if (currentTaskRow) {
+    console.log(`✅ 任务在当前页面 ${currentPage}`);
+    return currentPage;
+  }
+  
+  // 如果当前页面没有，搜索其他页面
+  for (let page = 1; page <= totalPages; page++) {
+    if (page === currentPage) continue; // 跳过当前页面，已经检查过了
+    
+    try {
+      console.log(`🔍 检查第 ${page} 页...`);
+      
+      // 同时请求两种状态的数据
+      const [response1, response4] = await Promise.all([
+        getMyAuditTaskList({
+          pn: page,
+          rn: pageSize,
+          clueID: '',
+          clueType: '',
+          step: '',
+          subject: '',
+          state: 1
+        }),
+        getMyAuditTaskList({
+          pn: page,
+          rn: pageSize,
+          clueID: '',
+          clueType: '',
+          step: '',
+          subject: '',
+          state: 4
+        })
+      ]);
+      
+      // 检查两种状态的数据
+      const list1 = (response1 && response1.errno === 0 && response1.data) ? response1.data.list || [] : [];
+      const list4 = (response4 && response4.errno === 0 && response4.data) ? response4.data.list || [] : [];
+      const combinedList = [...list1, ...list4];
+      
+      // 查找是否包含目标任务 - 同时检查 taskID 和 clueID
+      const foundTask = combinedList.find(item => {
+        let matchByTaskId = false;
+        let matchByClueId = false;
+        
+        if (taskInfo.hasTaskId) {
+          matchByTaskId = item.taskID === taskInfo.taskId;
+        }
+        
+        if (taskInfo.hasClueId) {
+          matchByClueId = item.clueID === taskInfo.clueId;
+        }
+        
+        // 如果两个ID都有，必须都匹配；如果只有一个，匹配一个即可
+        if (taskInfo.hasTaskId && taskInfo.hasClueId) {
+          return matchByTaskId && matchByClueId;
+        } else {
+          return matchByTaskId || matchByClueId;
+        }
+      });
+      
+      if (foundTask) {
+        console.log(`✅ 找到任务在第 ${page} 页:`, {
+          taskID: foundTask.taskID,
+          clueID: foundTask.clueID,
+          searchCriteria: taskInfo
+        });
+        return page;
+      }
+    } catch (error) {
+      console.error(`❌ 检查第 ${page} 页时出错:`, error);
+    }
+  }
+  
+  console.log(`📋 未找到匹配的任务在任何页面中，将显示第一页所有数据`, taskInfo);
+  return null;
+}
+
+// 导航到包含当前任务的页面
+async function navigateToCurrentTask() {
+  const currentTaskInfo = getCurrentTaskInfo();
+  if (!currentTaskInfo.hasTaskId && !currentTaskInfo.hasClueId) {
+    console.log('📋 未检测到 taskid 或 clueID 参数，显示第一页数据');
+    loadTableData(1);
+    return;
+  }
+  
+  console.log(`🎯 尝试导航到包含任务的页面`, currentTaskInfo);
+  
+  // 检查当前页面是否已包含该任务
+  if (highlightCurrentTask(currentTaskInfo)) {
+    console.log('✅ 当前任务已在当前页面中');
+    return;
+  }
+  
+  // 查找任务所在页面
+  const targetPage = await findCurrentTaskPage(currentTaskInfo);
+  if (targetPage && targetPage !== currentPage) {
+    console.log(`🔄 导航到第 ${targetPage} 页`);
+    await loadTableData(targetPage);
+  } else if (!targetPage) {
+    console.log('📋 当前任务不在任何页面中，显示第一页所有数据');
+    // 未找到匹配任务时，显示第一页的所有数据
+    await loadTableData(1);
+  }
+}
 
 // 将关键函数暴露到全局作用域，确保可以在HTML中调用
 window.closeDrawer = closeDrawer;
@@ -1222,5 +1475,26 @@ window.openDrawer = openDrawer;
 window.removeDrawerElements = removeDrawerElements;
 window.checkURLAndAddDrawerButton = checkURLAndAddDrawerButton;
 window.selectQuestion = selectQuestion;
+window.getCurrentTaskId = getCurrentTaskId;
+window.getCurrentClueId = getCurrentClueId;
+window.getCurrentTaskInfo = getCurrentTaskInfo;
+window.highlightCurrentTask = highlightCurrentTask;
+window.navigateToCurrentTask = navigateToCurrentTask;
+window.findCurrentTaskPage = findCurrentTaskPage;
 
 console.log('✅ 抽屉模块函数已添加到全局作用域'); 
+
+// 导出模块函数 - 用于ES6模块导入
+export {
+  checkURLAndAddDrawerButton,
+  toggleDrawer,
+  openDrawer,
+  closeDrawer,
+  removeDrawerElements,
+  getCurrentTaskId,
+  getCurrentClueId,
+  getCurrentTaskInfo,
+  highlightCurrentTask,
+  navigateToCurrentTask,
+  findCurrentTaskPage
+}; 
