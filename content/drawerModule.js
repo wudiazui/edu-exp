@@ -3,14 +3,16 @@
 // 全局API函数变量
 let getMyAuditTaskList = null;
 let getMyProduceTaskList = null;
+let dropProduceTask = null;
 
 // 初始化API函数
 async function initializeAPI() {
   try {
     // 优先从全局作用域获取API函数
-    if (window.getMyAuditTaskList && window.getMyProduceTaskList) {
+    if (window.getMyAuditTaskList && window.getMyProduceTaskList && window.dropProduceTask) {
       getMyAuditTaskList = window.getMyAuditTaskList;
       getMyProduceTaskList = window.getMyProduceTaskList;
+      dropProduceTask = window.dropProduceTask;
       console.log('✅ 从全局作用域获取API函数成功');
       return;
     }
@@ -19,6 +21,7 @@ async function initializeAPI() {
     const libModule = await import('../lib.js');
     getMyAuditTaskList = libModule.getMyAuditTaskList;
     getMyProduceTaskList = libModule.getMyProduceTaskList;
+    dropProduceTask = libModule.dropProduceTask;
     console.log('✅ 动态导入API函数成功');
   } catch (error) {
     console.error('❌ API函数初始化失败:', error);
@@ -30,7 +33,7 @@ initializeAPI();
 
 // 添加延迟初始化，确保全局函数已设置
 setTimeout(() => {
-  if (!getMyAuditTaskList || !getMyProduceTaskList) {
+  if (!getMyAuditTaskList || !getMyProduceTaskList || !dropProduceTask) {
     console.log('🔄 延迟重新初始化API函数...');
     initializeAPI();
   }
@@ -103,6 +106,9 @@ function highlightCurrentTask(taskInfo = null) {
     taskInfo = getCurrentTaskInfo();
   }
   
+  console.log('🎯 开始高亮当前任务，输入参数:', taskInfo);
+  console.log('🎯 当前路由名称:', currentRouteName);
+  
   // 如果既没有 taskId 也没有 clueId，直接返回
   if (!taskInfo.hasTaskId && !taskInfo.hasClueId) {
     console.log('📋 未检测到 taskid 或 clueID 参数，将显示所有数据');
@@ -112,20 +118,44 @@ function highlightCurrentTask(taskInfo = null) {
   // 移除之前的高亮
   const previousHighlight = document.querySelector('#data-table-body tr.current-task');
   if (previousHighlight) {
+    console.log('🔄 移除之前的高亮:', previousHighlight.dataset.taskId);
     previousHighlight.classList.remove('current-task');
   }
   
   let currentTaskRow = null;
   let matchCriteria = '';
   
+  // 先检查数据表格是否存在
+  const tableBody = document.getElementById('data-table-body');
+  if (!tableBody) {
+    console.error('❌ 数据表格不存在');
+    return false;
+  }
+  
+  // 检查表格中的所有行，用于调试
+  const allRows = tableBody.querySelectorAll('tr[data-task-id]');
+  console.log(`🔍 表格中共有 ${allRows.length} 行数据`);
+  
+  if (allRows.length > 0) {
+    console.log('🔍 表格中的任务ID列表:');
+    allRows.forEach((row, index) => {
+      const rowTaskId = row.getAttribute('data-task-id');
+      const rowClueId = row.getAttribute('data-clue-id');
+      console.log(`  行 ${index + 1}: taskID=${rowTaskId}, clueID=${rowClueId}`);
+    });
+  }
+  
   // 优先使用 taskId 匹配，然后使用 clueId 匹配
   if (taskInfo.hasTaskId) {
+    console.log(`🔍 使用 taskId 查找: ${taskInfo.taskId}`);
     currentTaskRow = document.querySelector(`#data-table-body tr[data-task-id="${taskInfo.taskId}"]`);
     matchCriteria = `taskId: ${taskInfo.taskId}`;
+    console.log(`🔍 taskId 匹配结果:`, currentTaskRow ? '找到' : '未找到');
     
     // 如果同时有 clueId，验证是否匹配
     if (currentTaskRow && taskInfo.hasClueId) {
       const rowClueId = currentTaskRow.getAttribute('data-clue-id');
+      console.log(`🔍 验证 clueId: 期望=${taskInfo.clueId}, 实际=${rowClueId}`);
       if (rowClueId && rowClueId !== taskInfo.clueId) {
         console.warn(`⚠️ 任务ID ${taskInfo.taskId} 匹配，但线索ID不匹配: 期望 ${taskInfo.clueId}, 实际 ${rowClueId}`);
         // 可以选择是否继续高亮，这里选择继续，但给出警告
@@ -134,12 +164,16 @@ function highlightCurrentTask(taskInfo = null) {
     }
   } else if (taskInfo.hasClueId) {
     // 如果只有 clueId，通过 clueId 匹配
+    console.log(`🔍 使用 clueId 查找: ${taskInfo.clueId}`);
     currentTaskRow = document.querySelector(`#data-table-body tr[data-clue-id="${taskInfo.clueId}"]`);
     matchCriteria = `clueId: ${taskInfo.clueId}`;
+    console.log(`🔍 clueId 匹配结果:`, currentTaskRow ? '找到' : '未找到');
   }
   
   if (currentTaskRow) {
     currentTaskRow.classList.add('current-task');
+    console.log(`✅ 高亮当前任务成功 (${matchCriteria})`);
+    console.log(`✅ 高亮的行:`, currentTaskRow);
     
     // 滚动到当前任务位置
     const tableContainer = currentTaskRow.closest('.overflow-auto');
@@ -152,11 +186,14 @@ function highlightCurrentTask(taskInfo = null) {
       }, 100);
     }
     
-    console.log(`✅ 高亮当前任务 (${matchCriteria})`);
     return true;
   }
   
   console.log(`📋 当前页面未找到匹配任务 (${matchCriteria})，显示所有数据`);
+  console.log(`📋 可能的原因: 
+    1. 任务不在当前页面
+    2. API返回的数据结构不同
+    3. taskID或clueID不匹配`);
   return false;
 }
 
@@ -166,12 +203,12 @@ async function loadTableData(page = 1) {
   if (!tbody) return;
   
   // 检查API函数是否可用
-  if (!getMyAuditTaskList || !getMyProduceTaskList) {
+  if (!getMyAuditTaskList || !getMyProduceTaskList || !dropProduceTask) {
     console.warn('⚠️ API函数未初始化，尝试重新初始化...');
     await initializeAPI();
     
     // 如果仍然不可用，显示错误
-    if (!getMyAuditTaskList || !getMyProduceTaskList) {
+    if (!getMyAuditTaskList || !getMyProduceTaskList || !dropProduceTask) {
       tbody.innerHTML = `
         <tr>
           <td colspan="5" class="text-center py-8">
@@ -259,6 +296,16 @@ async function loadTableData(page = 1) {
         originalState: list1.includes(item) ? 1 : 4
       }));
       
+      // 按 taskID 排序（数字排序）
+      processedList.sort((a, b) => {
+        // 将 taskID 转换为数字进行比较，确保正确的数字排序
+        const taskIdA = parseInt(a.taskID) || 0;
+        const taskIdB = parseInt(b.taskID) || 0;
+        return taskIdA - taskIdB; // 升序排序，小的在前
+      });
+      
+      console.log('📊 数据已按 taskID 排序:', processedList.map(item => item.taskID).slice(0, 5), '...');
+      
       // 计算总记录数（两个状态的数据总和）
       const total1 = (response1 && response1.errno === 0 && response1.data) ? response1.data.total || 0 : 0;
       const total4 = (response4 && response4.errno === 0 && response4.data) ? response4.data.total || 0 : 0;
@@ -335,9 +382,16 @@ async function loadTableData(page = 1) {
         const currentTaskInfo = getCurrentTaskInfo();
         if (currentTaskInfo.hasTaskId || currentTaskInfo.hasClueId) {
           console.log(`🎯 检测到当前任务信息:`, currentTaskInfo);
+          console.log(`🎯 当前页面类型: ${currentRouteName}`);
+          console.log(`🎯 数据加载完成，准备高亮当前任务`);
+          console.log(`🎯 当前数据长度: ${currentData.length}`);
+          console.log(`🎯 当前页码: ${currentPage}`);
           setTimeout(() => {
-            highlightCurrentTask(currentTaskInfo);
+            const highlightResult = highlightCurrentTask(currentTaskInfo);
+            console.log(`🎯 高亮结果: ${highlightResult ? '成功' : '失败'}`);
           }, 100);
+        } else {
+          console.log('📋 当前URL中没有taskid或clueID参数');
         }
       } else {
         tbody.innerHTML = `
@@ -582,7 +636,7 @@ function selectQuestion(taskId) {
   }
   
   // 下一题按钮始终显示"下一题"，不再根据是否为当前任务改变文本
-  const nextButton = document.querySelector('.btn-primary.btn-wide');
+  const nextButton = document.querySelector('#drawer-container .btn.btn-primary');
   if (nextButton) {
     nextButton.textContent = '下一题 →';
     nextButton.classList.remove('btn-disabled', 'btn-success');
@@ -702,6 +756,108 @@ function goToNextQuestion() {
   } else {
     // 如果已经是最后一页的最后一个任务，提示用户
     alert('已经是最后一个任务了');
+  }
+}
+
+// 处理残缺废弃任务
+async function handleDropProduceTask() {
+  const currentTaskInfo = getCurrentTaskInfo();
+  
+  // 检查是否有当前任务ID
+  if (!currentTaskInfo.hasTaskId) {
+    alert('无法获取当前任务ID，请先选择一个任务');
+    return;
+  }
+  
+  const taskId = currentTaskInfo.taskId;
+  
+  // 确认操作
+  if (!confirm(`确定要废弃任务 ${taskId} 吗？`)) {
+    return;
+  }
+  
+  // 检查dropProduceTask函数是否可用
+  if (!dropProduceTask) {
+    console.error('❌ dropProduceTask函数未初始化');
+    alert('功能未初始化，请稍后重试');
+    return;
+  }
+  
+  try {
+    console.log('开始废弃任务:', taskId);
+    
+    // 显示加载提示
+    const loadingToast = document.createElement('div');
+    loadingToast.className = 'toast toast-top toast-center z-50';
+    loadingToast.innerHTML = `
+      <div class="alert alert-info">
+        <span class="loading loading-spinner loading-sm"></span>
+        <span>正在废弃任务 ${taskId}...</span>
+      </div>
+    `;
+    document.body.appendChild(loadingToast);
+    
+    // 调用废弃任务API
+    const result = await dropProduceTask(taskId);
+    
+    // 移除加载提示
+    loadingToast.remove();
+    
+    console.log('废弃任务结果:', result);
+    
+    // 检查结果
+    if (result && result.errno === 0) {
+      // 显示成功提示
+      const successToast = document.createElement('div');
+      successToast.className = 'toast toast-top toast-center z-50';
+      successToast.innerHTML = `
+        <div class="alert alert-success">
+          <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>任务 ${taskId} 废弃成功</span>
+        </div>
+      `;
+      document.body.appendChild(successToast);
+      
+      // 3秒后移除成功提示
+      setTimeout(() => {
+        successToast.remove();
+      }, 3000);
+      
+      // 刷新数据并自动跳转到下一题
+      console.log('废弃成功，刷新数据并跳转下一题');
+      await loadTableData(currentPage);
+      
+      // 延迟执行下一题，确保数据已刷新
+      setTimeout(() => {
+        goToNextQuestion();
+      }, 500);
+      
+    } else {
+      throw new Error(result ? result.errmsg || '废弃失败' : '废弃失败');
+    }
+    
+  } catch (error) {
+    console.error('❌ 废弃任务失败:', error);
+    
+    // 显示错误提示
+    const errorToast = document.createElement('div');
+    errorToast.className = 'toast toast-top toast-center z-50';
+    errorToast.innerHTML = `
+      <div class="alert alert-error">
+        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span>废弃任务失败: ${error.message}</span>
+      </div>
+    `;
+    document.body.appendChild(errorToast);
+    
+    // 5秒后移除错误提示
+    setTimeout(() => {
+      errorToast.remove();
+    }, 5000);
   }
 }
 
@@ -998,10 +1154,10 @@ function createDataTab() {
   
   // 下一题按钮
   const nextButtonContainer = document.createElement('div');
-  nextButtonContainer.className = 'flex justify-center';
+  nextButtonContainer.className = 'flex justify-center items-center flex-col gap-2';
   
   const nextButton = document.createElement('button');
-  nextButton.className = 'btn btn-primary btn-wide';
+  nextButton.className = 'btn btn-primary btn-block h-10';
   nextButton.innerHTML = '下一题 →';
   nextButton.addEventListener('click', () => {
     console.log('下一题按钮被点击');
@@ -1009,6 +1165,19 @@ function createDataTab() {
   });
   
   nextButtonContainer.appendChild(nextButton);
+  
+  // 只在生产任务编辑页面显示 "残缺废弃下一题" 按钮
+  if (currentRouteName === 'lead-pool-edit') {
+    const dropButton = document.createElement('button');
+    dropButton.className = 'btn btn-error btn-block h-10 mt-2';
+    dropButton.innerHTML = '残缺废弃下一题 ×';
+    dropButton.addEventListener('click', () => {
+      console.log('残缺废弃下一题按钮被点击');
+      handleDropProduceTask();
+    });
+    
+    nextButtonContainer.appendChild(dropButton);
+  }
   
   container.appendChild(statsContainer);
   container.appendChild(tableContainer);
@@ -1063,11 +1232,19 @@ function adjustTableHeight() {
   const drawerContent = document.querySelector('.drawer-content');
   if (!drawerContent) return;
   
-  // 计算其他元素的高度
+  // 计算其他元素的高度 - 添加空值检查
   const header = drawerContent.querySelector('.card-header');
-  const statsContainer = drawerContent.querySelector('#data-stats').closest('div');
-  const paginationContainer = drawerContent.querySelector('.btn-group').closest('div');
-  const nextButtonContainer = drawerContent.querySelector('.btn-primary.btn-wide').closest('div');
+  
+  // 安全地获取元素，添加空值检查
+  const dataStatsElement = drawerContent.querySelector('#data-stats');
+  const statsContainer = dataStatsElement ? dataStatsElement.closest('div') : null;
+  
+  const btnGroupElement = drawerContent.querySelector('.btn-group');
+  const paginationContainer = btnGroupElement ? btnGroupElement.closest('div') : null;
+  
+  // 修正选择器 - 应该是 .btn-primary 而不是 .btn-primary.btn-wide
+  const nextButtonElement = drawerContent.querySelector('.btn-primary');
+  const nextButtonContainer = nextButtonElement ? nextButtonElement.closest('div') : null;
   
   let usedHeight = 0;
   
@@ -1567,8 +1744,21 @@ async function findCurrentTaskPage(taskInfo = null) {
       const list4 = (response4 && response4.errno === 0 && response4.data) ? response4.data.list || [] : [];
       const combinedList = [...list1, ...list4];
       
+      // 为数据项添加状态标识并按 taskID 排序（与loadTableData保持一致）
+      const processedList = combinedList.map(item => ({
+        ...item,
+        originalState: list1.includes(item) ? 1 : 4
+      }));
+      
+      // 按 taskID 排序（数字排序）
+      processedList.sort((a, b) => {
+        const taskIdA = parseInt(a.taskID) || 0;
+        const taskIdB = parseInt(b.taskID) || 0;
+        return taskIdA - taskIdB; // 升序排序，小的在前
+      });
+      
       // 查找是否包含目标任务 - 同时检查 taskID 和 clueID
-      const foundTask = combinedList.find(item => {
+      const foundTask = processedList.find(item => {
         let matchByTaskId = false;
         let matchByClueId = false;
         
@@ -1608,6 +1798,10 @@ async function findCurrentTaskPage(taskInfo = null) {
 // 导航到包含当前任务的页面
 async function navigateToCurrentTask() {
   const currentTaskInfo = getCurrentTaskInfo();
+  console.log('🚀 开始导航到当前任务页面');
+  console.log('🚀 当前任务信息:', currentTaskInfo);
+  console.log('🚀 当前路由名称:', currentRouteName);
+  
   if (!currentTaskInfo.hasTaskId && !currentTaskInfo.hasClueId) {
     console.log('📋 未检测到 taskid 或 clueID 参数，显示第一页数据');
     loadTableData(1);
@@ -1617,13 +1811,17 @@ async function navigateToCurrentTask() {
   console.log(`🎯 尝试导航到包含任务的页面`, currentTaskInfo);
   
   // 检查当前页面是否已包含该任务
+  console.log('🔍 检查当前页面是否包含该任务...');
   if (highlightCurrentTask(currentTaskInfo)) {
     console.log('✅ 当前任务已在当前页面中');
     return;
   }
   
+  console.log('🔍 当前页面未找到任务，查找任务所在页面...');
   // 查找任务所在页面
   const targetPage = await findCurrentTaskPage(currentTaskInfo);
+  console.log('🔍 查找结果 - 目标页面:', targetPage);
+  
   if (targetPage && targetPage !== currentPage) {
     console.log(`🔄 导航到第 ${targetPage} 页`);
     await loadTableData(targetPage);
@@ -1631,6 +1829,13 @@ async function navigateToCurrentTask() {
     console.log('📋 当前任务不在任何页面中，显示第一页所有数据');
     // 未找到匹配任务时，显示第一页的所有数据
     await loadTableData(1);
+  } else {
+    console.log('📋 任务在当前页面，但高亮失败，重新尝试高亮');
+    // 如果任务在当前页面但高亮失败，延迟重试
+    setTimeout(() => {
+      const retryResult = highlightCurrentTask(currentTaskInfo);
+      console.log('🔄 重试高亮结果:', retryResult ? '成功' : '失败');
+    }, 200);
   }
 }
 

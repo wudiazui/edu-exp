@@ -189,6 +189,42 @@ export async function claimAuditTask(taskIDs, taskType = 'audittask') {
   }
 }
 
+export async function dropProduceTask(taskID) {
+  try {
+    // Generate random spentTime between 10 and 100
+    const spentTime = Math.floor(Math.random() * 90) + 10;
+    
+    // Ensure taskID is converted to number (int64 for backend)
+    const numericTaskID = parseInt(taskID, 10);
+    if (isNaN(numericTaskID)) {
+      throw new Error(`Invalid taskID: ${taskID}`);
+    }
+    
+    const requestBody = {
+      spentTime,
+      taskID: numericTaskID,
+      ctype: 3,
+      content: "线索残缺"
+    };
+
+    const response = await fetch('/edushop/question/myproducetaskcommit/drop', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error dropping produce task:', error);
+    throw error;
+  }
+}
 
 export function replacePunctuation(text) {
   const punctuationMap = {
