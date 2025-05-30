@@ -437,21 +437,24 @@ async function loadTableData(page = 1) {
           });
         });
         
-        // 高亮当前任务（从URL获取taskid和clueID）
+        // 高亮当前任务（如果在当前页面）
         const currentTaskInfo = getCurrentTaskInfo();
         if (currentTaskInfo.hasTaskId || currentTaskInfo.hasClueId) {
           console.log(`🎯 检测到当前任务信息:`, currentTaskInfo);
           console.log(`🎯 当前页面类型: ${currentRouteName}`);
-          console.log(`🎯 数据加载完成，准备高亮当前任务`);
-          console.log(`🎯 当前数据长度: ${currentData.length}`);
-          console.log(`🎯 当前页码: ${currentPage}`);
+          console.log(`🎯 数据加载完成，尝试在当前页面高亮任务`);
           setTimeout(() => {
             const highlightResult = highlightCurrentTask(currentTaskInfo);
-            console.log(`🎯 高亮结果: ${highlightResult ? '成功' : '失败'}`);
+            if (highlightResult) {
+              console.log(`✅ 在当前页面找到并高亮了任务`);
+            } else {
+              console.log(`📋 当前页面没有该任务，需要手动翻页查找`);
+            }
           }, 100);
         } else {
           console.log('📋 当前URL中没有taskid或clueID参数');
         }
+        
       } else {
         tbody.innerHTML = `
           <tr>
@@ -1246,13 +1249,14 @@ function createDataTab() {
   
   // 延迟初始化表格数据，确保API函数已经初始化
   setTimeout(() => {
+    console.log('🚀 开始初始化抽屉数据');
     const currentTaskInfo = getCurrentTaskInfo();
     if (currentTaskInfo.hasTaskId || currentTaskInfo.hasClueId) {
-      console.log(`🎯 检测到当前任务信息:`, currentTaskInfo, `，尝试导航到对应页面`);
-      navigateToCurrentTask();
+      console.log(`🎯 检测到当前任务信息:`, currentTaskInfo, `，将在第一页尝试高亮`);
     } else {
-      loadTableData(1);
+      console.log('📋 没有当前任务信息，显示第一页数据');
     }
+    loadTableData(1);
   }, 100);
   
   return container;
@@ -1760,193 +1764,6 @@ function addDrawerButton(config) {
   console.log('✅ 浮动按钮已添加到页面');
 }
 
-// 查找当前任务所在的页面 - 增强版本，支持 taskId 和 clueID 匹配
-async function findCurrentTaskPage(taskInfo = null) {
-  // 如果没有传入参数，自动获取当前任务信息
-  if (!taskInfo) {
-    taskInfo = getCurrentTaskInfo();
-  }
-  
-  // 如果既没有 taskId 也没有 clueId，直接返回
-  if (!taskInfo.hasTaskId && !taskInfo.hasClueId) {
-    console.log('📋 未检测到 taskid 或 clueID 参数，将显示所有数据');
-    return null;
-  }
-  
-  console.log(`🔍 查找任务所在页面...`, taskInfo);
-  
-  // 检查当前页面是否包含该任务
-  const currentTaskRow = document.querySelector(`#data-table-body tr[data-task-id="${taskInfo.taskId}"], #data-table-body tr[data-clue-id="${taskInfo.clueId}"]`);
-  if (currentTaskRow) {
-    console.log(`✅ 任务在当前页面 ${currentPage}`);
-    return currentPage;
-  }
-  
-  // 如果当前页面没有，搜索其他页面
-  for (let page = 1; page <= totalPages; page++) {
-    if (page === currentPage) continue; // 跳过当前页面，已经检查过了
-    
-    try {
-      console.log(`🔍 检查第 ${page} 页...`);
-      
-      // 根据当前页面类型选择API函数
-      const apiFunction = currentRouteName === 'lead-pool-edit' ? getMyProduceTaskList : getMyAuditTaskList;
-      
-      // 同时请求两种状态的数据
-      const [response1, response4] = await Promise.all([
-        apiFunction({
-          pn: page,
-          rn: pageSize,
-          clueID: '',
-          clueType: '',
-          step: '',
-          subject: '',
-          state: 1
-        }),
-        apiFunction({
-          pn: page,
-          rn: pageSize,
-          clueID: '',
-          clueType: '',
-          step: '',
-          subject: '',
-          state: 4
-        })
-      ]);
-      
-      // 检查两种状态的数据
-      const list1 = (response1 && response1.errno === 0 && response1.data) ? response1.data.list || [] : [];
-      const list4 = (response4 && response4.errno === 0 && response4.data) ? response4.data.list || [] : [];
-      const combinedList = [...list1, ...list4];
-      
-      // 为数据项添加状态标识
-      const processedList = combinedList.map(item => ({
-        ...item,
-        originalState: list1.includes(item) ? 1 : 4
-      }));
-      
-      // 稳定排序：与loadTableData保持完全一致的多重排序条件
-      processedList.sort((a, b) => {
-        // 第一排序条件：按 taskID 数字排序（升序）
-        const taskIdA = parseInt(a.taskID) || 0;
-        const taskIdB = parseInt(b.taskID) || 0;
-        if (taskIdA !== taskIdB) {
-          return taskIdA - taskIdB;
-        }
-        
-        // 第二排序条件：按 clueID 字符串排序（确保相同taskID时位置稳定）
-        const clueIdComparison = (a.clueID || '').localeCompare(b.clueID || '');
-        if (clueIdComparison !== 0) {
-          return clueIdComparison;
-        }
-        
-        // 第三排序条件：按 originalState 排序（state 1 在前，state 4 在后）
-        if (a.originalState !== b.originalState) {
-          return a.originalState - b.originalState;
-        }
-        
-        // 第四排序条件：按 stepName 排序（确保完全稳定）
-        const stepNameComparison = (a.stepName || '').localeCompare(b.stepName || '');
-        if (stepNameComparison !== 0) {
-          return stepNameComparison;
-        }
-        
-        // 第五排序条件：按 subjectName 排序（最终保证）
-        return (a.subjectName || '').localeCompare(b.subjectName || '');
-      });
-      
-      // 查找是否包含目标任务 - 同时检查 taskID 和 clueID
-      const foundTask = processedList.find(item => {
-        let matchByTaskId = false;
-        let matchByClueId = false;
-        
-        if (taskInfo.hasTaskId) {
-          matchByTaskId = item.taskID === taskInfo.taskId;
-        }
-        
-        if (taskInfo.hasClueId) {
-          matchByClueId = item.clueID === taskInfo.clueId;
-        }
-        
-        // 如果两个ID都有，必须都匹配；如果只有一个，匹配一个即可
-        if (taskInfo.hasTaskId && taskInfo.hasClueId) {
-          return matchByTaskId && matchByClueId;
-        } else {
-          return matchByTaskId || matchByClueId;
-        }
-      });
-      
-      if (foundTask) {
-        console.log(`✅ 找到任务在第 ${page} 页:`, {
-          taskID: foundTask.taskID,
-          clueID: foundTask.clueID,
-          searchCriteria: taskInfo
-        });
-        return page;
-      }
-    } catch (error) {
-      console.error(`❌ 检查第 ${page} 页时出错:`, error);
-    }
-  }
-  
-  console.log(`📋 未找到匹配的任务在任何页面中，将显示第一页所有数据`, taskInfo);
-  return null;
-}
-
-// 导航到包含当前任务的页面
-async function navigateToCurrentTask() {
-  const currentTaskInfo = getCurrentTaskInfo();
-  console.log('🚀 开始导航到当前任务页面');
-  console.log('🚀 当前任务信息:', currentTaskInfo);
-  console.log('🚀 当前路由名称:', currentRouteName);
-  
-  if (!currentTaskInfo.hasTaskId && !currentTaskInfo.hasClueId) {
-    console.log('📋 未检测到 taskid 或 clueID 参数，显示第一页数据');
-    loadTableData(1);
-    return;
-  }
-  
-  console.log(`🎯 尝试导航到包含任务的页面`, currentTaskInfo);
-  
-  // 首先加载第一页数据以获取总页数信息
-  console.log('🔍 加载第一页数据以获取总页数信息...');
-  await loadTableData(1);
-  
-  // 检查当前页面是否已包含该任务
-  console.log('🔍 检查当前页面是否包含该任务...');
-  if (highlightCurrentTask(currentTaskInfo)) {
-    console.log('✅ 当前任务已在第一页中');
-    return;
-  }
-  
-  console.log('🔍 当前任务不在第一页，查找任务所在页面...');
-  console.log(`🔍 总页数: ${totalPages}, 开始搜索其他页面...`);
-  
-  // 查找任务所在页面
-  const targetPage = await findCurrentTaskPage(currentTaskInfo);
-  console.log('🔍 查找结果 - 目标页面:', targetPage);
-  
-  if (targetPage && targetPage !== currentPage) {
-    console.log(`🔄 导航到第 ${targetPage} 页`);
-    await loadTableData(targetPage);
-    // 确保高亮当前任务
-    setTimeout(() => {
-      const highlightResult = highlightCurrentTask(currentTaskInfo);
-      console.log(`🎯 导航后高亮结果: ${highlightResult ? '成功' : '失败'}`);
-    }, 200);
-  } else if (!targetPage) {
-    console.log('📋 当前任务不在任何页面中，保持显示第一页数据');
-    // 任务不存在时，保持在第一页
-  } else {
-    console.log('📋 任务在当前页面，但高亮失败，重新尝试高亮');
-    // 如果任务在当前页面但高亮失败，延迟重试
-    setTimeout(() => {
-      const retryResult = highlightCurrentTask(currentTaskInfo);
-      console.log('🔄 重试高亮结果:', retryResult ? '成功' : '失败');
-    }, 200);
-  }
-}
-
 // 将关键函数暴露到全局作用域，确保可以在HTML中调用
 window.closeDrawer = closeDrawer;
 window.refreshData = refreshData;
@@ -1965,7 +1782,6 @@ window.getCurrentClueId = getCurrentClueId;
 window.getCurrentTaskInfo = getCurrentTaskInfo;
 window.highlightCurrentTask = highlightCurrentTask;
 window.navigateToCurrentTask = navigateToCurrentTask;
-window.findCurrentTaskPage = findCurrentTaskPage;
 window.adjustTableHeight = adjustTableHeight;
 window.calculateDynamicPageSize = calculateDynamicPageSize;
 window.updatePageSizeAndReload = updatePageSizeAndReload;
@@ -1985,7 +1801,6 @@ export {
   getCurrentTaskInfo,
   highlightCurrentTask,
   navigateToCurrentTask,
-  findCurrentTaskPage,
   calculateDynamicPageSize,
   updatePageSizeAndReload,
   triggerPageSizeRecalculation
@@ -2102,4 +1917,14 @@ function triggerPageSizeRecalculation() {
       updatePageSizeAndReload();
     }
   }, 200); // 等待DOM完全渲染
+}
+
+// 导航到当前任务 - 极简版本：仅加载第一页数据
+async function navigateToCurrentTask() {
+  console.log('🚀 开始加载抽屉数据');
+  console.log('🚀 当前路由名称:', currentRouteName);
+  
+  // 直接加载第一页数据，不进行任何查找和高亮操作
+  console.log('📋 加载第一页数据');
+  await loadTableData(1);
 }
