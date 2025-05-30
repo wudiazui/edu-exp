@@ -384,6 +384,8 @@ async function loadTableData(page = 1) {
         const buttonText = currentRouteName === 'lead-pool-edit' ? '生产' : '审核';
         const actionType = currentRouteName === 'lead-pool-edit' ? 'edit-task' : 'audit-task';
         
+        console.log('🔧 表格按钮配置:', { currentRouteName, buttonText, actionType });
+        
         tbody.innerHTML = currentData.map(item => `
           <tr class="hover:bg-base-200" data-task-id="${item.taskID}" data-clue-id="${item.clueID}" data-state="${item.originalState}">
             <td class="font-mono text-sm">${item.clueID}</td>
@@ -416,6 +418,15 @@ async function loadTableData(page = 1) {
             }
           });
         });
+        
+        // 验证并确保表格中的按钮文本正确
+        actionButtons.forEach((btn, index) => {
+          if (btn.textContent.trim() !== buttonText) {
+            console.warn(`⚠️ 检测到按钮文本错误，第${index + 1}个按钮文本为: "${btn.textContent.trim()}"，应该为: "${buttonText}"`);
+            btn.textContent = buttonText; // 强制修正按钮文本
+          }
+        });
+        console.log(`✅ 表格中共生成 ${actionButtons.length} 个"${buttonText}"按钮`);
         
         // 为表格行添加点击事件，用于选择
         const tableRows = tbody.querySelectorAll('tr[data-task-id]');
@@ -683,13 +694,8 @@ function selectQuestion(taskId) {
     selectedRow.classList.add('bg-primary', 'text-primary-content');
   }
   
-  // 下一题按钮始终显示"下一题"，不再根据是否为当前任务改变文本
-  const nextButton = document.querySelector('#drawer-container .btn.btn-primary');
-  if (nextButton) {
-    nextButton.textContent = '下一题 →';
-    nextButton.classList.remove('btn-disabled', 'btn-success');
-    nextButton.classList.add('btn-primary');
-  }
+  // 注意：表格中的操作按钮应该始终保持为"审核"或"生产"，不需要修改
+  // 只有抽屉底部的下一题按钮需要保持状态
 }
 
 // 下一题功能 - 修改为找到当前任务的下一个任务
@@ -1205,6 +1211,7 @@ function createDataTab() {
   nextButtonContainer.className = 'flex justify-center items-center flex-col gap-2';
   
   const nextButton = document.createElement('button');
+  nextButton.id = 'next-question-button'; // 添加唯一ID
   nextButton.className = 'btn btn-primary btn-block h-10';
   nextButton.innerHTML = '下一题 →';
   nextButton.addEventListener('click', () => {
@@ -1886,14 +1893,20 @@ async function navigateToCurrentTask() {
   
   console.log(`🎯 尝试导航到包含任务的页面`, currentTaskInfo);
   
+  // 首先加载第一页数据以获取总页数信息
+  console.log('🔍 加载第一页数据以获取总页数信息...');
+  await loadTableData(1);
+  
   // 检查当前页面是否已包含该任务
   console.log('🔍 检查当前页面是否包含该任务...');
   if (highlightCurrentTask(currentTaskInfo)) {
-    console.log('✅ 当前任务已在当前页面中');
+    console.log('✅ 当前任务已在第一页中');
     return;
   }
   
-  console.log('🔍 当前页面未找到任务，查找任务所在页面...');
+  console.log('🔍 当前任务不在第一页，查找任务所在页面...');
+  console.log(`🔍 总页数: ${totalPages}, 开始搜索其他页面...`);
+  
   // 查找任务所在页面
   const targetPage = await findCurrentTaskPage(currentTaskInfo);
   console.log('🔍 查找结果 - 目标页面:', targetPage);
@@ -1901,10 +1914,14 @@ async function navigateToCurrentTask() {
   if (targetPage && targetPage !== currentPage) {
     console.log(`🔄 导航到第 ${targetPage} 页`);
     await loadTableData(targetPage);
+    // 确保高亮当前任务
+    setTimeout(() => {
+      const highlightResult = highlightCurrentTask(currentTaskInfo);
+      console.log(`🎯 导航后高亮结果: ${highlightResult ? '成功' : '失败'}`);
+    }, 200);
   } else if (!targetPage) {
-    console.log('📋 当前任务不在任何页面中，显示第一页所有数据');
-    // 未找到匹配任务时，显示第一页的所有数据
-    await loadTableData(1);
+    console.log('📋 当前任务不在任何页面中，保持显示第一页数据');
+    // 任务不存在时，保持在第一页
   } else {
     console.log('📋 任务在当前页面，但高亮失败，重新尝试高亮');
     // 如果任务在当前页面但高亮失败，延迟重试
