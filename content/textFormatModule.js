@@ -1,5 +1,5 @@
 // Text formatting module
-import { replacePunctuation } from "../lib.js";
+import { replacePunctuation, cleanHtmlContent } from "../lib.js";
 
 /**
  * Cleans HTML content by removing styles and standardizing paragraph structure
@@ -20,7 +20,7 @@ async function cleanPTags(html, replacePunctuations = true) {
     }
   }
   
-  // 修改文本处理函数，添加标点符号替换和HTML实体处理
+  // 修改文本处理函数，使用 cleanHtmlContent 进行HTML实体处理和标点符号替换
   async function processTextContent(textNode) {
     // 获取原始内容
     let text = textNode.textContent;
@@ -30,13 +30,16 @@ async function cleanPTags(html, replacePunctuations = true) {
       text = textNode.innerHTML;
     }
     
-    // 处理HTML非断空格实体
-    // 1. 直接替换字符串形式的&nbsp;实体
-    text = text.replace(/&nbsp;/g, ' ');
-    // 2. 处理已解码的非断空格字符 (Unicode: \u00A0)
-    text = text.replace(/\u00A0/g, ' ');
+    // 使用 cleanHtmlContent 函数进行更全面的HTML清理
+    // 这里只解码HTML实体，不移除标签，因为我们需要保留结构
+    text = cleanHtmlContent(text, {
+      removeBrTags: false,        // 不移除br标签，后续单独处理
+      removeParagraphBreaks: false, // 不移除段落分隔
+      removeAllTags: false,       // 不移除所有标签，只清理实体
+      decodeEntities: true        // 解码HTML实体
+    });
     
-    // 处理其他空白字符
+    // 处理空白字符规范化
     text = text.replace(/[\x20\t\n]/g, function(match) {
       switch (match) {
         case ' ': return ' '; // 将HTML空格（\x20）转换为正常空格

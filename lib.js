@@ -657,21 +657,13 @@ export async function replaceLatexWithImages(text) {
     // 清理表达式：移除首尾的空白字符（包括换行符）
     expression = expression.trim();
     
-    // 替换 HTML 符号为文本符号
-    expression = expression
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&amp;/g, '&')
-      .replace(/&quot;/g, '"')
-      .replace(/&apos;/g, "'")
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&copy;/g, '©')
-      .replace(/&reg;/g, '®')
-      .replace(/&euro;/g, '€')
-      .replace(/&yen;/g, '¥')
-      .replace(/<\/span>/g,'')
-      .replace(/<span>/g, '')
-      .replace(/<br>/g, '');
+    // 替换 HTML 符号为文本符号和清理HTML标签
+    expression = cleanHtmlContent(expression, {
+      removeBrTags: true,
+      removeParagraphBreaks: false,
+      removeAllTags: true,
+      decodeEntities: true
+    });
     
     const imgElement = await math2img(expression);
     result = result.replace(fullMatch, imgElement.outerHTML);
@@ -714,20 +706,7 @@ export async function replaceLatexWithImagesInHtml(htmlText) {
       let expression = match[1];
       
       // Remove HTML tags from the expression but preserve the math content
-      expression = expression
-        .replace(/<br\s*\/?>/gi, ' ')          // Replace <br> with space
-        .replace(/<\/p>\s*<p[^>]*>/gi, ' ')    // Replace </p><p> with space
-        .replace(/<[^>]*>/g, '')               // Remove all other HTML tags
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&amp;/g, '&')
-        .replace(/&quot;/g, '"')
-        .replace(/&apos;/g, "'")
-        .replace(/&nbsp;/g, ' ')
-        .replace(/&copy;/g, '©')
-        .replace(/&reg;/g, '®')
-        .replace(/&euro;/g, '€')
-        .replace(/&yen;/g, '¥');
+      expression = cleanHtmlContent(expression);
       
       // Clean up the expression
       expression = expression.trim();
@@ -809,17 +788,7 @@ export async function replaceLatexWithImagesInHtml(htmlText) {
       expression = expression.trim();
 
       // Replace HTML entities
-      expression = expression
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&amp;/g, '&')
-        .replace(/&quot;/g, '"')
-        .replace(/&apos;/g, "'")
-        .replace(/&nbsp;/g, ' ')
-        .replace(/&copy;/g, '©')
-        .replace(/&reg;/g, '®')
-        .replace(/&euro;/g, '€')
-        .replace(/&yen;/g, '¥');
+      expression = decodeHtmlEntities(expression);
 
       // Add text before the LaTeX
       if (match.index > lastIndex) {
@@ -859,4 +828,216 @@ export async function replaceLatexWithImagesInHtml(htmlText) {
 
   // Return the processed HTML
   return tempDiv.innerHTML;
+}
+
+/**
+ * Clean HTML content by removing tags and converting HTML entities to their corresponding characters
+ * @param {string} content - The HTML content to clean
+ * @param {Object} options - Configuration options
+ * @param {boolean} options.removeBrTags - Whether to replace <br> tags with spaces (default: true)
+ * @param {boolean} options.removeParagraphBreaks - Whether to replace </p><p> with spaces (default: true)
+ * @param {boolean} options.removeAllTags - Whether to remove all HTML tags (default: true)
+ * @param {boolean} options.decodeEntities - Whether to decode HTML entities (default: true)
+ * @returns {string} - The cleaned content
+ */
+export function cleanHtmlContent(content, options = {}) {
+  const {
+    removeBrTags = true,
+    removeParagraphBreaks = true,
+    removeAllTags = true,
+    decodeEntities = true
+  } = options;
+
+  let cleanedContent = content;
+
+  // Remove HTML tags if enabled
+  if (removeBrTags) {
+    cleanedContent = cleanedContent.replace(/<br\s*\/?>/gi, ' ');
+  }
+  
+  if (removeParagraphBreaks) {
+    cleanedContent = cleanedContent.replace(/<\/p>\s*<p[^>]*>/gi, ' ');
+  }
+  
+  if (removeAllTags) {
+    cleanedContent = cleanedContent.replace(/<[^>]*>/g, '');
+  }
+
+  // Decode HTML entities if enabled
+  if (decodeEntities) {
+    cleanedContent = decodeHtmlEntities(cleanedContent);
+  }
+
+  return cleanedContent;
+}
+
+/**
+ * Decode HTML entities to their corresponding characters
+ * @param {string} text - The text containing HTML entities
+ * @returns {string} - The text with decoded entities
+ */
+export function decodeHtmlEntities(text) {
+  // Comprehensive HTML entity mapping
+  const entityMap = {
+    // Basic HTML entities
+    '&lt;': '<',
+    '&gt;': '>',
+    '&amp;': '&',
+    '&quot;': '"',
+    '&apos;': "'",
+    '&#39;': "'",
+    '&nbsp;': ' ',
+    
+    // Copyright and trademark symbols
+    '&copy;': '©',
+    '&reg;': '®',
+    '&trade;': '™',
+    
+    // Currency symbols
+    '&euro;': '€',
+    '&yen;': '¥',
+    '&pound;': '£',
+    '&cent;': '¢',
+    
+    // Mathematical symbols
+    '&plusmn;': '±',
+    '&times;': '×',
+    '&divide;': '÷',
+    '&minus;': '−',
+    '&infin;': '∞',
+    '&sum;': '∑',
+    '&prod;': '∏',
+    '&int;': '∫',
+    '&part;': '∂',
+    '&nabla;': '∇',
+    '&radic;': '√',
+    '&prop;': '∝',
+    '&empty;': '∅',
+    '&isin;': '∈',
+    '&notin;': '∉',
+    '&ni;': '∋',
+    '&cap;': '∩',
+    '&cup;': '∪',
+    '&sub;': '⊂',
+    '&sup;': '⊃',
+    '&sube;': '⊆',
+    '&supe;': '⊇',
+    '&oplus;': '⊕',
+    '&otimes;': '⊗',
+    '&perp;': '⊥',
+    
+    // Greek letters (commonly used in math)
+    '&alpha;': 'α',
+    '&beta;': 'β',
+    '&gamma;': 'γ',
+    '&delta;': 'δ',
+    '&epsilon;': 'ε',
+    '&zeta;': 'ζ',
+    '&eta;': 'η',
+    '&theta;': 'θ',
+    '&iota;': 'ι',
+    '&kappa;': 'κ',
+    '&lambda;': 'λ',
+    '&mu;': 'μ',
+    '&nu;': 'ν',
+    '&xi;': 'ξ',
+    '&omicron;': 'ο',
+    '&pi;': 'π',
+    '&rho;': 'ρ',
+    '&sigma;': 'σ',
+    '&tau;': 'τ',
+    '&upsilon;': 'υ',
+    '&phi;': 'φ',
+    '&chi;': 'χ',
+    '&psi;': 'ψ',
+    '&omega;': 'ω',
+    
+    // Uppercase Greek letters
+    '&Alpha;': 'Α',
+    '&Beta;': 'Β',
+    '&Gamma;': 'Γ',
+    '&Delta;': 'Δ',
+    '&Epsilon;': 'Ε',
+    '&Zeta;': 'Ζ',
+    '&Eta;': 'Η',
+    '&Theta;': 'Θ',
+    '&Iota;': 'Ι',
+    '&Kappa;': 'Κ',
+    '&Lambda;': 'Λ',
+    '&Mu;': 'Μ',
+    '&Nu;': 'Ν',
+    '&Xi;': 'Ξ',
+    '&Omicron;': 'Ο',
+    '&Pi;': 'Π',
+    '&Rho;': 'Ρ',
+    '&Sigma;': 'Σ',
+    '&Tau;': 'Τ',
+    '&Upsilon;': 'Υ',
+    '&Phi;': 'Φ',
+    '&Chi;': 'Χ',
+    '&Psi;': 'Ψ',
+    '&Omega;': 'Ω',
+    
+    // Arrows
+    '&larr;': '←',
+    '&uarr;': '↑',
+    '&rarr;': '→',
+    '&darr;': '↓',
+    '&harr;': '↔',
+    '&lArr;': '⇐',
+    '&uArr;': '⇑',
+    '&rArr;': '⇒',
+    '&dArr;': '⇓',
+    '&hArr;': '⇔',
+    
+    // Miscellaneous symbols
+    '&deg;': '°',
+    '&sect;': '§',
+    '&para;': '¶',
+    '&middot;': '·',
+    '&hellip;': '…',
+    '&ndash;': '–',
+    '&mdash;': '—',
+    '&lsquo;': '\u2018',
+    '&rsquo;': '\u2019',
+    '&ldquo;': '\u201C',
+    '&rdquo;': '\u201D',
+    '&laquo;': '«',
+    '&raquo;': '»',
+    
+    // Fractions
+    '&frac14;': '¼',
+    '&frac12;': '½',
+    '&frac34;': '¾',
+    
+    // Superscripts and subscripts
+    '&sup1;': '¹',
+    '&sup2;': '²',
+    '&sup3;': '³',
+    
+    // Additional common entities
+    '&hearts;': '♥',
+    '&clubs;': '♣',
+    '&diams;': '♦',
+    '&spades;': '♠'
+  };
+
+  let decodedText = text;
+
+  // Replace all known entities
+  for (const [entity, char] of Object.entries(entityMap)) {
+    const regex = new RegExp(entity.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+    decodedText = decodedText.replace(regex, char);
+  }
+
+  // Handle numeric character references (&#123; or &#x1A;)
+  decodedText = decodedText.replace(/&#(\d+);/g, (match, dec) => {
+    return String.fromCharCode(parseInt(dec, 10));
+  });
+  
+  decodedText = decodedText.replace(/&#x([0-9A-Fa-f]+);/g, (match, hex) => {
+    return String.fromCharCode(parseInt(hex, 16));
+  });
+
+  return decodedText;
 }
