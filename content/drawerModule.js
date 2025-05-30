@@ -788,7 +788,6 @@ function createDrawer() {
   
   drawerContainer = document.createElement('div');
   drawerContainer.id = 'drawer-container';
-  drawerContainer.className = 'drawer-container';
   
   // 创建遮罩层
   const overlay = document.createElement('div');
@@ -1171,57 +1170,80 @@ function addDrawerStyles() {
   const styles = document.createElement('style');
   styles.id = 'drawer-styles';
   styles.textContent = `
+    /* CSS作用域限制 - 确保样式只影响抽屉相关元素 */
+    /* 重置可能影响全局的属性 */
+    
     /* 浮动按钮激活状态 - 静态样式 */
-    .drawer-float-button.active {
+    #drawer-float-button.active {
       transform: scale(1.05) rotate(45deg) !important;
       background: #f5576c !important;
     }
     
     /* 禁用所有动画 */
-    .drawer-float-button.no-animation,
-    .drawer-float-button:not(.active) {
+    #drawer-float-button.no-animation,
+    #drawer-float-button:not(.active) {
       animation: none !important;
     }
     
     /* 抽屉容器样式 - 固定在整个视窗 */
-    .drawer-container {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 100000;
-      pointer-events: none;
-      opacity: 0;
-      visibility: hidden;
-      transition: opacity 0.3s ease, visibility 0.3s ease;
+    #drawer-container {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      z-index: 100000 !important;
+      pointer-events: none !important;
+      opacity: 0 !important;
+      visibility: hidden !important;
+      transition: opacity 0.3s ease, visibility 0.3s ease !important;
+      /* 确保不影响页面布局 */
+      box-sizing: border-box !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: none !important;
+      background: transparent !important;
+      color: inherit !important;
+      font-family: inherit !important;
+      font-size: inherit !important;
+      line-height: inherit !important;
+      text-align: inherit !important;
+      text-decoration: inherit !important;
+      vertical-align: inherit !important;
+      white-space: inherit !important;
+      word-spacing: inherit !important;
+      letter-spacing: inherit !important;
     }
     
-    .drawer-container.drawer-open {
-      pointer-events: all;
-      opacity: 1;
-      visibility: visible;
+    #drawer-container.drawer-open {
+      pointer-events: all !important;
+      opacity: 1 !important;
+      visibility: visible !important;
     }
     
     /* 遮罩层样式 */
-    .drawer-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.5);
-      opacity: 0;
-      transition: opacity 0.3s ease;
-      z-index: 100001;
+    #drawer-container .drawer-overlay {
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      background: rgba(0, 0, 0, 0.5) !important;
+      opacity: 0 !important;
+      transition: opacity 0.3s ease !important;
+      z-index: 100001 !important;
+      box-sizing: border-box !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: none !important;
     }
     
-    .drawer-container.drawer-open .drawer-overlay {
-      opacity: 1;
+    #drawer-container.drawer-open .drawer-overlay {
+      opacity: 1 !important;
     }
     
     /* 右侧抽屉样式 - 强制右侧定位 */
-    .drawer-content {
+    #drawer-container .drawer-content {
       position: fixed !important;
       top: 0 !important;
       right: -400px !important;
@@ -1229,10 +1251,10 @@ function addDrawerStyles() {
       width: 400px !important;
       height: 100vh !important;
       border-radius: 0 !important;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      border-left: 1px solid #e5e7eb;
+      overflow: hidden !important;
+      display: flex !important;
+      flex-direction: column !important;
+      border-left: 1px solid #e5e7eb !important;
       border-right: none !important;
       background: white !important;
       box-shadow: -4px 0 15px rgba(0, 0, 0, 0.1) !important;
@@ -1241,58 +1263,74 @@ function addDrawerStyles() {
       margin-left: auto !important;
       margin-right: 0 !important;
       transform: translateX(0) !important;
+      box-sizing: border-box !important;
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+      padding: 0 !important;
+      border-top: none !important;
+      border-bottom: none !important;
+      color: #333 !important;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+      font-size: 14px !important;
+      line-height: 1.5 !important;
+      text-align: left !important;
+      text-decoration: none !important;
+      vertical-align: baseline !important;
+      white-space: normal !important;
+      word-spacing: normal !important;
+      letter-spacing: normal !important;
     }
     
-    .drawer-container.drawer-open .drawer-content {
+    #drawer-container.drawer-open .drawer-content {
       right: 0 !important;
       left: auto !important;
       transform: translateX(0) !important;
     }
     
     /* 额外确保右侧定位的样式 */
-    .drawer-container .drawer-content {
+    #drawer-container .drawer-content {
       right: -400px !important;
       left: auto !important;
       margin-left: auto !important;
       margin-right: 0 !important;
     }
     
-    .drawer-container.drawer-open .drawer-content {
+    #drawer-container.drawer-open .drawer-content {
       right: 0 !important;
       left: auto !important;
     }
     
     /* 响应式设计 - 确保在小屏幕上也在右侧 */
     @media (max-width: 768px) {
-      .drawer-content {
+      #drawer-container .drawer-content {
         width: calc(100% - 2rem) !important;
         right: calc(-100% + 2rem) !important;
       }
       
-      .drawer-container.drawer-open .drawer-content {
+      #drawer-container.drawer-open .drawer-content {
         right: 0 !important;
       }
       
-      .drawer-float-button {
+      #drawer-float-button {
         bottom: 20px !important;
         right: 20px !important;
         width: 50px !important;
         height: 50px !important;
       }
       
-      .drawer-float-button svg {
+      #drawer-float-button svg {
         width: 24px !important;
         height: 24px !important;
       }
     }
     
     @media (max-width: 480px) {
-      .drawer-content {
+      #drawer-container .drawer-content {
         width: 100% !important;
         right: -100% !important;
       }
       
-      .drawer-container.drawer-open .drawer-content {
+      #drawer-container.drawer-open .drawer-content {
         right: 0 !important;
       }
     }
@@ -1309,11 +1347,26 @@ function addDrawerStyles() {
       visibility: visible !important;
       opacity: 1 !important;
       display: flex !important;
+      box-sizing: border-box !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: none !important;
+      background: #667eea !important;
+      color: white !important;
+      font-family: inherit !important;
+      font-size: inherit !important;
+      line-height: inherit !important;
+      text-align: center !important;
+      text-decoration: none !important;
+      vertical-align: baseline !important;
+      white-space: normal !important;
+      word-spacing: normal !important;
+      letter-spacing: normal !important;
     }
     
     /* 确保按钮在抽屉打开时也保持可见 */
-    .drawer-container.drawer-open ~ #drawer-float-button,
-    .drawer-container.drawer-open + #drawer-float-button {
+    #drawer-container.drawer-open ~ #drawer-float-button,
+    #drawer-container.drawer-open + #drawer-float-button {
       z-index: 999999 !important;
       visibility: visible !important;
       opacity: 1 !important;
@@ -1324,68 +1377,72 @@ function addDrawerStyles() {
       cursor: pointer !important;
     }
     
-    /* 表格滚动优化 - 支持垂直和水平滚动 */
-    .overflow-auto, .overflow-x-auto {
-      scrollbar-width: thin;
-      scrollbar-color: rgba(0,0,0,0.2) transparent;
-      scroll-behavior: smooth;
-    }
-    
-    /* 水平滚动条样式 */
-    .overflow-auto::-webkit-scrollbar, .overflow-x-auto::-webkit-scrollbar {
-      height: 6px;
-      width: 6px;
-    }
-    
-    .overflow-auto::-webkit-scrollbar-track, .overflow-x-auto::-webkit-scrollbar-track {
-      background: transparent;
-      border-radius: 3px;
-    }
-    
-    .overflow-auto::-webkit-scrollbar-thumb, .overflow-x-auto::-webkit-scrollbar-thumb {
-      background: rgba(0,0,0,0.2);
-      border-radius: 3px;
-    }
-    
-    .overflow-auto::-webkit-scrollbar-thumb:hover, .overflow-x-auto::-webkit-scrollbar-thumb:hover {
-      background: rgba(0,0,0,0.3);
-    }
-    
-    /* 表格容器特殊优化 */
-    .overflow-auto {
+    /* 表格滚动优化 - 仅针对抽屉内的表格容器 */
+    #drawer-container .drawer-content .overflow-auto {
+      scrollbar-width: thin !important;
+      scrollbar-color: rgba(0,0,0,0.2) transparent !important;
+      scroll-behavior: smooth !important;
       /* 确保平滑滚动 */
-      -webkit-overflow-scrolling: touch;
-      /* 鼠标滚轮滚动优化 */
-      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch !important;
     }
     
-    /* 表格固定头部 */
-    .overflow-auto table thead th {
-      position: sticky;
-      top: 0;
-      background: white;
-      z-index: 10;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    /* 水平滚动条样式 - 仅针对抽屉内元素 */
+    #drawer-container .drawer-content .overflow-auto::-webkit-scrollbar {
+      height: 6px !important;
+      width: 6px !important;
+    }
+    
+    #drawer-container .drawer-content .overflow-auto::-webkit-scrollbar-track {
+      background: transparent !important;
+      border-radius: 3px !important;
+    }
+    
+    #drawer-container .drawer-content .overflow-auto::-webkit-scrollbar-thumb {
+      background: rgba(0,0,0,0.2) !important;
+      border-radius: 3px !important;
+    }
+    
+    #drawer-container .drawer-content .overflow-auto::-webkit-scrollbar-thumb:hover {
+      background: rgba(0,0,0,0.3) !important;
+    }
+    
+    /* 表格固定头部 - 仅针对抽屉内的表格 */
+    #drawer-container .drawer-content .overflow-auto table thead th {
+      position: sticky !important;
+      top: 0 !important;
+      background: white !important;
+      z-index: 10 !important;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
     }
     
     /* 当前任务高亮样式 - 简化版本，只改变背景色 */
-    #data-table-body tr.current-task {
+    #drawer-container #data-table-body tr.current-task {
       background: #fef3c7 !important;
       color: inherit !important;
     }
     
-    #data-table-body tr.current-task:hover {
+    #drawer-container #data-table-body tr.current-task:hover {
       background: #fde68a !important;
     }
     
-    #data-table-body tr.current-task td {
+    #drawer-container #data-table-body tr.current-task td {
       color: inherit !important;
     }
     
-    /* 确保抽屉内容不被其他元素遮挡 */
-    .drawer-content * {
-      position: relative;
-      z-index: 1;
+    /* 确保抽屉内容不被其他元素遮挡 - 仅针对关键元素 */
+    #drawer-container .drawer-content > .card-header {
+      position: relative !important;
+      z-index: 2 !important;
+    }
+    
+    #drawer-container .drawer-content > .card-body {
+      position: relative !important;
+      z-index: 1 !important;
+    }
+    
+    /* 确保抽屉内的所有元素都不会影响外部布局 */
+    #drawer-container * {
+      box-sizing: border-box !important;
     }
   `;
   

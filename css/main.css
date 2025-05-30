@@ -1,3 +1,67 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* 使用 Tailwind 的层级系统来覆盖基础样式 */
+@layer base {
+  /* 修复图片内联显示问题 - 覆盖 Tailwind 的 Preflight 样式 */
+  img {
+    display: inline !important;
+    vertical-align: baseline !important;
+  }
+  
+  /* 特别针对数学公式中的图片 */
+  .math img,
+  .katex img,
+  .mathjax img,
+  p img,
+  span img {
+    display: inline !important;
+    vertical-align: baseline !important;
+    max-width: none !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  /* 更具体的数学公式图片修复 */
+  img[src*="math"],
+  img[src*="formula"],
+  img[src*="equation"],
+  img[alt*="math"],
+  img[alt*="formula"],
+  img[alt*="△"],
+  img[alt*="∠"],
+  img[alt*="∞"] {
+    display: inline !important;
+    vertical-align: baseline !important;
+    max-width: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}
+
+@layer components {
+  /* 如果需要保持某些图片为块级显示，可以添加特定类 */
+  .block-image {
+    @apply block;
+  }
+  
+  .inline-image {
+    @apply inline;
+  }
+}
+
+@layer utilities {
+  /* 实用工具类 */
+  .img-inline {
+    display: inline !important;
+    vertical-align: baseline !important;
+  }
+  
+  .img-block {
+    display: block !important;
+  }
+}
