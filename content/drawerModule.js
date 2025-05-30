@@ -137,11 +137,12 @@ function highlightCurrentTask(taskInfo = null) {
   console.log(`🔍 表格中共有 ${allRows.length} 行数据`);
   
   if (allRows.length > 0) {
-    console.log('🔍 表格中的任务ID列表:');
+    console.log('🔍 表格中的任务列表（排序后）:');
     allRows.forEach((row, index) => {
       const rowTaskId = row.getAttribute('data-task-id');
       const rowClueId = row.getAttribute('data-clue-id');
-      console.log(`  行 ${index + 1}: taskID=${rowTaskId}, clueID=${rowClueId}`);
+      const rowState = row.getAttribute('data-state');
+      console.log(`  行 ${index + 1}: taskID=${rowTaskId}, clueID=${rowClueId}, state=${rowState}`);
     });
   }
   
@@ -152,15 +153,23 @@ function highlightCurrentTask(taskInfo = null) {
     matchCriteria = `taskId: ${taskInfo.taskId}`;
     console.log(`🔍 taskId 匹配结果:`, currentTaskRow ? '找到' : '未找到');
     
-    // 如果同时有 clueId，验证是否匹配
-    if (currentTaskRow && taskInfo.hasClueId) {
+    // 如果找到了匹配的任务行，验证其他信息
+    if (currentTaskRow) {
+      const rowTaskId = currentTaskRow.getAttribute('data-task-id');
       const rowClueId = currentTaskRow.getAttribute('data-clue-id');
-      console.log(`🔍 验证 clueId: 期望=${taskInfo.clueId}, 实际=${rowClueId}`);
-      if (rowClueId && rowClueId !== taskInfo.clueId) {
-        console.warn(`⚠️ 任务ID ${taskInfo.taskId} 匹配，但线索ID不匹配: 期望 ${taskInfo.clueId}, 实际 ${rowClueId}`);
-        // 可以选择是否继续高亮，这里选择继续，但给出警告
+      const rowState = currentTaskRow.getAttribute('data-state');
+      
+      console.log(`🔍 找到的任务行详情: taskID=${rowTaskId}, clueID=${rowClueId}, state=${rowState}`);
+      
+      // 如果同时有 clueId，验证是否匹配
+      if (taskInfo.hasClueId) {
+        console.log(`🔍 验证 clueId: 期望=${taskInfo.clueId}, 实际=${rowClueId}`);
+        if (rowClueId && rowClueId !== taskInfo.clueId) {
+          console.warn(`⚠️ 任务ID ${taskInfo.taskId} 匹配，但线索ID不匹配: 期望 ${taskInfo.clueId}, 实际 ${rowClueId}`);
+          // 可以选择是否继续高亮，这里选择继续，但给出警告
+        }
+        matchCriteria += `, clueId: ${taskInfo.clueId}`;
       }
-      matchCriteria += `, clueId: ${taskInfo.clueId}`;
     }
   } else if (taskInfo.hasClueId) {
     // 如果只有 clueId，通过 clueId 匹配
@@ -175,6 +184,12 @@ function highlightCurrentTask(taskInfo = null) {
     console.log(`✅ 高亮当前任务成功 (${matchCriteria})`);
     console.log(`✅ 高亮的行:`, currentTaskRow);
     
+    // 获取当前任务在列表中的位置信息
+    const allTaskRows = tableBody.querySelectorAll('tr[data-task-id]');
+    const currentTaskIndex = Array.from(allTaskRows).indexOf(currentTaskRow);
+    console.log(`📍 当前任务在排序后列表中的位置: 第 ${currentTaskIndex + 1} 行 / 共 ${allTaskRows.length} 行`);
+    console.log(`📍 当前页码: ${currentPage} / 共 ${totalPages} 页`);
+    
     // 滚动到当前任务位置
     const tableContainer = currentTaskRow.closest('.overflow-auto');
     if (tableContainer) {
@@ -183,6 +198,7 @@ function highlightCurrentTask(taskInfo = null) {
           behavior: 'smooth', 
           block: 'center' 
         });
+        console.log(`🎯 已滚动到当前任务位置`);
       }, 100);
     }
     
@@ -191,9 +207,10 @@ function highlightCurrentTask(taskInfo = null) {
   
   console.log(`📋 当前页面未找到匹配任务 (${matchCriteria})，显示所有数据`);
   console.log(`📋 可能的原因: 
-    1. 任务不在当前页面
+    1. 任务不在当前页面（当前第 ${currentPage} 页）
     2. API返回的数据结构不同
-    3. taskID或clueID不匹配`);
+    3. taskID或clueID不匹配
+    4. 任务在其他页面中`);
   return false;
 }
 
@@ -296,15 +313,46 @@ async function loadTableData(page = 1) {
         originalState: list1.includes(item) ? 1 : 4
       }));
       
-      // 按 taskID 排序（数字排序）
+      // 稳定排序：多重排序条件确保同一任务位置一致
       processedList.sort((a, b) => {
-        // 将 taskID 转换为数字进行比较，确保正确的数字排序
+        // 第一排序条件：按 taskID 数字排序（升序）
         const taskIdA = parseInt(a.taskID) || 0;
         const taskIdB = parseInt(b.taskID) || 0;
-        return taskIdA - taskIdB; // 升序排序，小的在前
+        if (taskIdA !== taskIdB) {
+          return taskIdA - taskIdB;
+        }
+        
+        // 第二排序条件：按 clueID 字符串排序（确保相同taskID时位置稳定）
+        const clueIdComparison = (a.clueID || '').localeCompare(b.clueID || '');
+        if (clueIdComparison !== 0) {
+          return clueIdComparison;
+        }
+        
+        // 第三排序条件：按 originalState 排序（state 1 在前，state 4 在后）
+        if (a.originalState !== b.originalState) {
+          return a.originalState - b.originalState;
+        }
+        
+        // 第四排序条件：按 stepName 排序（确保完全稳定）
+        const stepNameComparison = (a.stepName || '').localeCompare(b.stepName || '');
+        if (stepNameComparison !== 0) {
+          return stepNameComparison;
+        }
+        
+        // 第五排序条件：按 subjectName 排序（最终保证）
+        return (a.subjectName || '').localeCompare(b.subjectName || '');
       });
       
-      console.log('📊 数据已按 taskID 排序:', processedList.map(item => item.taskID).slice(0, 5), '...');
+      console.log('📊 数据已按多重条件稳定排序:', {
+        firstFew: processedList.slice(0, 3).map(item => ({
+          taskID: item.taskID,
+          clueID: item.clueID,
+          state: item.originalState,
+          stepName: item.stepName,
+          subjectName: item.subjectName
+        })),
+        totalCount: processedList.length
+      });
       
       // 计算总记录数（两个状态的数据总和）
       const total1 = (response1 && response1.errno === 0 && response1.data) ? response1.data.total || 0 : 0;
@@ -1220,6 +1268,11 @@ function updateDataStats() {
   adjustTableHeight();
 }
 
+// 更新当前任务显示信息
+function updateCurrentTaskDisplay() {
+  // 功能已禁用
+}
+
 // 动态调整表格高度
 function adjustTableHeight() {
   const tableContainer = document.querySelector('.overflow-auto.flex-1.mb-2');
@@ -1592,14 +1645,14 @@ function addDrawerStyles() {
       box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
     }
     
-    /* 当前任务高亮样式 - 简化版本，只改变背景色 */
+    /* 当前任务高亮样式 - 简化版本，使用DaisyUI样式 */
     #drawer-container #data-table-body tr.current-task {
-      background: #fef3c7 !important;
+      background-color: #fef3c7 !important;
       color: inherit !important;
     }
     
     #drawer-container #data-table-body tr.current-task:hover {
-      background: #fde68a !important;
+      background-color: #fde68a !important;
     }
     
     #drawer-container #data-table-body tr.current-task td {
@@ -1744,17 +1797,40 @@ async function findCurrentTaskPage(taskInfo = null) {
       const list4 = (response4 && response4.errno === 0 && response4.data) ? response4.data.list || [] : [];
       const combinedList = [...list1, ...list4];
       
-      // 为数据项添加状态标识并按 taskID 排序（与loadTableData保持一致）
+      // 为数据项添加状态标识
       const processedList = combinedList.map(item => ({
         ...item,
         originalState: list1.includes(item) ? 1 : 4
       }));
       
-      // 按 taskID 排序（数字排序）
+      // 稳定排序：与loadTableData保持完全一致的多重排序条件
       processedList.sort((a, b) => {
+        // 第一排序条件：按 taskID 数字排序（升序）
         const taskIdA = parseInt(a.taskID) || 0;
         const taskIdB = parseInt(b.taskID) || 0;
-        return taskIdA - taskIdB; // 升序排序，小的在前
+        if (taskIdA !== taskIdB) {
+          return taskIdA - taskIdB;
+        }
+        
+        // 第二排序条件：按 clueID 字符串排序（确保相同taskID时位置稳定）
+        const clueIdComparison = (a.clueID || '').localeCompare(b.clueID || '');
+        if (clueIdComparison !== 0) {
+          return clueIdComparison;
+        }
+        
+        // 第三排序条件：按 originalState 排序（state 1 在前，state 4 在后）
+        if (a.originalState !== b.originalState) {
+          return a.originalState - b.originalState;
+        }
+        
+        // 第四排序条件：按 stepName 排序（确保完全稳定）
+        const stepNameComparison = (a.stepName || '').localeCompare(b.stepName || '');
+        if (stepNameComparison !== 0) {
+          return stepNameComparison;
+        }
+        
+        // 第五排序条件：按 subjectName 排序（最终保证）
+        return (a.subjectName || '').localeCompare(b.subjectName || '');
       });
       
       // 查找是否包含目标任务 - 同时检查 taskID 和 clueID
