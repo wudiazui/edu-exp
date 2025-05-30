@@ -1,14 +1,16 @@
 // drawerModule.js - 抽屉功能模块
 
-// 动态导入API函数，避免静态导入在内容脚本中的问题
+// 全局API函数变量
 let getMyAuditTaskList = null;
+let getMyProduceTaskList = null;
 
 // 初始化API函数
 async function initializeAPI() {
   try {
     // 优先从全局作用域获取API函数
-    if (window.getMyAuditTaskList) {
+    if (window.getMyAuditTaskList && window.getMyProduceTaskList) {
       getMyAuditTaskList = window.getMyAuditTaskList;
+      getMyProduceTaskList = window.getMyProduceTaskList;
       console.log('✅ 从全局作用域获取API函数成功');
       return;
     }
@@ -16,6 +18,7 @@ async function initializeAPI() {
     // 如果全局作用域没有，尝试动态导入
     const libModule = await import('../lib.js');
     getMyAuditTaskList = libModule.getMyAuditTaskList;
+    getMyProduceTaskList = libModule.getMyProduceTaskList;
     console.log('✅ 动态导入API函数成功');
   } catch (error) {
     console.error('❌ API函数初始化失败:', error);
@@ -27,7 +30,7 @@ initializeAPI();
 
 // 添加延迟初始化，确保全局函数已设置
 setTimeout(() => {
-  if (!getMyAuditTaskList) {
+  if (!getMyAuditTaskList || !getMyProduceTaskList) {
     console.log('🔄 延迟重新初始化API函数...');
     initializeAPI();
   }
@@ -62,17 +65,6 @@ function getStatusBadgeClass(status) {
     'draft': 'badge-info'
   };
   return statusMap[status] || 'badge-secondary';
-}
-
-// 获取状态显示文本
-function getStatusText(status) {
-  const statusMap = {
-    'approved': '已审核',
-    'pending': '待审核',
-    'rejected': '需修改',
-    'draft': '草稿'
-  };
-  return statusMap[status] || '未知';
 }
 
 // 获取URL中的查询参数
@@ -174,12 +166,12 @@ async function loadTableData(page = 1) {
   if (!tbody) return;
   
   // 检查API函数是否可用
-  if (!getMyAuditTaskList) {
+  if (!getMyAuditTaskList || !getMyProduceTaskList) {
     console.warn('⚠️ API函数未初始化，尝试重新初始化...');
     await initializeAPI();
     
     // 如果仍然不可用，显示错误
-    if (!getMyAuditTaskList) {
+    if (!getMyAuditTaskList || !getMyProduceTaskList) {
       tbody.innerHTML = `
         <tr>
           <td colspan="5" class="text-center py-8">
@@ -220,11 +212,14 @@ async function loadTableData(page = 1) {
   `;
   
   try {
-    console.log('🔄 开始请求数据...', { page, pageSize });
+    console.log('🔄 开始请求数据...', { page, pageSize, currentRouteName });
+    
+    // 根据当前页面类型选择API函数
+    const apiFunction = currentRouteName === 'lead-pool-edit' ? getMyProduceTaskList : getMyAuditTaskList;
     
     // 同时请求state为1和state为4的数据
     const [response1, response4] = await Promise.all([
-      getMyAuditTaskList({
+      apiFunction({
         pn: page,
         rn: pageSize,
         clueID: '',
@@ -233,7 +228,7 @@ async function loadTableData(page = 1) {
         subject: '',
         state: 1
       }),
-      getMyAuditTaskList({
+      apiFunction({
         pn: page,
         rn: pageSize,
         clueID: '',
@@ -290,6 +285,10 @@ async function loadTableData(page = 1) {
       
       // 渲染数据
       if (currentData.length > 0) {
+        // 根据当前页面类型决定按钮文本和操作
+        const buttonText = currentRouteName === 'lead-pool-edit' ? '生产' : '审核';
+        const actionType = currentRouteName === 'lead-pool-edit' ? 'edit-task' : 'audit-task';
+        
         tbody.innerHTML = currentData.map(item => `
           <tr class="hover:bg-base-200" data-task-id="${item.taskID}" data-clue-id="${item.clueID}" data-state="${item.originalState}">
             <td class="font-mono text-sm">${item.clueID}</td>
@@ -301,20 +300,25 @@ async function loadTableData(page = 1) {
                 <span class="badge badge-xs ${item.originalState === 1 ? 'badge-primary' : 'badge-secondary'}" title="状态: ${item.originalState}">
                   ${item.originalState === 1 ? 'S1' : 'S4'}
                 </span>
-                <button class="btn btn-primary btn-sm" data-action="audit-task" data-task-id="${item.taskID}">
-                  审核
+                <button class="btn btn-primary btn-sm" data-action="${actionType}" data-task-id="${item.taskID}" data-clue-id="${item.clueID}">
+                  ${buttonText}
                 </button>
               </div>
             </td>
           </tr>
         `).join('');
         
-        // 为审核按钮添加事件监听器
-        const auditButtons = tbody.querySelectorAll('[data-action="audit-task"]');
-        auditButtons.forEach(btn => {
+        // 为操作按钮添加事件监听器
+        const actionButtons = tbody.querySelectorAll(`[data-action="${actionType}"]`);
+        actionButtons.forEach(btn => {
           btn.addEventListener('click', () => {
-            const taskId = btn.dataset.taskId;
-            auditTask(taskId);
+            if (actionType === 'edit-task') {
+              const taskId = btn.dataset.taskId;
+              editTask(taskId);
+            } else {
+              const taskId = btn.dataset.taskId;
+              auditTask(taskId);
+            }
           });
         });
         
@@ -420,6 +424,45 @@ function auditTask(taskID) {
   setTimeout(() => {
     toast.remove();
     console.log(`跳转到审核页面: ${newPath}`);
+    
+    // 先替换URL到新页面
+    window.location.replace(newPath);
+    
+    // 然后执行强制刷新，确保页面完全重新加载
+    setTimeout(() => {
+      window.location.reload();
+    }, 100); // 短暂延迟确保URL替换完成
+  }, 800); // 减少等待时间，提升用户体验
+}
+
+// 编辑任务功能
+function editTask(taskID) {
+  console.log('编辑任务:', taskID);
+  
+  // 修改当前访问路径
+  const newPath = `/edu-shop-web/#/question-task/lead-pool-edit?taskid=${taskID}`;
+  
+  // 先关闭抽屉，提升用户体验
+  closeDrawer();
+  
+  // 显示提示信息
+  const toast = document.createElement('div');
+  toast.className = 'toast toast-top toast-center z-50';
+  toast.innerHTML = `
+    <div class="alert alert-info">
+      <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span>正在跳转到编辑页面 (任务ID: ${taskID})...</span>
+    </div>
+  `;
+  
+  document.body.appendChild(toast);
+  
+  // 延迟一小段时间显示提示，然后强制刷新页面
+  setTimeout(() => {
+    toast.remove();
+    console.log(`跳转到编辑页面: ${newPath}`);
     
     // 先替换URL到新页面
     window.location.replace(newPath);
@@ -551,6 +594,9 @@ function selectQuestion(taskId) {
 function goToNextQuestion() {
   const currentTaskInfo = getCurrentTaskInfo();
   
+  // 根据当前页面类型决定操作类型
+  const actionType = currentRouteName === 'lead-pool-edit' ? 'edit-task' : 'audit-task';
+  
   // 如果没有当前任务信息，选择第一个任务
   if (!currentTaskInfo.hasTaskId && !currentTaskInfo.hasClueId) {
     const firstRow = document.querySelector('#data-table-body tr[data-task-id]');
@@ -559,11 +605,17 @@ function goToNextQuestion() {
       return;
     }
     
-    const firstTaskButton = firstRow.querySelector('[data-action="audit-task"]');
+    const firstTaskButton = firstRow.querySelector(`[data-action="${actionType}"]`);
     if (firstTaskButton) {
-      const taskId = firstTaskButton.dataset.taskId;
-      console.log('处理第一个任务:', taskId);
-      auditTask(taskId);
+      if (actionType === 'edit-task') {
+        const taskId = firstTaskButton.dataset.taskId;
+        console.log('处理第一个任务:', taskId);
+        editTask(taskId);
+      } else {
+        const taskId = firstTaskButton.dataset.taskId;
+        console.log('处理第一个任务:', taskId);
+        auditTask(taskId);
+      }
       return;
     }
     
@@ -587,11 +639,17 @@ function goToNextQuestion() {
       return;
     }
     
-    const firstTaskButton = firstRow.querySelector('[data-action="audit-task"]');
+    const firstTaskButton = firstRow.querySelector(`[data-action="${actionType}"]`);
     if (firstTaskButton) {
-      const taskId = firstTaskButton.dataset.taskId;
-      console.log('当前任务不在此页面，处理第一个任务:', taskId);
-      auditTask(taskId);
+      if (actionType === 'edit-task') {
+        const taskId = firstTaskButton.dataset.taskId;
+        console.log('当前任务不在此页面，处理第一个任务:', taskId);
+        editTask(taskId);
+      } else {
+        const taskId = firstTaskButton.dataset.taskId;
+        console.log('当前任务不在此页面，处理第一个任务:', taskId);
+        auditTask(taskId);
+      }
       return;
     }
     
@@ -603,11 +661,17 @@ function goToNextQuestion() {
   const nextTaskRow = currentTaskRow.nextElementSibling;
   if (nextTaskRow && nextTaskRow.hasAttribute('data-task-id')) {
     // 如果有下一个任务，处理下一个任务
-    const nextTaskButton = nextTaskRow.querySelector('[data-action="audit-task"]');
+    const nextTaskButton = nextTaskRow.querySelector(`[data-action="${actionType}"]`);
     if (nextTaskButton) {
-      const nextTaskId = nextTaskButton.dataset.taskId;
-      console.log('处理下一个任务:', nextTaskId);
-      auditTask(nextTaskId);
+      if (actionType === 'edit-task') {
+        const nextTaskId = nextTaskButton.dataset.taskId;
+        console.log('处理下一个任务:', nextTaskId);
+        editTask(nextTaskId);
+      } else {
+        const nextTaskId = nextTaskButton.dataset.taskId;
+        console.log('处理下一个任务:', nextTaskId);
+        auditTask(nextTaskId);
+      }
       return;
     }
   }
@@ -620,11 +684,17 @@ function goToNextQuestion() {
       setTimeout(() => {
         const firstRowInNewPage = document.querySelector('#data-table-body tr[data-task-id]');
         if (firstRowInNewPage) {
-          const firstTaskButton = firstRowInNewPage.querySelector('[data-action="audit-task"]');
+          const firstTaskButton = firstRowInNewPage.querySelector(`[data-action="${actionType}"]`);
           if (firstTaskButton) {
-            const taskId = firstTaskButton.dataset.taskId;
-            console.log('下一页第一个任务:', taskId);
-            auditTask(taskId);
+            if (actionType === 'edit-task') {
+              const taskId = firstTaskButton.dataset.taskId;
+              console.log('下一页第一个任务:', taskId);
+              editTask(taskId);
+            } else {
+              const taskId = firstTaskButton.dataset.taskId;
+              console.log('下一页第一个任务:', taskId);
+              auditTask(taskId);
+            }
           }
         }
       }, 100);
@@ -667,7 +737,7 @@ function checkURLAndAddDrawerButton() {
   const currentURL = window.location.href;
   console.log('🔍 检查URL:', currentURL);
   
-  // 直接判断URL是否匹配目标页面
+  // 检查是否匹配审核池编辑页面
   if (currentURL.includes('/edu-shop-web/#/question-task/audit-pool-edit')) {
     currentRouteName = 'audit-pool-edit';
     currentRouteConfig = {
@@ -684,7 +754,26 @@ function checkURLAndAddDrawerButton() {
     } else {
       console.log('⚠️ 按钮已存在');
     }
-  } else {
+  } 
+  // 检查是否匹配生产任务编辑页面
+  else if (currentURL.includes('/edu-shop-web/#/question-task/lead-pool-edit')) {
+    currentRouteName = 'lead-pool-edit';
+    currentRouteConfig = {
+      title: 'edu-exp',
+      position: { bottom: 30, right: 30 }
+    };
+    
+    console.log('✅ URL匹配成功: 生产任务编辑页面');
+    
+    // 检查是否已经添加过按钮
+    if (!document.getElementById('drawer-float-button')) {
+      console.log('🔘 添加浮动按钮');
+      addDrawerButton(currentRouteConfig);
+    } else {
+      console.log('⚠️ 按钮已存在');
+    }
+  } 
+  else {
     // 如果URL不匹配，移除按钮和抽屉
     console.log('❌ 无匹配路由，移除元素');
     currentRouteConfig = null;
@@ -1391,9 +1480,12 @@ async function findCurrentTaskPage(taskInfo = null) {
     try {
       console.log(`🔍 检查第 ${page} 页...`);
       
+      // 根据当前页面类型选择API函数
+      const apiFunction = currentRouteName === 'lead-pool-edit' ? getMyProduceTaskList : getMyAuditTaskList;
+      
       // 同时请求两种状态的数据
       const [response1, response4] = await Promise.all([
-        getMyAuditTaskList({
+        apiFunction({
           pn: page,
           rn: pageSize,
           clueID: '',
@@ -1402,7 +1494,7 @@ async function findCurrentTaskPage(taskInfo = null) {
           subject: '',
           state: 1
         }),
-        getMyAuditTaskList({
+        apiFunction({
           pn: page,
           rn: pageSize,
           clueID: '',
@@ -1491,6 +1583,7 @@ window.refreshData = refreshData;
 window.goToNextQuestion = goToNextQuestion;
 window.changePage = changePage;
 window.auditTask = auditTask;
+window.editTask = editTask;
 window.loadTableData = loadTableData;
 window.toggleDrawer = toggleDrawer;
 window.openDrawer = openDrawer;
