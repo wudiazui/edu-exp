@@ -50,7 +50,7 @@ let currentRouteName = null;
 let currentPage = 1;
 let totalPages = 1;
 let totalRecords = 0;
-let pageSize = 20;
+let pageSize = 20; // 默认值，将被动态计算覆盖
 
 // 存储当前数据
 let currentData = [];
@@ -467,6 +467,9 @@ async function loadTableData(page = 1) {
       
       // 更新数据统计信息
       updateDataStats();
+      
+      // 触发pageSize重新计算
+      triggerPageSizeRecalculation();
       
     } else {
       throw new Error('两个状态的数据都请求失败');
@@ -1058,6 +1061,7 @@ function createDrawer() {
   if (!window.drawerResizeListener) {
     window.drawerResizeListener = () => {
       if (isDrawerOpen) {
+        console.log('🔄 窗口大小改变，重新调整表格高度和页面大小');
         adjustTableHeight();
       }
     };
@@ -1114,6 +1118,7 @@ function createDataTab() {
       <div class="flex gap-4 text-xs">
         <span>状态1: <span id="state1-records" class="text-primary font-medium">0</span> 条</span>
         <span>状态4: <span id="state4-records" class="text-secondary font-medium">0</span> 条</span>
+        <span>每页: <span id="current-page-size" class="text-info font-medium">${pageSize}</span> 条</span>
       </div>
     </div>
     <button class="btn btn-xs btn-ghost" data-action="refresh-data" title="刷新数据">
@@ -1258,6 +1263,7 @@ function updateDataStats() {
   const totalRecordsElement = document.getElementById('total-records');
   const state1RecordsElement = document.getElementById('state1-records');
   const state4RecordsElement = document.getElementById('state4-records');
+  const currentPageSizeElement = document.getElementById('current-page-size');
   
   if (totalRecordsElement) {
     totalRecordsElement.textContent = totalRecords;
@@ -1269,6 +1275,10 @@ function updateDataStats() {
   
   if (state4RecordsElement) {
     state4RecordsElement.textContent = state4Records;
+  }
+  
+  if (currentPageSizeElement) {
+    currentPageSizeElement.textContent = pageSize;
   }
   
   // 调整表格高度
@@ -1324,6 +1334,11 @@ function adjustTableHeight() {
   tableContainer.style.maxHeight = `${maxTableHeight}px`;
   
   console.log(`📐 动态调整表格高度: ${maxTableHeight}px (视窗高度: ${viewportHeight}px, 已用高度: ${usedHeight}px)`);
+  
+  // 调整高度后，延迟更新页面大小（确保高度变化已生效）
+  setTimeout(() => {
+    updatePageSizeAndReload();
+  }, 150);
 }
 
 // 切换抽屉状态
@@ -1952,6 +1967,9 @@ window.highlightCurrentTask = highlightCurrentTask;
 window.navigateToCurrentTask = navigateToCurrentTask;
 window.findCurrentTaskPage = findCurrentTaskPage;
 window.adjustTableHeight = adjustTableHeight;
+window.calculateDynamicPageSize = calculateDynamicPageSize;
+window.updatePageSizeAndReload = updatePageSizeAndReload;
+window.triggerPageSizeRecalculation = triggerPageSizeRecalculation;
 
 console.log('✅ 抽屉模块函数已添加到全局作用域'); 
 
@@ -1967,5 +1985,121 @@ export {
   getCurrentTaskInfo,
   highlightCurrentTask,
   navigateToCurrentTask,
-  findCurrentTaskPage
+  findCurrentTaskPage,
+  calculateDynamicPageSize,
+  updatePageSizeAndReload,
+  triggerPageSizeRecalculation
 };
+
+// 动态计算每页显示数量
+function calculateDynamicPageSize() {
+  const tableContainer = document.querySelector('#drawer-container .overflow-auto.flex-1.mb-2');
+  if (!tableContainer) {
+    console.log('📏 表格容器不存在，使用默认pageSize: 20');
+    return 20; // 默认值
+  }
+  
+  // 获取表格容器的实际可用高度
+  const containerHeight = tableContainer.clientHeight;
+  
+  // 如果容器高度太小或为0，返回默认值
+  if (containerHeight < 100) {
+    console.log('📏 表格容器高度太小，使用默认pageSize: 20');
+    return 20;
+  }
+  
+  // 获取表头高度
+  const tableHeader = tableContainer.querySelector('thead tr');
+  const headerHeight = tableHeader ? tableHeader.offsetHeight : 40; // 默认40px
+  
+  // 创建一个临时行来测量单行高度
+  let rowHeight = 48; // 默认行高
+  const tbody = tableContainer.querySelector('tbody');
+  if (tbody && tbody.children.length > 0) {
+    // 如果有现有行，使用第一行的高度
+    rowHeight = tbody.children[0].offsetHeight;
+  } else {
+    // 如果没有现有行，创建一个临时行来测量
+    const tempRow = document.createElement('tr');
+    tempRow.style.visibility = 'hidden';
+    tempRow.style.position = 'absolute';
+    tempRow.innerHTML = `
+      <td class="font-mono text-sm">TEST12345</td>
+      <td class="font-medium max-w-xs truncate">测试内容测试内容测试内容</td>
+      <td class="text-sm">测试学段</td>
+      <td class="text-sm">测试学科</td>
+      <td>
+        <div class="flex items-center gap-2">
+          <span class="badge badge-xs badge-primary">S1</span>
+          <button class="btn btn-primary btn-sm">测试</button>
+        </div>
+      </td>
+    `;
+    
+    if (tbody) {
+      tbody.appendChild(tempRow);
+      rowHeight = tempRow.offsetHeight;
+      tbody.removeChild(tempRow);
+    }
+  }
+  
+  // 计算可用于显示数据行的高度
+  const availableHeight = containerHeight - headerHeight - 20; // 减去20px的缓冲和滚动条
+  
+  // 计算能显示的行数
+  const maxRows = Math.floor(availableHeight / rowHeight);
+  
+  // 确保至少显示5行，最多不超过50行
+  const calculatedPageSize = Math.max(5, Math.min(50, maxRows));
+  
+  console.log(`📏 动态计算pageSize:`, {
+    containerHeight,
+    headerHeight,
+    rowHeight,
+    availableHeight,
+    maxRows,
+    calculatedPageSize,
+    currentPageSize: pageSize
+  });
+  
+  return calculatedPageSize;
+}
+
+// 更新页面大小并重新加载数据
+function updatePageSizeAndReload() {
+  const newPageSize = calculateDynamicPageSize();
+  
+  // 如果页面大小有显著变化，更新并重新加载
+  if (Math.abs(newPageSize - pageSize) > 2) { // 允许2行的差异避免频繁重载
+    console.log(`📏 pageSize变化: ${pageSize} -> ${newPageSize}`);
+    
+    // 计算当前数据在新分页下应该在第几页
+    const currentFirstItemIndex = (currentPage - 1) * pageSize;
+    const newPage = Math.floor(currentFirstItemIndex / newPageSize) + 1;
+    
+    pageSize = newPageSize;
+    
+    // 加载新的页面
+    loadTableData(Math.max(1, newPage));
+  } else {
+    pageSize = newPageSize;
+    console.log(`📏 pageSize保持: ${pageSize} (变化幅度小于阈值)`);
+    
+    // 更新显示的pageSize数字
+    const currentPageSizeElement = document.getElementById('current-page-size');
+    if (currentPageSizeElement) {
+      currentPageSizeElement.textContent = pageSize;
+    }
+  }
+}
+
+// 在表格数据加载完成后触发pageSize重新计算
+function triggerPageSizeRecalculation() {
+  setTimeout(() => {
+    const newPageSize = calculateDynamicPageSize();
+    if (newPageSize !== pageSize) {
+      console.log(`📏 表格渲染后检测到pageSize需要调整: ${pageSize} -> ${newPageSize}`);
+      updatePageSizeAndReload();
+    }
+  }, 200); // 等待DOM完全渲染
+}
