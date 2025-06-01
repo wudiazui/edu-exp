@@ -228,7 +228,7 @@ export async function dropProduceTask(taskID) {
 
 export function replacePunctuation(text) {
   const punctuationMap = {
-    '\\.$': '。',
+    '(?<!\\d)\\.(?!\\d)': '。', // 匹配前后都不是数字的点
     ',': '，',
     '\\?': '？',
     '!': '！',
