@@ -3,3 +3,7 @@ authors = ["pingfury"]
 language = "zh"
 multilingual = false
 src = "src"
+
+[output.html]
+git-repository-url = "https://github.com/pingfury108/edu-exp"
+git-repository-icon = "fa-github"
