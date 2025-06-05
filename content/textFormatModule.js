@@ -5,9 +5,10 @@ import { replacePunctuation, cleanHtmlContent } from "../lib.js";
  * Cleans HTML content by removing styles and standardizing paragraph structure
  * @param {string} html - The HTML content to clean
  * @param {boolean} [replacePunctuations=true] - Whether to replace punctuations
+ * @param {boolean} [removeStylesEnabled=true] - Whether to remove styles from elements
  * @returns {Promise<string>} - The cleaned HTML content
  */
-async function cleanPTags(html, replacePunctuations = true) {
+async function cleanPTags(html, replacePunctuations = true, removeStylesEnabled = true) {
   const temp = document.createElement('div');
   temp.innerHTML = html;
 
@@ -73,7 +74,7 @@ async function cleanPTags(html, replacePunctuations = true) {
     });
   }
 
-  // 第二步：处理p标签内容，保留文本、图片和换行
+  // 第二步：处理p标签内容，保留文本、图片、换行和下划线标签
   async function cleanParagraph(p) {
     // 将所有节点转换为数组并记录其类型
     const nodes = await Promise.all(Array.from(p.childNodes).map(async node => { // 使用 Promise.all
@@ -91,6 +92,16 @@ async function cleanPTags(html, replacePunctuations = true) {
         } else if (node.tagName.toLowerCase() === 'br') {
           return {
             type: 'br'
+          };
+        } else if (node.tagName.toLowerCase() === 'u') {
+          return {
+            type: 'u',
+            node: node.cloneNode(true)
+          };
+        } else if (node.tagName.toLowerCase() === 'span' && !removeStylesEnabled) {
+          return {
+            type: 'span',
+            node: node.cloneNode(true)
           };
         }
       }
@@ -112,12 +123,18 @@ async function cleanPTags(html, replacePunctuations = true) {
         p.appendChild(item.node);
       } else if (item.type === 'br') {
         p.appendChild(document.createElement('br'));
+      } else if (item.type === 'u') {
+        p.appendChild(item.node);
+      } else if (item.type === 'span') {
+        p.appendChild(item.node);
       }
     });
   }
 
-  // 移除所有样式
-  removeStyles(temp);
+  // 移除所有样式（根据参数决定是否执行）
+  if (removeStylesEnabled) {
+    removeStyles(temp);
+  }
   convertToParagraphs(temp);
 
   const pElements = temp.getElementsByTagName('p');

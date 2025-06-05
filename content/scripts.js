@@ -103,13 +103,13 @@ function handleRouteChange() {
   lastPathname = window.location.pathname;
   lastSearch = window.location.search;
   lastHash = window.location.hash;
-  
+
   // 检查URL并添加过滤UI
   checkURLAndAddFilterUI();
-  
+
   // 检查URL并添加抽屉按钮
   checkURLAndAddDrawerButton();
-  
+
   // 设置事件监听器
   setupEventListeners();
 }
@@ -394,7 +394,15 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   if (request.action === "font_format") {
     // 调用printCascaderInputValue函数并获取返回值
     const cascaderValue = printCascaderInputValue();
-    
+
+    // 从存储中读取强力格式化设置
+    const strongFormattingEnabled = await new Promise((resolve) => {
+      chrome.storage.sync.get(['strongFormatting'], (result) => {
+        // 如果没有设置，默认为true
+        resolve(result.strongFormatting !== undefined ? result.strongFormatting : true);
+      });
+    });
+
     const selectedElement = document.activeElement;
     if (selectedElement) {
       // 保存滚动位置
@@ -409,14 +417,14 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
 
       // 创建一个临时容器来解析清理后的HTML
       const temp = document.createElement('div');
-      
+
       // 如果cascaderValue包含"英语"，则不执行replacePunctuation
       if (cascaderValue && cascaderValue.includes('英语')) {
-        // 清理HTML，但不替换标点符号（第二个参数为false）
-        temp.innerHTML = await cleanPTags(selectedElement.innerHTML, false);
+        // 清理HTML，但不替换标点符号（第二个参数为false），根据设置决定是否移除样式
+        temp.innerHTML = await cleanPTags(selectedElement.innerHTML, false, strongFormattingEnabled);
       } else {
-        // 正常清理HTML，包括替换标点符号（默认参数为true）
-        temp.innerHTML = await cleanPTags(selectedElement.innerHTML);
+        // 正常清理HTML，包括替换标点符号（默认参数为true），根据设置决定是否移除样式
+        temp.innerHTML = await cleanPTags(selectedElement.innerHTML, true, strongFormattingEnabled);
       }
       const cleanedElement = temp.firstElementChild;
 
@@ -515,7 +523,7 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
       action: "audit_content_extract",
       html: formattedText
     });
-    
+
     return true;
   }
 
@@ -574,17 +582,17 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   if (request.action === "topic_split") {
     // 使用umbrellajs查找class="doc-clip-img"的元素
     const docClipImgElements = u('.doc-clip-img');
-    
+
     if (docClipImgElements.length > 0) {
       // 显示处理中通知
       const notificationId = showNotification('正在处理题目内容...', 'info');
-      
+
       // 创建临时容器并复制内容
       const temp = document.createElement('div');
       // 使用正确的方式获取元素内容 - first()返回DOM元素，不是umbrella实例
       const firstElement = docClipImgElements.nodes[0];
       temp.innerHTML = firstElement ? firstElement.innerHTML : '';
-      
+
       // 查找所有图片元素，特别是处理blob URL
       const processActiveElement = async () => {
         try {
@@ -592,7 +600,7 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
           const images = temp.querySelectorAll('img');
           let blobImage = null;
           let originalSize = 0;
-          
+
           // 查找第一个有效的blob URL图片
           for (const img of images) {
             const src = img.getAttribute('src');
@@ -603,12 +611,12 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
                 const blob = await response.blob();
                 originalSize = blob.size;
                 console.log('Original blob size:', originalSize, 'bytes');
-                
+
                 // 压缩图片并转换为base64
                 const base64Data = await compressAndConvertToBase64(blob);
                 console.log('Compressed image size:', base64Data.length, 'bytes');
                 console.log('Compression ratio:', (base64Data.length / originalSize).toFixed(2));
-                
+
                 blobImage = base64Data;
                 break; // 找到第一个有效的blob图片就停止
               } catch (error) {
@@ -616,7 +624,7 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
               }
             }
           }
-          
+
           // 压缩图片并转换为base64的函数
           async function compressAndConvertToBase64(blob, quality = 0.7, maxWidth = 1200) {
             return new Promise((resolve, reject) => {
@@ -630,28 +638,28 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
                   width = maxWidth;
                   height = Math.floor(height * ratio);
                 }
-                
+
                 // 创建canvas并绘制调整大小后的图片
                 const canvas = document.createElement('canvas');
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
-                
+
                 // 将canvas转换为压缩后的base64字符串
                 const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
                 resolve(compressedBase64);
               };
               img.onerror = reject;
-              
+
               // 从blob创建一个临时URL
               const url = URL.createObjectURL(blob);
               img.src = url;
-              
+
               // 使用后释放URL
               img.onload = function() {
                 URL.revokeObjectURL(url);
-                
+
                 // 计算新的尺寸，保持宽高比
                 let width = img.width;
                 let height = img.height;
@@ -660,31 +668,31 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
                   width = maxWidth;
                   height = Math.floor(height * ratio);
                 }
-                
+
                 // 创建canvas并绘制调整大小后的图片
                 const canvas = document.createElement('canvas');
                 canvas.width = width;
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, width, height);
-                
+
                 // 将canvas转换为压缩后的base64字符串
                 const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
                 resolve(compressedBase64);
               };
             });
           }
-          
+
           if (blobImage) {
             // 记录 blobImage 的大小
             console.log('blobImage size:', blobImage.length, 'bytes');
-            
+
             // 发送到 background script，指定类型为 TOPIC_SPLIT
             chrome.runtime.sendMessage({
               type: 'TOPIC_SPLIT',
               data: { 'image_data': blobImage }
             });
-            
+
             hideNotification(notificationId);
             showNotification('已发送图片到题目切割标签页', 'success');
           } else {
@@ -696,7 +704,7 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
           showNotification('处理题目内容失败: ' + error.message, 'error');
         }
       };
-      
+
       // 执行异步处理
       processActiveElement();
     } else {
@@ -720,14 +728,14 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
           const filteredTasks = res.data.list.filter(task => {
             // 只匹配 task.brief 的内容
             const textToCheck = task.brief || '';
-            
+
             // 使用filterByKeywords函数检查文本是否满足关键词条件
             return filterByKeywords(textToCheck, includeKeywords, excludeKeywords);
           });
-        
+
           // TODO: 添加更详细的日志，记录哪些关键词匹配了哪些任务
           console.log(`过滤后的任务: ${filteredTasks.length}/${res.data.list.length}`);
-          
+
           // 获取认领数量限制和已认领数量
           const claimLimit = request.claimLimit || 10;
           const successfulClaims = request.successfulClaims || 0;
@@ -738,16 +746,16 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
             console.log('已达到认领上限，不再认领');
             return;
           }
-          
+
           // 只认领不超过remainingClaimsNeeded个题目
           let taskIdsToUse = [];
           // 无论任务数量多少，都限制为不超过remainingClaimsNeeded个
           const tasksToUse = filteredTasks.slice(0, remainingClaimsNeeded);
-          taskIdsToUse = tasksToUse.map(task => request.params.taskType === 'producetask' ? task.clueID : task.taskID);  
+          taskIdsToUse = tasksToUse.map(task => request.params.taskType === 'producetask' ? task.clueID : task.taskID);
           console.log('将要认领的Task IDs:', taskIdsToUse);
-          
+
           if (taskIdsToUse.length > 0) {
-            const params = request.params.taskType === 'producetask' 
+            const params = request.params.taskType === 'producetask'
               ? { clueIDs: taskIdsToUse }
               : { taskIds: taskIdsToUse };
 
@@ -798,8 +806,8 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
         // 从storage获取服务器配置
         const { host, name, serverType, kouziAccessKey, kouziAppId, kouziEquationAlignWorkflowId } = await new Promise(resolve => {
           chrome.storage.sync.get([
-            'host', 
-            'name', 
+            'host',
+            'name',
             'serverType',
             'kouziAccessKey',
             'kouziAppId',
@@ -939,12 +947,12 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   if (request.action === "fill_content") {
     // 调用printCascaderInputValue函数获取返回值
     const cascaderValue = printCascaderInputValue();
-    
+
     // 当返回值中包含"数学"二字时才执行设置答案输入框值的函数
     if (cascaderValue && (cascaderValue.includes('数学') || cascaderValue.includes('化学') || cascaderValue.includes('物理') || cascaderValue.includes('生物'))) {
       setAnswerInputValue();
     }
-    
+
     // Helper function to fill editor content
     function fillEditorContent(containerSelector) {
       const container = u(containerSelector);
@@ -959,14 +967,15 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
         tempDiv.innerHTML = convertedText.split('\n')
           .map(line => {
             // Convert regular spaces to HTML non-breaking spaces
-            const lineWithPreservedSpaces = line.replace(/ /g, '&nbsp;');
-            return `<p>${lineWithPreservedSpaces}</p>`;
+            //const lineWithPreservedSpaces = line.replace(/ /g, '&nbsp;');
+            //return `<p>${lineWithPreservedSpaces}</p>`;
+            return `<p>${line}</p>`
           })
           .join('');
 
         // 检查是否为追加模式，默认为替换模式
         const isAppend = request.append === true;
-        
+
         if (isAppend) {
           // 追加模式：保留原有内容，添加新内容
           const currentContent = editorContainer.html();
@@ -1033,17 +1042,17 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     try {
       // 获取页面的可见文本内容
       const bodyText = document.body.innerText || '';
-      
+
       // 提取标题
       const title = document.title || '';
-      
+
       // 提取元描述（如果有）
       let metaDescription = '';
       const metaDescTag = document.querySelector('meta[name="description"]');
       if (metaDescTag) {
         metaDescription = metaDescTag.getAttribute('content') || '';
       }
-      
+
       // 提取主要内容区域（尝试找到主要内容区域，如果无法确定，则使用body）
       let mainContent = '';
       const possibleMainElements = [
@@ -1054,20 +1063,20 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
         document.querySelector('#main'),
         document.querySelector('.main')
       ].filter(Boolean); // 过滤掉null和undefined
-      
+
       if (possibleMainElements.length > 0) {
         // 使用最长的内容作为主要内容
         mainContent = possibleMainElements
           .map(element => element.innerText || '')
-          .reduce((longest, current) => 
+          .reduce((longest, current) =>
             current.length > longest.length ? current : longest, '');
       }
-      
+
       // 组合提取的内容
-      const extractedContent = `标题: ${title}\n\n` + 
+      const extractedContent = `标题: ${title}\n\n` +
                                (metaDescription ? `描述: ${metaDescription}\n\n` : '') +
                                `内容:\n${mainContent || bodyText}`;
-      
+
       // 发送提取的内容回背景脚本
       chrome.runtime.sendMessage({
         action: "extracted_page_content",
@@ -1084,12 +1093,12 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     }
     return true;
   }
-  
+
   if (request.action === "extract_editor_content") {
     try {
       // 使用提取的函数获取审核内容
       const formattedText = extractAuditContent();
-      
+
       // 发送提取的编辑器内容回背景脚本
       chrome.runtime.sendMessage({
         action: "extracted_editor_content",
@@ -1241,7 +1250,7 @@ async function handleMathImg() {
 
 async function handleAutoFillBlank() {
   const selectedText = window.getSelection().toString().trim();
-  
+
   if (!selectedText) {
     showNotification('请先选择要填入的文本', 'error');
     return;
@@ -1249,7 +1258,7 @@ async function handleAutoFillBlank() {
 
   // 使用分号分割文本
   const answers = selectedText.split('；').filter(text => text.trim());
-  
+
   // 首先找到所有 c-margin-bottom-middle el-row 容器
   const containers = u('.c-margin-bottom-middle.el-row');
   if (!containers.length) {
@@ -1261,17 +1270,17 @@ async function handleAutoFillBlank() {
   for (let i = 0; i < Math.min(containers.length, answers.length); i++) {
     const container = u(containers.nodes[i]);
     const inputElement = container.find('.el-input__inner');
-    
+
     if (inputElement.length > 0) {
       const input = inputElement.nodes[0];
-      
+
       // 设置输入值
       input.value = answers[i].trim();
-      
+
       // 触发输入事件
       const inputEvent = new Event('input', { bubbles: true });
       input.dispatchEvent(inputEvent);
-      
+
       // 触发change事件
       const changeEvent = new Event('change', { bubbles: true });
       input.dispatchEvent(changeEvent);
@@ -1286,7 +1295,7 @@ async function handleAutoFillBlank() {
 
   // 如果答案数量大于容器数量，需要添加新的输入框
   const diffCount = answers.length - containers.length;
-  
+
   if (diffCount > 0) {
     const addBtn = u('.add-btn');
     if (addBtn.length > 0) {
@@ -1295,31 +1304,31 @@ async function handleAutoFillBlank() {
         // 添加小延迟确保DOM更新
         await new Promise(resolve => setTimeout(resolve, 100));
       }
-      
+
       // 等待DOM更新后填入剩余答案
       await new Promise(resolve => setTimeout(resolve, 200));
-      
+
       // 重新获取所有容器
       const newContainers = u('.c-margin-bottom-middle.el-row');
-      
+
       // 填入剩余答案
       for (let i = containers.length; i < answers.length; i++) {
         if (i < newContainers.length) {
           const container = u(newContainers.nodes[i]);
           const inputElement = container.find('.el-input__inner');
-          
+
           if (inputElement.length > 0) {
             const input = inputElement.nodes[0];
-            
+
             // 设置输入值
             input.value = answers[i].trim();
-            
+
             // 触发事件
             const inputEvent = new Event('input', { bubbles: true });
             const changeEvent = new Event('change', { bubbles: true });
             const focusEvent = new Event('focus', { bubbles: true });
             const blurEvent = new Event('blur', { bubbles: true });
-            
+
             input.dispatchEvent(inputEvent);
             input.dispatchEvent(changeEvent);
             input.dispatchEvent(focusEvent);
@@ -1339,7 +1348,7 @@ async function handleAutoFillBlank() {
  */
 async function handleAutoFillOptions() {
   const selectedText = window.getSelection().toString().trim();
-  
+
   if (!selectedText) {
     showNotification('请先选择要填入的文本', 'error');
     return;
@@ -1350,12 +1359,12 @@ async function handleAutoFillOptions() {
     .filter(text => text.trim())
     // 使用正则表达式移除选项前的标识符（如A.、B.、1.、(1)等）
     .map(text => text.trim().replace(/^\s*(?:[A-Za-z0-9]+[.、)\]\s]*|\([A-Za-z0-9]+[.、)\]\s]*|（[A-Za-z0-9]+[.、)\]\s]*|[\(\[【「『]?[A-Za-z0-9]+[.、)\]】」』\s]*)/u, '').trim());
-  
+
   if (options.length === 0) {
     showNotification('未找到有效的选项内容', 'error');
     return;
   }
-  
+
   try {
     // 按照指定的DOM路径查找按钮
     // 1. 找到 class=el-main 的div
@@ -1364,16 +1373,16 @@ async function handleAutoFillOptions() {
       showNotification('未找到主内容区域(.el-main)', 'error');
       return;
     }
-    
+
     // 2. 找到 class=c-margin-bottom-large 的div
     const largeMarginDivs = mainDiv.find('.c-margin-bottom-large');
     if (largeMarginDivs.length < 5) {
       showNotification(`未找到足够的内容区块(.c-margin-bottom-large), 当前数量: ${largeMarginDivs.length}`, 'error');
       return;
     }
-    
+
     const targetLargeDiv = u(largeMarginDivs.nodes[4]); // 第四个div
-    
+
     // 3. 找到 class=c-margin-bottom-middle el-row 的第一个div
     const middleMarginDivs = targetLargeDiv.find('.c-margin-bottom-middle.el-row');
     if (!middleMarginDivs.length) {
@@ -1381,50 +1390,50 @@ async function handleAutoFillOptions() {
       return;
     }
     const targetMiddleDiv = u(middleMarginDivs.nodes[0]); // 第一个div
-    
+
     // 4. 找到 class=el-button el-button--primary el-button--small 的button
     const addButton = targetMiddleDiv.find('.el-button.el-button--primary.el-button--small');
     if (!addButton.length) {
       // 尝试查找其他可能的按钮选择器
       const allButtons = targetMiddleDiv.find('button');
-      
+
       showNotification('未找到添加按钮', 'error');
       return;
     }
-    
+
     // 先点击所有按钮，然后再插入文本
-    
+
     // 定义一个函数来递归点击按钮，确保按钮点击完成后再执行插入操作
     function clickButtonsSequentially(index, callback) {
       if (index >= options.length) {
         callback();
         return;
       }
-      
+
       // 模拟点击按钮
       addButton.nodes[0].click();
-      
+
       // 等待一小段时间再点击下一个按钮，确保DOM有时间更新
       setTimeout(() => {
         clickButtonsSequentially(index + 1, callback);
       }, 100); // 每次点击间隔100ms
     }
-    
+
     // 开始递归点击按钮
     showNotification(`正在添加 ${options.length} 个选项...`, 'info');
     clickButtonsSequentially(0, () => {
       // 所有按钮点击完成后执行的回调函数
-      
+
       // 等待一小段时间，等DOM完全更新后再查找新的编辑器
       setTimeout(() => {
       // 在targetLargeDiv中查找.w-e-text-container元素
       const textContainers = targetLargeDiv.find('.w-e-text-container');
-      
+
       if (textContainers.length === 0) {
         showNotification('未找到文本输入容器，请检查页面结构', 'error');
         return;
       }
-      
+
       // 在每个.w-e-text-container中查找.w-e-text元素
       const textElements = [];
       textContainers.each((container) => {
@@ -1434,29 +1443,29 @@ async function handleAutoFillOptions() {
         }
       });
 
-      
+
       if (textElements.length === 0) {
         showNotification('未找到文本输入框，请检查页面结构', 'error');
         return;
       }
-      
+
       // 将选项内容插入到对应的编辑器中
       let insertCount = 0;
       for (let i = 0; i < Math.min(options.length, textElements.length); i++) {
         const textElement = textElements[i];
         const optionText = options[i].trim();
-        
+
         // 将选项内容设置到编辑器中
         textElement.innerHTML = optionText;
 
         insertCount++;
       }
-      
+
       showNotification(`已成功填入 ${insertCount} 个选项内容`, 'success');
     }, 500); // 等待500毫秒给DOM更新的时间
     });
-    
-    
+
+
   } catch (error) {
     console.error('自动填入选项时出错:', error);
     showNotification(`自动填入选项失败: ${error.message}`, 'error');
