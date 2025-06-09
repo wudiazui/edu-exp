@@ -9,6 +9,7 @@ const OcrComponent = ({ host, uname, serverType }) => {
   const [recognizedText, setRecognizedText] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
   const [cozeService, setCozeService] = React.useState(null);
+  const [ocrMode, setOcrMode] = React.useState(""); // 新增OCR模式状态
 
   // Initialize CozeService when serverType is "扣子"
   React.useEffect(() => {
@@ -57,7 +58,8 @@ const OcrComponent = ({ host, uname, serverType }) => {
               img: {
                 type: "image",
                 file_id: uploadResult.id
-              }
+              },
+              orc_type: ocrMode // 添加OCR模式参数
             }
           });
 
@@ -81,8 +83,11 @@ const OcrComponent = ({ host, uname, serverType }) => {
             setRecognizedText('识别失败：未获取到识别结果');
           }
         } else {
-          // 直接调用ocr_text函数而不是通过background.js
-          const formattedText = await ocr_text({ 'image_data': selectedImage }, host, uname);
+          // 直接调用ocr_text函数而不是通过background.js，添加orc_type参数
+          const formattedText = await ocr_text({ 
+            'image_data': selectedImage,
+            'orc_type': ocrMode
+          }, host, uname);
           
           if (formattedText) {
             setRecognizedText(formattedText);
@@ -102,6 +107,19 @@ const OcrComponent = ({ host, uname, serverType }) => {
   return (
     <div className="container max-auto w-full">
       <div className="flex flex-col gap-2">
+        {/* OCR模式选择 */}
+        <div className="form-control">
+          <select 
+            className="select select-bordered select-sm w-full"
+            value={ocrMode}
+            onChange={(e) => setOcrMode(e.target.value)}
+          >
+            <option value="">默认模式</option>
+            <option value="html">下划线模式</option>
+            <option value="latex">LaTeX模式</option>
+          </select>
+        </div>
+
         <ImageUploader
           selectedImage={selectedImage}
           setSelectedImage={setSelectedImage}
