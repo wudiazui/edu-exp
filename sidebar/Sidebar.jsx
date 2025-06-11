@@ -6,6 +6,7 @@ import ClueClaimingComponent from './ClueClaimingComponent'; // 引入线索认�
 import TopicSplitComponent from './TopicSplitComponent'; // 引入题目切割组件
 import FeedbackComponent from './FeedbackComponent'; // 引入问题反馈组件
 import DocumentationComponent from './DocumentationComponent'; // 引入文档组件
+import DocuScanComponent from './DocuScanComponent'; // 引入DocuScan组件
 import MobileWebComponent from './MobileWebComponent'; // 引入手机网页端组件
 import AuditComponent from './AuditComponent'; // 引入审核组件
 import { CozeService } from '../coze.js';
@@ -37,6 +38,7 @@ export default function Main() {
     "clue-claiming": false,
     "topic_split": true,
     "documentation": true,
+    "docuscan": true,
     "mobile-web": true,
     "audit": true
   });
@@ -1057,6 +1059,9 @@ export default function Main() {
                   {features.documentation && (
                     <li><a className={activeTab === 'documentation' ? 'active' : ''} onClick={() => handleTabChange('documentation')}>文档</a></li>
                   )}
+                  {features.docuscan && (
+                    <li><a className={activeTab === 'docuscan' ? 'active' : ''} onClick={() => handleTabChange('docuscan')}>图片白底化</a></li>
+                  )}
                   {features["mobile-web"] && (
                     <li><a className={activeTab === 'mobile-web' ? 'active' : ''} onClick={() => handleTabChange('mobile-web')}>移动网页版</a></li>
                   )}
@@ -1133,6 +1138,9 @@ export default function Main() {
             )}
             {activeTab === 'documentation' && (
               <DocumentationComponent />
+            )}
+            {activeTab === 'docuscan' && (
+              <DocuScanComponent />
             )}
             {activeTab === 'mobile-web' && (
               <MobileWebComponent />
