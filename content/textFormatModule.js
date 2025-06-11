@@ -49,6 +49,8 @@ async function cleanPTags(html, replacePunctuations = true, removeStylesEnabled 
         default: return match;
       }
     });
+    // 删除所有空白字符（包括用户手敲的空格和解码后的&nbsp;）
+    text = text.replace(/\s+/g, '');
 
     // 根据参数决定是否替换标点符号
     return replacePunctuations ? replacePunctuation(text) : text;
