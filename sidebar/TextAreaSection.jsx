@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import CopyButton from './CopyButton.jsx';
 import { marked } from 'marked';
 import { renderMarkdownWithMath } from '../markdown-renderer.js';
-import { removeEmptyLinesFromString } from '../text.js';
+
 
 // Configure marked options
 marked.setOptions({
@@ -157,7 +157,7 @@ const TextAreaSection = ({
                   // 当site为bc但没有渲染内容时，直接使用原始value
                   onFill(value);
                 } else {
-                  onFill(removeEmptyLinesFromString(value, gradeLevel === "小学"));
+                  onFill(value);
                 }
               }}
               className="btn btn-ghost btn-xs flex items-center"
@@ -175,7 +175,7 @@ const TextAreaSection = ({
           >
             清除
           </button>
-          <CopyButton text={displayMode ? renderedHtml : (site === 'bc' ? value : removeEmptyLinesFromString(value, gradeLevel === "小学"))} />
+          <CopyButton text={displayMode ? renderedHtml : value} />
         </div>
       </div>
       {thinkingChain && (
@@ -231,7 +231,7 @@ const TextAreaSection = ({
         />
       ) : (
         <textarea
-          value={site === 'bc' ? value : removeEmptyLinesFromString(value, gradeLevel === "小学")}
+          value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           className="textarea textarea-bordered textarea-lg w-full h-full min-h-40 p-4 text-sm"

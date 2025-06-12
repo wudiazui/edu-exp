@@ -12,6 +12,8 @@ import AuditComponent from './AuditComponent'; // 引入审核组件
 import { CozeService } from '../coze.js';
 // 从lib.js导入需要的网络请求函数
 import { run_llm, run_llm_stream, ocr_text, topic_split, content_review, format_latex } from '../lib.js';
+// 导入文本处理函数
+import { removeEmptyLinesFromString } from '../text.js';
 
 export default function Main() {
   const [question, setQuestion] = React.useState('');
@@ -374,52 +376,32 @@ export default function Main() {
           // 数据块处理函数
           (chunk) => {
             try {
-              // 检查是否是结束标志 [DONE]
-              if (chunk === "[DONE]") {
-                console.log("收到流结束标志 [DONE]");
-                return; // 不处理这个数据块，直接返回
+              // 过滤掉 [DONE]
+              if (chunk.trim() === '[DONE]') {
+                return;
               }
-              
-              // 尝试解析数据，处理可能的JSON格式
-              let processedData;
-              let dataType = "content"; // 默认类型
-              
-              try {
-                const jsonData = JSON.parse(chunk);
-                
-                if (jsonData.type === "reasoning") {
-                  // 如果是思维链数据
-                  dataType = "reasoning";
-                  // 确保保留换行符
-                  processedData = jsonData.text || "";
-                } else {
-                  // 其他类型数据（内容）
-                  // 确保保留换行符
-                  if (jsonData.text !== undefined) {
-                    processedData = jsonData.text;
-                  } else if (jsonData.topic !== undefined) {
-                    processedData = jsonData.topic;
-                  } else if (jsonData.content !== undefined) {
-                    processedData = jsonData.content;
-                  } else if (typeof jsonData === 'object') {
-                    // 避免将整个对象直接转为字符串
-                    console.warn('收到不包含text/topic/content的对象:', jsonData);
-                    return; // 跳过这个数据块
-                  } else {
-                    processedData = jsonData;
-                  }
+
+              // 尝试解析JSON数据
+              const data = JSON.parse(chunk);
+
+              if (data.type === 'reasoning') {
+                // 思考过程内容 - 仅记录日志
+                console.log('思维链数据:', data.text || '');
+              } else if (data.type === 'content') {
+                // 主要内容
+                setQuestion(prev => prev + (data.text || ''));
+              } else {
+                // 兼容其他字段名
+                const text = data.text || data.topic || data.content || '';
+                if (text) {
+                  setQuestion(prev => prev + text);
                 }
-              } catch {
-                // 如果不是有效的JSON，直接使用原始字符串
-                processedData = chunk;
               }
-              
-              if (dataType !== "reasoning") {
-                // 添加数据到题干（非思维链）
-                setQuestion(prev => prev + processedData);
+            } catch (e) {
+              // 如果不是JSON格式，当作普通文本处理
+              if (chunk.trim() !== '[DONE]') {
+                console.log('Chunk is not JSON format:', chunk);
               }
-            } catch (error) {
-              console.error("处理流式数据时出错:", error);
             }
           },
           // 错误处理函数
@@ -430,6 +412,8 @@ export default function Main() {
           // 完成处理函数
           () => {
             setIsFormatting(false);
+            // 流式响应完成后，根据site条件执行 removeEmptyLinesFromString
+            setQuestion(prev => site === 'bc' ? prev : removeEmptyLinesFromString(prev, gradeLevel === "小学"));
           }
         );
       }
@@ -492,52 +476,32 @@ export default function Main() {
           // 数据块处理函数
           (chunk) => {
             try {
-              // 检查是否是结束标志 [DONE]
-              if (chunk === "[DONE]") {
-                console.log("收到流结束标志 [DONE]");
-                return; // 不处理这个数据块，直接返回
+              // 过滤掉 [DONE]
+              if (chunk.trim() === '[DONE]') {
+                return;
               }
-              
-              // 尝试解析数据，处理可能的JSON格式
-              let processedData;
-              let dataType = "content"; // 默认类型
-              
-              try {
-                const jsonData = JSON.parse(chunk);
-                
-                if (jsonData.type === "reasoning") {
-                  // 如果是思维链数据
-                  dataType = "reasoning";
-                  // 确保保留换行符
-                  processedData = jsonData.text || "";
-                } else {
-                  // 其他类型数据（内容）
-                  // 确保保留换行符
-                  if (jsonData.text !== undefined) {
-                    processedData = jsonData.text;
-                  } else if (jsonData.topic !== undefined) {
-                    processedData = jsonData.topic;
-                  } else if (jsonData.content !== undefined) {
-                    processedData = jsonData.content;
-                  } else if (typeof jsonData === 'object') {
-                    // 避免将整个对象直接转为字符串
-                    console.warn('收到不包含text/topic/content的对象:', jsonData);
-                    return; // 跳过这个数据块
-                  } else {
-                    processedData = jsonData;
-                  }
+
+              // 尝试解析JSON数据
+              const data = JSON.parse(chunk);
+
+              if (data.type === 'reasoning') {
+                // 思考过程内容 - 仅记录日志
+                console.log('思维链数据:', data.text || '');
+              } else if (data.type === 'content') {
+                // 主要内容
+                setQuestion(prev => prev + (data.text || ''));
+              } else {
+                // 兼容其他字段名
+                const text = data.text || data.topic || data.content || '';
+                if (text) {
+                  setQuestion(prev => prev + text);
                 }
-              } catch {
-                // 如果不是有效的JSON，直接使用原始字符串
-                processedData = chunk;
               }
-              
-              if (dataType !== "reasoning") {
-                // 添加数据到题干（非思维链）
-                setQuestion(prev => prev + processedData);
+            } catch (e) {
+              // 如果不是JSON格式，当作普通文本处理
+              if (chunk.trim() !== '[DONE]') {
+                console.log('Chunk is not JSON format:', chunk);
               }
-            } catch (error) {
-              console.error("处理流式数据时出错:", error);
             }
           },
           // 错误处理函数
@@ -548,6 +512,8 @@ export default function Main() {
           // 完成处理函数
           () => {
             setIsCompleteeing(false);
+            // 流式响应完成后，根据site条件执行 removeEmptyLinesFromString
+            setQuestion(prev => site === 'bc' ? prev : removeEmptyLinesFromString(prev, gradeLevel === "小学"));
           }
         );
       }
@@ -664,55 +630,32 @@ export default function Main() {
           // 数据块处理函数
           (chunk) => {
             try {
-              // 检查是否是结束标志 [DONE]
-              if (chunk === "[DONE]") {
-                console.log("收到流结束标志 [DONE]");
-                return; // 不处理这个数据块，直接返回
+              // 过滤掉 [DONE]
+              if (chunk.trim() === '[DONE]') {
+                return;
               }
-              
-              // 尝试解析数据，处理可能的JSON格式
-              let processedData;
-              let dataType = "content"; // 默认类型
-              
-              try {
-                const jsonData = JSON.parse(chunk);
-                
-                if (jsonData.type === "reasoning") {
-                  // 如果是思维链数据
-                  dataType = "reasoning";
-                  // 确保保留换行符
-                  processedData = jsonData.text || "";
-                } else {
-                  // 其他类型数据（内容）
-                  // 确保保留换行符
-                  if (jsonData.text !== undefined) {
-                    processedData = jsonData.text;
-                  } else if (jsonData.topic !== undefined) {
-                    processedData = jsonData.topic;
-                  } else if (jsonData.content !== undefined) {
-                    processedData = jsonData.content;
-                  } else if (typeof jsonData === 'object') {
-                    // 避免将整个对象直接转为字符串
-                    console.warn('收到不包含text/topic/content的对象:', jsonData);
-                    return; // 跳过这个数据块
-                  } else {
-                    processedData = jsonData;
-                  }
-                }
-              } catch {
-                // 如果不是有效的JSON，直接使用原始字符串
-                processedData = chunk;
-              }
-              
-              if (dataType === "reasoning") {
-                // 思维链数据 - 保留换行符
-                setAnswerThinkingChain(prev => prev + processedData);
+
+              // 尝试解析JSON数据
+              const data = JSON.parse(chunk);
+
+              if (data.type === 'reasoning') {
+                // 思考过程内容
+                setAnswerThinkingChain(prev => prev + (data.text || ''));
+              } else if (data.type === 'content') {
+                // 主要内容
+                setAnswer(prev => prev + (data.text || ''));
               } else {
-                // 常规内容数据 - 保留换行符
-                setAnswer(prev => prev + processedData);
+                // 兼容其他字段名
+                const text = data.text || data.topic || data.content || '';
+                if (text) {
+                  setAnswer(prev => prev + text);
+                }
               }
-            } catch (error) {
-              console.error("处理流式数据时出错:", error);
+            } catch (e) {
+              // 如果不是JSON格式，当作普通文本处理
+              if (chunk.trim() !== '[DONE]') {
+                console.log('Chunk is not JSON format:', chunk);
+              }
             }
           },
           // 错误处理函数
@@ -723,6 +666,8 @@ export default function Main() {
           // 完成处理函数
           () => {
             setIsGeneratingAnswer(false);
+            // 流式响应完成后，根据site条件执行 removeEmptyLinesFromString
+            setAnswer(prev => site === 'bc' ? prev : removeEmptyLinesFromString(prev, gradeLevel === "小学"));
           }
         );
       }
@@ -828,55 +773,32 @@ export default function Main() {
           // 数据块处理函数
           (chunk) => {
             try {
-              // 检查是否是结束标志 [DONE]
-              if (chunk === "[DONE]") {
-                console.log("收到流结束标志 [DONE]");
-                return; // 不处理这个数据块，直接返回
+              // 过滤掉 [DONE]
+              if (chunk.trim() === '[DONE]') {
+                return;
               }
-              
-              // 尝试解析数据，处理可能的JSON格式
-              let processedData;
-              let dataType = "content"; // 默认类型
-              
-              try {
-                const jsonData = JSON.parse(chunk);
-                
-                if (jsonData.type === "reasoning") {
-                  // 如果是思维链数据
-                  dataType = "reasoning";
-                  // 确保保留换行符
-                  processedData = jsonData.text || "";
-                } else {
-                  // 其他类型数据（内容）
-                  // 确保保留换行符
-                  if (jsonData.text !== undefined) {
-                    processedData = jsonData.text;
-                  } else if (jsonData.topic !== undefined) {
-                    processedData = jsonData.topic;
-                  } else if (jsonData.content !== undefined) {
-                    processedData = jsonData.content;
-                  } else if (typeof jsonData === 'object') {
-                    // 避免将整个对象直接转为字符串
-                    console.warn('收到不包含text/topic/content的对象:', jsonData);
-                    return; // 跳过这个数据块
-                  } else {
-                    processedData = jsonData;
-                  }
-                }
-              } catch {
-                // 如果不是有效的JSON，直接使用原始字符串
-                processedData = chunk;
-              }
-              
-              if (dataType === "reasoning") {
-                // 思维链数据 - 保留换行符
-                setAnalysisThinkingChain(prev => prev + processedData);
+
+              // 尝试解析JSON数据
+              const data = JSON.parse(chunk);
+
+              if (data.type === 'reasoning') {
+                // 思考过程内容
+                setAnalysisThinkingChain(prev => prev + (data.text || ''));
+              } else if (data.type === 'content') {
+                // 主要内容
+                setAnalysis(prev => prev + (data.text || ''));
               } else {
-                // 常规内容数据 - 保留换行符
-                setAnalysis(prev => prev + processedData);
+                // 兼容其他字段名
+                const text = data.text || data.topic || data.content || '';
+                if (text) {
+                  setAnalysis(prev => prev + text);
+                }
               }
-            } catch (error) {
-              console.error("处理流式数据时出错:", error);
+            } catch (e) {
+              // 如果不是JSON格式，当作普通文本处理
+              if (chunk.trim() !== '[DONE]') {
+                console.log('Chunk is not JSON format:', chunk);
+              }
             }
           },
           // 错误处理函数
@@ -887,6 +809,8 @@ export default function Main() {
           // 完成处理函数
           () => {
             setIsGeneratingAnalysis(false);
+            // 流式响应完成后，根据site条件执行 removeEmptyLinesFromString
+            setAnalysis(prev => site === 'bc' ? prev : removeEmptyLinesFromString(prev, gradeLevel === "小学"));
           }
         );
       }
