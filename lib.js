@@ -640,9 +640,10 @@ export function content_review(text, host, uname, onMessage, onError, onComplete
 
 export async function replaceLatexWithImages(text) {
    console.log("replaceLatexWithImages:\n",text);
-  // Convert \( and \) to $
+  // Convert \( and \) to $, \[ and \] to $, $$ to $
   text = text.replace(/\\\(/g, '$').replace(/\\\)/g, '$')
-    .replace(/\\\[/g, '$').replace(/\\\]/g, '$');
+    .replace(/\\\[/g, '$').replace(/\\\]/g, '$')
+    .replace(/\$\$/g, '$');
 
   // 使用 dotAll 标志 (s) 来匹配包括换行符在内的任意字符
   // [^$]*? 使用非贪婪匹配，避免跨越多个数学表达式
@@ -682,7 +683,8 @@ export async function replaceLatexWithImagesInHtml(htmlText) {
   
   // Convert \( and \) to $, \[ and \] to $
   let processedFullText = fullTextContent.replace(/\\\(/g, '$').replace(/\\\)/g, '$')
-    .replace(/\\\[/g, '$').replace(/\\\]/g, '$');
+    .replace(/\\\[/g, '$').replace(/\\\]/g, '$')
+    .replace(/\$\$/g, '$');
 
   // Check if there are cross-element LaTeX expressions
   const regex = /\$([\s\S]*?)\$/g;
@@ -692,9 +694,10 @@ export async function replaceLatexWithImagesInHtml(htmlText) {
     // Found cross-element LaTeX, process the entire HTML as text first
     let processedHtml = htmlText;
     
-    // Convert \( and \) to $, \[ and \] to $ in the raw HTML
+    // Convert \( and \) to $, \[ and \] to $, $$ to $ in the raw HTML
     processedHtml = processedHtml.replace(/\\\(/g, '$').replace(/\\\)/g, '$')
-      .replace(/\\\[/g, '$').replace(/\\\]/g, '$');
+      .replace(/\\\[/g, '$').replace(/\\\]/g, '$')
+      .replace(/\$\$/g, '$');
     
     // Find LaTeX expressions in the HTML, allowing for HTML tags in between
     // This regex allows HTML tags between the $ delimiters
@@ -759,9 +762,10 @@ export async function replaceLatexWithImagesInHtml(htmlText) {
     // Get the combined text content
     const textContent = getElementTextContent(element);
     
-    // Convert \( and \) to $, \[ and \] to $
+    // Convert \( and \) to $, \[ and \] to $, $$ to $
     let processedText = textContent.replace(/\\\(/g, '$').replace(/\\\)/g, '$')
-      .replace(/\\\[/g, '$').replace(/\\\]/g, '$');
+      .replace(/\\\[/g, '$').replace(/\\\]/g, '$')
+      .replace(/\$\$/g, '$');
 
     // 使用 [\s\S]*? 来匹配包括换行符在内的任意字符，使用非贪婪匹配
     const regex = /\$([\s\S]*?)\$/g;
