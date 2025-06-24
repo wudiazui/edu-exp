@@ -1,7 +1,7 @@
 // 动态导入全局CSS文件以启用Tailwind CSS和daisyUI
 import("../css/main.css");
 
-import { claimAuditTask, getAuditTaskList, getAuditTaskLabel, replaceLatexWithImages, replacePunctuation, img_upload, replaceLatexWithImagesInHtml, getMyAuditTaskList } from "../lib.js";
+import { claimAuditTask, getAuditTaskList, getAuditTaskLabel, replaceLatexWithImages, replacePunctuation, img_upload, replaceLatexWithImagesInHtml, getMyAuditTaskList, processImage } from "../lib.js";
 import {generateVerticalArithmeticImage} from "../src/index.js";
 import { CozeService } from "../coze.js";
 import u from "umbrellajs";
@@ -713,6 +713,11 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     return true;
   }
 
+  if (request.action === "image_white_background") {
+    handleImageWhiteBackground(request.srcUrl);
+    return true;
+  }
+
   if (request.action === "periodic_message") {
     // 导入工具函数
     import('./utils.js').then(({ filterByKeywords }) => {
@@ -1245,6 +1250,68 @@ async function handleMathImg() {
 
     // 显示错误通知
     showNotification('竖式计算处理失败: ' + errorMessage, 'error');
+  }
+}
+
+async function handleImageWhiteBackground(srcUrl) {
+  try {
+    // 显示处理中通知
+    const notificationId = showNotification('正在处理图片白底...', 'info', true);
+
+    // 获取图片并转换为base64
+    const response = await fetch(srcUrl);
+    const blob = await response.blob();
+    
+    // 将blob转换为base64
+    const base64Data = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+
+    // 调用图片处理函数
+    const processedBlob = await processImage(base64Data);
+
+    // 隐藏处理中通知
+    hideNotification(notificationId);
+
+    // 显示上传中通知
+    const uploadNotificationId = showNotification('正在上传处理后的图片...', 'info', true);
+
+    // 上传处理后的图片
+    const uploadResponse = await img_upload(processedBlob);
+
+    // 隐藏上传中通知
+    hideNotification(uploadNotificationId);
+
+    // 找到页面中所有使用原始URL的图片元素并替换
+    const imgElements = document.querySelectorAll('img');
+    let replacedCount = 0;
+    
+    imgElements.forEach(img => {
+      if (img.src === srcUrl) {
+        img.src = uploadResponse.data.cdnUrl;
+        replacedCount++;
+      }
+    });
+
+    // 显示成功通知
+    showNotification(`图片白底处理完成，已替换 ${replacedCount} 个图片`, 'success');
+
+  } catch (error) {
+    console.error('Error processing image white background:', error);
+    
+    // 隐藏所有通知
+    hideNotification();
+    
+    // 显示错误通知
+    let errorMessage = '未知错误';
+    if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    showNotification('图片白底处理失败: ' + errorMessage, 'error');
   }
 }
 

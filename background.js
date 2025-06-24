@@ -111,6 +111,12 @@ chrome.runtime.onInstalled.addListener(() => {
         parentId: "baidu-submenu",
         contexts: ["all"]
       });
+      chrome.contextMenus.create({
+        id: "image-white-background",
+        title: "图片白底",
+        parentId: "baidu-submenu",
+        contexts: ["image"]
+      });
     });
 
     // Create "百川" submenu
@@ -198,6 +204,9 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   }
   if (info.menuItemId === "format-organize") {
     chrome.tabs.sendMessage(tab.id, { action: "format_organize" });
+  }
+  if (info.menuItemId === "image-white-background") {
+    chrome.tabs.sendMessage(tab.id, { action: "image_white_background", srcUrl: info.srcUrl });
   }
   if (info.menuItemId.startsWith('insert-char-')) {
     const shortcutName = info.menuItemId.replace('insert-char-', '');

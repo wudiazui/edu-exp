@@ -1045,3 +1045,33 @@ export function decodeHtmlEntities(text) {
 
   return decodedText;
 }
+
+/**
+ * Process image using the image processing API
+ * @param {string} imgBase64 - Base64 encoded image data
+ * @returns {Promise<string>} - Promise that resolves to the processed image as base64
+ */
+export async function processImage(imgBase64) {
+  try {
+    const response = await fetch('https://ds.pingfury.top/process-image', {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ img: imgBase64 })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    // Since the API directly responds with processed image data,
+    // we assume it returns binary image data
+    const processedImageBlob = await response.blob();
+    return processedImageBlob;
+  } catch (error) {
+    console.error('Error processing image:', error);
+    throw error;
+  }
+}
