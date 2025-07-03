@@ -23,6 +23,16 @@ const ApiSettingsForm = ({
   const [kouziEquationAlignWorkflowId, setKouziEquationAlignWorkflowId] = useState("");
   const [kouziQuestionSplitWorkflowId, setKouziQuestionSplitWorkflowId] = useState("");
   const [kouziReviewWorkflowId, setKouziReviewWorkflowId] = useState("");
+  const [apiAddressMode, setApiAddressMode] = useState("preset"); // "preset" or "custom"
+  const [customApiAddress, setCustomApiAddress] = useState("");
+
+  // 预设的API地址选项
+  const presetApiAddresses = [
+    { value: "https://bedu.pingfury.top", label: "官方服务器" },
+    { value: "http://47.109.61.89:5911", label: "官方服务器(备用地址1)" },
+    { value: "https://bedu-p.pingfury.top", label: "官方服务器-高质量AI模型" },
+    { value: "http://47.109.61.89:5914", label: "官方服务器-高质量AI模型(备用地址1)" }
+  ];
 
   // Load saved settings from Chrome storage
   useEffect(() => {
@@ -49,13 +59,44 @@ const ApiSettingsForm = ({
         if (result.kouziEquationAlignWorkflowId) setKouziEquationAlignWorkflowId(result.kouziEquationAlignWorkflowId);
         if (result.kouziQuestionSplitWorkflowId) setKouziQuestionSplitWorkflowId(result.kouziQuestionSplitWorkflowId);
         if (result.kouziReviewWorkflowId) setKouziReviewWorkflowId(result.kouziReviewWorkflowId);
+
+        // 检查当前host是否是预设地址
+        if (host) {
+          const isPresetAddress = presetApiAddresses.some(preset => preset.value === host);
+          if (isPresetAddress) {
+            setApiAddressMode("preset");
+          } else {
+            setApiAddressMode("custom");
+            setCustomApiAddress(host);
+          }
+        }
       } catch (error) {
         console.error('Error loading settings:', error);
       }
     };
 
     loadSettings();
-  }, []);
+  }, [host]);
+
+  // 处理API地址选择变化
+  const handleApiAddressChange = (e) => {
+    const selectedValue = e.target.value;
+    
+    if (selectedValue === "custom") {
+      setApiAddressMode("custom");
+      handleHostChange({ target: { value: customApiAddress } });
+    } else {
+      setApiAddressMode("preset");
+      handleHostChange({ target: { value: selectedValue } });
+    }
+  };
+
+  // 处理自定义API地址输入
+  const handleCustomApiAddressChange = (e) => {
+    const value = e.target.value;
+    setCustomApiAddress(value);
+    handleHostChange({ target: { value } });
+  };
 
   // Save settings to Chrome storage when they change
   useEffect(() => {
@@ -238,14 +279,33 @@ const ApiSettingsForm = ({
             <label className="label">
               <span className="label-text">API 地址</span>
             </label>
-            <input
-              type="text"
-              value={host}
-              onChange={handleHostChange}
-              placeholder="输入 API 地址"
-              className="input input-bordered input-sm"
-            />
+            <select
+              className="select select-bordered select-sm"
+              value={apiAddressMode === "custom" ? "custom" : host}
+              onChange={handleApiAddressChange}
+            >
+              {presetApiAddresses.map((preset) => (
+                <option key={preset.value} value={preset.value}>
+                  {preset.label}
+                </option>
+              ))}
+              <option value="custom">自定义</option>
+            </select>
           </div>
+          {apiAddressMode === "custom" && (
+            <div className="form-control w-full max-w-xs mt-2">
+              <label className="label">
+                <span className="label-text">自定义 API 地址</span>
+              </label>
+              <input
+                type="text"
+                value={customApiAddress}
+                onChange={handleCustomApiAddressChange}
+                placeholder="输入自定义 API 地址"
+                className="input input-bordered input-sm"
+              />
+            </div>
+          )}
           <div className="form-control w-full max-w-xs mt-2">
             <label className="label">
               <span className="label-text">用户名</span>

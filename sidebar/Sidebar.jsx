@@ -917,7 +917,7 @@ export default function Main() {
         // Update state and show toast if any changes
         if (hasChanges) {
           setFeatures(updatedFeatures);
-          displayToast(`${changedFeatureName}已${status ? '启用' : '禁用'}`);
+          console.log(`${changedFeatureName}已${status ? '启用' : '禁用'}`);
         }
       }
     };
@@ -967,16 +967,18 @@ export default function Main() {
               {features.ocr && (
                 <a className={`tab ${activeTab === 'ocr' ? 'tab-active' : ''}`} onClick={() => handleTabChange('ocr')}>文字识别</a>
               )}
+              {features.topic_split && (
+                <a className={`tab ${activeTab === 'topic_split' ? 'tab-active' : ''}`} onClick={() => handleTabChange('topic_split')}>题目切割</a>
+              )}
+              {/*
               {features.audit && (
                 <a className={`tab ${activeTab === 'audit' ? 'tab-active' : ''}`} onClick={() => handleTabChange('audit')}>审核</a>
               )}
+              */}
               
               <div className="dropdown dropdown-end">
                 <label tabIndex={0} className="tab">更多 ▼</label>
-                <ul tabIndex={0} className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52 z-10">
-                  {features.topic_split && (
-                    <li><a className={activeTab === 'topic_split' ? 'active' : ''} onClick={() => handleTabChange('topic_split')}>题目切割</a></li>
-                  )}
+                <ul tabIndex={0} className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52 z-10">                  
                   {features["clue-claiming"] && (
                     <li><a className={activeTab === 'clue-claiming' ? 'active' : ''} onClick={() => handleTabChange('clue-claiming')}>线索认领</a></li>
                   )}
