@@ -39,12 +39,33 @@ const QuestionAnswerForm = ({
   setSite,
 }) => {
   const [autoRenderFormula, setAutoRenderFormula] = useState(true);
+  const [deepThinking, setDeepThinking] = useState(false);
 
   useEffect(() => {
     // 从存储中读取设置
-    chrome.storage.sync.get(['autoRenderFormula'], (result) => {
+    chrome.storage.sync.get(['autoRenderFormula', 'deepThinking'], (result) => {
       setAutoRenderFormula(result.autoRenderFormula ?? true);
+      setDeepThinking(result.deepThinking ?? false);
     });
+
+    // 监听存储变更
+    const handleStorageChange = (changes, namespace) => {
+      if (namespace === 'sync') {
+        if ('deepThinking' in changes) {
+          setDeepThinking(changes.deepThinking.newValue ?? false);
+        }
+        if ('autoRenderFormula' in changes) {
+          setAutoRenderFormula(changes.autoRenderFormula.newValue ?? true);
+        }
+      }
+    };
+
+    chrome.storage.onChanged.addListener(handleStorageChange);
+
+    // 清理监听器
+    return () => {
+      chrome.storage.onChanged.removeListener(handleStorageChange);
+    };
   }, []);
 
   const handleAutoRenderFormulaChange = (e) => {
@@ -161,6 +182,7 @@ const QuestionAnswerForm = ({
         site={site}
         thinkingChain={answerThinkingChain}
         gradeLevel={gradeLevel}
+        showThinkingProcess={deepThinking}
       />
       <TextAreaSection
         title={['bc', 'bc-no-cot'].includes(site) ? '思路点拨' : '解析'}
@@ -179,6 +201,7 @@ const QuestionAnswerForm = ({
         site={site}
         thinkingChain={analysisThinkingChain}
         gradeLevel={gradeLevel}
+        showThinkingProcess={deepThinking}
       />
     </>
   );

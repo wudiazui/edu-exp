@@ -29,6 +29,7 @@ const TextAreaSection = ({
   site,
   thinkingChain = "", // 接收从父组件传递的思维链数据（文本格式）
   gradeLevel = "小学", // 添加学段属性，默认为"小学"
+  showThinkingProcess = true, // 控制是否显示思考过程UI，默认为true
 }) => {
   const [displayMode, setDisplayMode] = useState(false);
   const [isThinkingExpanded, setIsThinkingExpanded] = useState(true);
@@ -178,7 +179,7 @@ const TextAreaSection = ({
           <CopyButton text={displayMode ? renderedHtml : value} />
         </div>
       </div>
-      {thinkingChain && (
+      {thinkingChain && showThinkingProcess && (
         <div className="mb-1 border rounded-lg overflow-hidden text-xs">
           <div 
             className="bg-base-200 p-1 flex justify-between items-center cursor-pointer"

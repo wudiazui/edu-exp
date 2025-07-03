@@ -46,7 +46,8 @@ const ApiSettingsForm = ({
             'kouziSolveWorkflowId',
             'kouziEquationAlignWorkflowId',
             'kouziQuestionSplitWorkflowId',
-            'kouziReviewWorkflowId'
+            'kouziReviewWorkflowId',
+            'customApiAddress'
           ], resolve);
         });
         
@@ -59,6 +60,7 @@ const ApiSettingsForm = ({
         if (result.kouziEquationAlignWorkflowId) setKouziEquationAlignWorkflowId(result.kouziEquationAlignWorkflowId);
         if (result.kouziQuestionSplitWorkflowId) setKouziQuestionSplitWorkflowId(result.kouziQuestionSplitWorkflowId);
         if (result.kouziReviewWorkflowId) setKouziReviewWorkflowId(result.kouziReviewWorkflowId);
+        if (result.customApiAddress) setCustomApiAddress(result.customApiAddress);
 
         // 检查当前host是否是预设地址
         if (host) {
@@ -107,9 +109,10 @@ const ApiSettingsForm = ({
       kouziSolveWorkflowId,
       kouziEquationAlignWorkflowId,
       kouziQuestionSplitWorkflowId,
-      kouziReviewWorkflowId
+      kouziReviewWorkflowId,
+      customApiAddress
     });
-  }, [kouziAccessKey, kouziAppId, kouziOcrWorkflowId, kouziSolveWorkflowId, kouziEquationAlignWorkflowId, kouziQuestionSplitWorkflowId, kouziReviewWorkflowId]);
+  }, [kouziAccessKey, kouziAppId, kouziOcrWorkflowId, kouziSolveWorkflowId, kouziEquationAlignWorkflowId, kouziQuestionSplitWorkflowId, kouziReviewWorkflowId, customApiAddress]);
 
   const fetchUserInfo = async () => {
     if (serverType === "扣子") return;

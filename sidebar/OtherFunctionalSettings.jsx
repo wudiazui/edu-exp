@@ -4,10 +4,11 @@ const OtherFunctionalSettings = () => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [autoRenderFormula, setAutoRenderFormula] = useState(true);
   const [strongFormatting, setStrongFormatting] = useState(false);
+  const [deepThinking, setDeepThinking] = useState(false);
 
   useEffect(() => {
     // 从存储中读取设置
-    chrome.storage.sync.get(['autoRenderFormula', 'strongFormatting'], (result) => {
+    chrome.storage.sync.get(['autoRenderFormula', 'strongFormatting', 'deepThinking'], (result) => {
       if (result.autoRenderFormula === undefined) {
         // 如果存储中没有值，使用并保存默认值
         const defaultValue = true;
@@ -25,6 +26,15 @@ const OtherFunctionalSettings = () => {
       } else {
         setStrongFormatting(result.strongFormatting);
       }
+
+      if (result.deepThinking === undefined) {
+        // 如果存储中没有值，使用并保存默认值
+        const defaultValue = false;
+        chrome.storage.sync.set({ deepThinking: defaultValue });
+        setDeepThinking(defaultValue);
+      } else {
+        setDeepThinking(result.deepThinking);
+      }
     });
   }, []);
 
@@ -38,6 +48,12 @@ const OtherFunctionalSettings = () => {
     setStrongFormatting(checked);
     // 保存设置到存储
     chrome.storage.sync.set({ strongFormatting: checked });
+  };
+
+  const handleDeepThinkingChange = (checked) => {
+    setDeepThinking(checked);
+    // 保存设置到存储
+    chrome.storage.sync.set({ deepThinking: checked });
   };
 
   return (
@@ -72,6 +88,17 @@ const OtherFunctionalSettings = () => {
                 className="toggle toggle-primary"
                 checked={strongFormatting}
                 onChange={(e) => handleStrongFormattingChange(e.target.checked)}
+              />
+            </label>
+          </div>
+          <div className="form-control">
+            <label className="label cursor-pointer">
+              <span className="label-text">深度思考</span>
+              <input
+                type="checkbox"
+                className="toggle toggle-primary"
+                checked={deepThinking}
+                onChange={(e) => handleDeepThinkingChange(e.target.checked)}
               />
             </label>
           </div>
