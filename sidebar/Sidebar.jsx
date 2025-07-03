@@ -957,7 +957,7 @@ export default function Main() {
     }
   }, [serverType]);
 
-  return (<div className="container max-auto px-1 mt-2">
+  return (<div className="w-full px-1 mt-2 overflow-hidden">
             <div className="pb-1">
               <div className="tabs tabs-boxed inline-flex whitespace-nowrap min-w-full">
               <a className={`tab ${activeTab === 'settings' ? 'tab-active' : ''}`} onClick={() => handleTabChange('settings')}>设置</a>
