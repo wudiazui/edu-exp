@@ -39,7 +39,7 @@ async function formatOrganize(content) {
 chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   if (request.action === "fill_content") {
     // Helper function to fill editor content
-    function fillEditorContent(element) {
+    async function fillEditorContent(element) {
       if (!element) return false;
       
       // Find the ql-editor div inside this element
@@ -61,6 +61,15 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
       // Trigger change event to update the editor
       sendFixEvent(editorDiv);
 
+      // 自动执行格式整理
+      try {
+        const formattedContent = await formatOrganize(editorDiv.innerHTML);
+        editorDiv.innerHTML = formattedContent;
+        sendFixEvent(editorDiv);
+      } catch (error) {
+        console.error('格式整理失败:', error);
+      }
+
       return true;
     }
     console.log(request);
@@ -79,24 +88,24 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
       // 题目详解
       if (isNewAnswerTask) {
         // 新答题任务页面使用elem2作为题目详解
-        fillEditorContent(elem1);
+        await fillEditorContent(elem1);
       } else {
         // 非新答题任务页面使用elem2作为题目详解
         // 目前两种页面都使用相同的元素，但逻辑已准备好支持不同情况
-        fillEditorContent(elem2);
+        await fillEditorContent(elem2);
       }
     } else if (request.type === "analysis") {
       // 思路点拨
       if (isNewAnswerTask) {
         // 新答题任务页面使用elem1作为思路点拨
-        fillEditorContent(elem2);
+        await fillEditorContent(elem2);
       } else {
         // 非新答题任务页面使用elem1作为思路点拨
         // 目前两种页面都使用相同的元素，但逻辑已准备好支持不同情况
-        fillEditorContent(elem1);
+        await fillEditorContent(elem1);
       }
     } else if (request.type === "topic") {
-      fillEditorContent(elem3); // 答案
+      await fillEditorContent(elem3); // 答案
     }
 
     return true;
