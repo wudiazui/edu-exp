@@ -37,6 +37,8 @@ const QuestionAnswerForm = ({
   setGradeLevel,
   site = "bd",
   setSite,
+  setAnswerThinkingChain,
+  setAnalysisThinkingChain,
 }) => {
   const [autoRenderFormula, setAutoRenderFormula] = useState(true);
   const [deepThinking, setDeepThinking] = useState(false);
@@ -178,7 +180,13 @@ const QuestionAnswerForm = ({
             text: content || answer
           });
         }}
-        onClear={() => setAnswer('')}
+        onClear={() => {
+          setAnswer('');
+          // 清除对应的思维链内容
+          if (setAnswerThinkingChain) {
+            setAnswerThinkingChain('');
+          }
+        }}
         site={site}
         thinkingChain={answerThinkingChain}
         gradeLevel={gradeLevel}
@@ -197,7 +205,13 @@ const QuestionAnswerForm = ({
             text: content || analysis
           });
         }}
-        onClear={() => setAnalysis('')}
+        onClear={() => {
+          setAnalysis('');
+          // 清除对应的思维链内容
+          if (setAnalysisThinkingChain) {
+            setAnalysisThinkingChain('');
+          }
+        }}
         site={site}
         thinkingChain={analysisThinkingChain}
         gradeLevel={gradeLevel}

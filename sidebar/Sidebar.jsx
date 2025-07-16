@@ -1049,6 +1049,8 @@ export default function Main() {
                 setGradeLevel={setGradeLevel}
                 site={site}
                 setSite={setSite}
+                setAnswerThinkingChain={setAnswerThinkingChain}
+                setAnalysisThinkingChain={setAnalysisThinkingChain}
               />
             )}
             {activeTab === 'ocr' && (

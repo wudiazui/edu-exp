@@ -166,7 +166,7 @@ export async function getMyProduceTaskList({
 export async function claimAuditTask(taskIDs, taskType = 'audittask') {
   const commitType = taskType === 'producetask' ? 'producetaskcommit' : 'audittaskcommit';
   try {
-    const requestBody = taskType === 'producetask' 
+    const requestBody = taskType === 'producetask'
       ? { clueIDs: taskIDs }
       : { taskIDs };
 
@@ -193,13 +193,13 @@ export async function dropProduceTask(taskID) {
   try {
     // Generate random spentTime between 10 and 100
     const spentTime = Math.floor(Math.random() * 90) + 10;
-    
+
     // Ensure taskID is converted to number (int64 for backend)
     const numericTaskID = parseInt(taskID, 10);
     if (isNaN(numericTaskID)) {
       throw new Error(`Invalid taskID: ${taskID}`);
     }
-    
+
     const requestBody = {
       spentTime,
       taskID: numericTaskID,
@@ -274,6 +274,7 @@ export function replacePunctuation(text) {
   // 处理多个字符的情况，包括字母
   result = result.replace(/\(([\u4e00-\u9fa5a-zA-Z]+)\)/g, '（$1）');
   // 处理括号内数字和中文混合的情况，如(3分)
+
   result = result.replace(/\((\d+[\u4e00-\u9fa5]+)\)/g, '（$1）');
   result = result.replace(/\(([\u4e00-\u9fa5]+\d+)\)/g, '（$1）');
   result = result.replace(/\((\d+[\u4e00-\u9fa5]+\d+)\)/g, '（$1）');
@@ -323,7 +324,7 @@ export function run_llm_stream(host, uname, item, data, onChunk, onError, onComp
   try {
     const controller = new AbortController();
     const { signal } = controller;
-    
+
     fetch(`${host}/llm/run/${item}/stream`, {
       method: 'POST',
       headers: {
@@ -338,10 +339,10 @@ export function run_llm_stream(host, uname, item, data, onChunk, onError, onComp
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      
+
       function processStream() {
         return reader.read().then(({ done, value }) => {
           if (done) {
@@ -350,9 +351,9 @@ export function run_llm_stream(host, uname, item, data, onChunk, onError, onComp
             }
             return;
           }
-          
+
           const chunk = decoder.decode(value, { stream: true });
-          
+
           // Process SSE format (data: messages)
           const lines = chunk.split('\n');
           lines.forEach(line => {
@@ -367,7 +368,7 @@ export function run_llm_stream(host, uname, item, data, onChunk, onError, onComp
               }
             }
           });
-          
+
           return processStream();
         }).catch(err => {
           if (onError) {
@@ -377,7 +378,7 @@ export function run_llm_stream(host, uname, item, data, onChunk, onError, onComp
           }
         });
       }
-      
+
       return processStream();
     })
     .catch(error => {
@@ -387,7 +388,7 @@ export function run_llm_stream(host, uname, item, data, onChunk, onError, onComp
         console.error('Fetch error:', error);
       }
     });
-    
+
     return controller; // Return controller so caller can abort if needed
   } catch (error) {
     if (onError) {
@@ -591,19 +592,19 @@ export function content_review(text, host, uname, onMessage, onError, onComplete
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      
+
       function processStream() {
         return reader.read().then(({ value, done }) => {
           if (done) {
             if (onComplete) onComplete();
             return;
           }
-          
+
           const chunk = decoder.decode(value, { stream: true });
-          
+
           // Process SSE format (data: messages)
           const lines = chunk.split('\n');
           lines.forEach(line => {
@@ -618,17 +619,17 @@ export function content_review(text, host, uname, onMessage, onError, onComplete
               }
             }
           });
-          
+
           return processStream();
         });
       }
-      
+
       return processStream();
     }).catch(error => {
       console.error('Error in content review:', error);
       if (onError) onError(error);
     });
-    
+
     // Return abort controller to allow cancellation
     return controller;
   } catch (error) {
@@ -654,10 +655,10 @@ export async function replaceLatexWithImages(text) {
   for (const match of matches) {
     const fullMatch = match[0];
     let expression = match[1];
-    
+
     // 清理表达式：移除首尾的空白字符（包括换行符）
     expression = expression.trim();
-    
+
     // 替换 HTML 符号为文本符号和清理HTML标签
     expression = cleanHtmlContent(expression, {
       removeBrTags: true,
@@ -665,7 +666,7 @@ export async function replaceLatexWithImages(text) {
       removeAllTags: true,
       decodeEntities: true
     });
-    
+
     const imgElement = await math2img(expression);
     result = result.replace(fullMatch, imgElement.outerHTML);
   }
@@ -680,7 +681,7 @@ export async function replaceLatexWithImagesInHtml(htmlText) {
 
   // First, try to process the entire content as a whole to handle cross-element LaTeX
   const fullTextContent = tempDiv.textContent || tempDiv.innerText || '';
-  
+
   // Convert \( and \) to $, \[ and \] to $
   let processedFullText = fullTextContent.replace(/\\\(/g, '$').replace(/\\\)/g, '$')
     .replace(/\\\[/g, '$').replace(/\\\]/g, '$')
@@ -689,34 +690,34 @@ export async function replaceLatexWithImagesInHtml(htmlText) {
   // Check if there are cross-element LaTeX expressions
   const regex = /\$([\s\S]*?)\$/g;
   const crossElementMatches = [...processedFullText.matchAll(regex)];
-  
+
   if (crossElementMatches.length > 0) {
     // Found cross-element LaTeX, process the entire HTML as text first
     let processedHtml = htmlText;
-    
+
     // Convert \( and \) to $, \[ and \] to $, $$ to $ in the raw HTML
     processedHtml = processedHtml.replace(/\\\(/g, '$').replace(/\\\)/g, '$')
       .replace(/\\\[/g, '$').replace(/\\\]/g, '$')
       .replace(/\$\$/g, '$');
-    
+
     // Find LaTeX expressions in the HTML, allowing for HTML tags in between
     // This regex allows HTML tags between the $ delimiters
     const htmlLatexRegex = /\$(((?!<script|<style)[^$]|<[^>]*>)*?)\$/gs;
     const htmlMatches = [...processedHtml.matchAll(htmlLatexRegex)];
-    
+
     for (const match of htmlMatches) {
       const fullMatch = match[0];
       let expression = match[1];
-      
+
       // Remove HTML tags from the expression but preserve the math content
       expression = cleanHtmlContent(expression);
-      
+
       // Clean up the expression
       expression = expression.trim();
-      
+
       // Skip empty expressions
       if (!expression) continue;
-      
+
       // Get the image element
       const imgElement = await math2img(expression);
       if (imgElement) {
@@ -724,15 +725,15 @@ export async function replaceLatexWithImagesInHtml(htmlText) {
         processedHtml = processedHtml.replace(fullMatch, imgElement.outerHTML);
       }
     }
-    
+
     return processedHtml;
   }
-  
+
   // No cross-element LaTeX found, use the original element-by-element processing
   // Function to get all text content from an element, preserving the structure for LaTeX detection
   function getElementTextContent(element) {
     let textContent = '';
-    
+
     function traverse(node) {
       if (node.nodeType === Node.TEXT_NODE) {
         textContent += node.textContent;
@@ -747,7 +748,7 @@ export async function replaceLatexWithImagesInHtml(htmlText) {
         }
       }
     }
-    
+
     traverse(element);
     return textContent;
   }
@@ -761,7 +762,7 @@ export async function replaceLatexWithImagesInHtml(htmlText) {
 
     // Get the combined text content
     const textContent = getElementTextContent(element);
-    
+
     // Convert \( and \) to $, \[ and \] to $, $$ to $
     let processedText = textContent.replace(/\\\(/g, '$').replace(/\\\)/g, '$')
       .replace(/\\\[/g, '$').replace(/\\\]/g, '$')
@@ -858,11 +859,11 @@ export function cleanHtmlContent(content, options = {}) {
   if (removeBrTags) {
     cleanedContent = cleanedContent.replace(/<br\s*\/?>/gi, ' ');
   }
-  
+
   if (removeParagraphBreaks) {
     cleanedContent = cleanedContent.replace(/<\/p>\s*<p[^>]*>/gi, ' ');
   }
-  
+
   if (removeAllTags) {
     cleanedContent = cleanedContent.replace(/<[^>]*>/g, '');
   }
@@ -891,18 +892,18 @@ export function decodeHtmlEntities(text) {
     '&apos;': "'",
     '&#39;': "'",
     '&nbsp;': ' ',
-    
+
     // Copyright and trademark symbols
     '&copy;': '©',
     '&reg;': '®',
     '&trade;': '™',
-    
+
     // Currency symbols
     '&euro;': '€',
     '&yen;': '¥',
     '&pound;': '£',
     '&cent;': '¢',
-    
+
     // Mathematical symbols
     '&plusmn;': '±',
     '&times;': '×',
@@ -929,7 +930,7 @@ export function decodeHtmlEntities(text) {
     '&oplus;': '⊕',
     '&otimes;': '⊗',
     '&perp;': '⊥',
-    
+
     // Greek letters (commonly used in math)
     '&alpha;': 'α',
     '&beta;': 'β',
@@ -955,7 +956,7 @@ export function decodeHtmlEntities(text) {
     '&chi;': 'χ',
     '&psi;': 'ψ',
     '&omega;': 'ω',
-    
+
     // Uppercase Greek letters
     '&Alpha;': 'Α',
     '&Beta;': 'Β',
@@ -981,7 +982,7 @@ export function decodeHtmlEntities(text) {
     '&Chi;': 'Χ',
     '&Psi;': 'Ψ',
     '&Omega;': 'Ω',
-    
+
     // Arrows
     '&larr;': '←',
     '&uarr;': '↑',
@@ -993,7 +994,7 @@ export function decodeHtmlEntities(text) {
     '&rArr;': '⇒',
     '&dArr;': '⇓',
     '&hArr;': '⇔',
-    
+
     // Miscellaneous symbols
     '&deg;': '°',
     '&sect;': '§',
@@ -1008,17 +1009,17 @@ export function decodeHtmlEntities(text) {
     '&rdquo;': '\u201D',
     '&laquo;': '«',
     '&raquo;': '»',
-    
+
     // Fractions
     '&frac14;': '¼',
     '&frac12;': '½',
     '&frac34;': '¾',
-    
+
     // Superscripts and subscripts
     '&sup1;': '¹',
     '&sup2;': '²',
     '&sup3;': '³',
-    
+
     // Additional common entities
     '&hearts;': '♥',
     '&clubs;': '♣',
@@ -1038,7 +1039,7 @@ export function decodeHtmlEntities(text) {
   decodedText = decodedText.replace(/&#(\d+);/g, (match, dec) => {
     return String.fromCharCode(parseInt(dec, 10));
   });
-  
+
   decodedText = decodedText.replace(/&#x([0-9A-Fa-f]+);/g, (match, hex) => {
     return String.fromCharCode(parseInt(hex, 16));
   });

@@ -11,7 +11,7 @@ async function formatOrganize(content) {
   // 移除空白的 <p> 标签
   const parser = new DOMParser();
   const doc = parser.parseFromString(content, 'text/html');
-  
+
   // 查找所有 p 标签
   const paragraphs = doc.querySelectorAll('p');
   paragraphs.forEach(p => {
@@ -30,7 +30,18 @@ async function formatOrganize(content) {
       li.remove();
     }
   });
-  
+
+  // 移除同行内容中的空格
+  const allElements = doc.querySelectorAll('p, li');
+  allElements.forEach(element => {
+    // 获取元素内的文本内容
+    let text = element.textContent;
+    // 移除所有空格
+    text = text.replace(/ +/g, '');
+    // 更新元素的文本内容
+    element.textContent = text;
+  });
+
   // 返回处理后的 HTML
   return doc.body.innerHTML;
 }
@@ -41,26 +52,25 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     // Helper function to fill editor content
     async function fillEditorContent(element) {
       if (!element) return false;
-      
+
       // Find the ql-editor div inside this element
       const editorDiv = element.querySelector('.ql-editor');
       if (!editorDiv) return false;
-      
+
       // Convert text to HTML safely
       const parser = new DOMParser();
       const doc = parser.parseFromString(request.text, 'text/html');
       const sanitizedContent = doc.body.innerHTML;
-      
+
       // Insert the content
       if (request.append && editorDiv.innerHTML) {
         editorDiv.innerHTML += sanitizedContent;
       } else {
         editorDiv.innerHTML = sanitizedContent;
       }
-      
+
       // Trigger change event to update the editor
       sendFixEvent(editorDiv);
-
       // 自动执行格式整理
       try {
         const formattedContent = await formatOrganize(editorDiv.innerHTML);
@@ -73,17 +83,17 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
       return true;
     }
     console.log(request);
-    
+
     // Find elements with the specified class using umbrellajs
     const elements = u('.ql-container.ql-tk-base.text-editor-wrapper.ql-tiku');
     // Take only the last 3 elements, discard the rest
     const allNodes = elements.nodes;
     const elementsCount = allNodes.length;
     const [elem1, elem2, elem3] = allNodes.slice(Math.max(0, elementsCount - 3));
-    
+
     // 检查URL是否包含newAnswerTask
     const isNewAnswerTask = window.location.href.includes('newAnswerTask');
-    
+
     if (request.type === "answer") {
       // 题目详解
       if (isNewAnswerTask) {
@@ -120,7 +130,7 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
       activeElement.innerHTML = formattedContent;
       sendFixEvent(activeElement);
     }
-    
+
     sendResponse({ status: 'success' });
     return true;
   }
