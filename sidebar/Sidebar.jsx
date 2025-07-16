@@ -967,16 +967,16 @@ export default function Main() {
 
   return (<div className="w-full px-1 mt-2">
             <div className="pb-1">
-              <div className="tabs tabs-boxed inline-flex whitespace-nowrap min-w-full">
-              <a className={`tab ${activeTab === 'settings' ? 'tab-active' : ''}`} onClick={() => handleTabChange('settings')}>设置</a>
+              <div className="tabs tabs-boxed w-full flex justify-between">
+              <a className={`tab px-2 py-1 text-sm ${activeTab === 'settings' ? 'tab-active' : ''}`} onClick={() => handleTabChange('settings')}>设置</a>
               {features.jieti && (
-                <a className={`tab ${activeTab === 'solving' ? 'tab-active' : ''}`} onClick={() => handleTabChange('solving')}>解题</a>
+                <a className={`tab px-2 py-1 text-sm ${activeTab === 'solving' ? 'tab-active' : ''}`} onClick={() => handleTabChange('solving')}>解题</a>
               )}
               {features.ocr && (
-                <a className={`tab ${activeTab === 'ocr' ? 'tab-active' : ''}`} onClick={() => handleTabChange('ocr')}>文字识别</a>
+                <a className={`tab px-2 py-1 text-sm ${activeTab === 'ocr' ? 'tab-active' : ''}`} onClick={() => handleTabChange('ocr')}>文字识别</a>
               )}
               {features.topic_split && (
-                <a className={`tab ${activeTab === 'topic_split' ? 'tab-active' : ''}`} onClick={() => handleTabChange('topic_split')}>题目切割</a>
+                <a className={`tab px-2 py-1 text-sm ${activeTab === 'topic_split' ? 'tab-active' : ''}`} onClick={() => handleTabChange('topic_split')}>题目切割</a>
               )}
 
               <div className="dropdown dropdown-end">
