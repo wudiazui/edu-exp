@@ -25,6 +25,13 @@ export default function Options() {
       defaultEnabled: false,
     },
     {
+      id: "audit",
+      name: "审核功能",
+      description: "启用内容审核功能",
+      category: "features",
+      defaultEnabled: false,
+    },
+    {
       id: "darkMode",
       name: "深色模式",
       description: "启用深色模式，减轻眼睛疲劳",

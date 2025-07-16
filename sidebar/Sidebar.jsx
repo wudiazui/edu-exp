@@ -51,7 +51,7 @@ export default function Main() {
   const [site, setSite] = useState("");
   // 添加长连接引用
   const portRef = useRef(null);
-  
+
   // 添加LaTeX格式化请求的节流控制
   const latexRequestRef = useRef({
     lastRequestTime: 0,
@@ -66,7 +66,7 @@ export default function Main() {
   useEffect(() => {
     // 始终创建长连接，不再根据serverType判断
     console.log('建立流式响应长连接');
-    
+
     // 创建与background.js的长连接
     const port = chrome.runtime.connect({ name: 'solving-stream-channel' });
     portRef.current = port;
@@ -216,7 +216,7 @@ export default function Main() {
         const imageUrlRegex = /\[图片[：:]\s*(https?:\/\/[^\s\]]+)\]/;
         const questionText = message.data.trim();
         const match = questionText.match(imageUrlRegex);
-        
+
         if (match && match[1]) {
           // 如果包含图片链接，设置图片题模式并提取图片URL
           setQuestion(questionText.replace(match[0], '').trim());
@@ -234,30 +234,30 @@ export default function Main() {
         const requestText = message.text || '';
         const requestHash = `latex-${requestText.substring(0, 50)}`; // 使用文本前50个字符作为请求哈希
         const throttleData = latexRequestRef.current;
-        
+
         // 检查是否存在完全相同的请求正在处理中
         if (throttleData.requestHash.has(requestHash)) {
           return true;
         }
-        
+
         // 检查是否在节流时间内
         if (now - throttleData.lastRequestTime < throttleData.throttleTime && throttleData.isProcessing) {
           return true;
         }
-        
+
         // 更新最后请求时间和处理状态
         throttleData.lastRequestTime = now;
         throttleData.isProcessing = true;
-        
+
         // 添加请求到哈希集合
         throttleData.requestHash.add(requestHash);
-        
+
         // 添加超时检查，如果3秒内未收到响应，重置处理状态
         const timeoutId = setTimeout(() => {
           throttleData.isProcessing = false;
           throttleData.requestHash.delete(requestHash); // 超时后移除请求哈希
         }, throttleData.throttleTime);
-        
+
         // 处理LaTeX格式化请求
         (async () => {
           try {
@@ -265,22 +265,22 @@ export default function Main() {
             const config = await new Promise(resolve => {
               chrome.storage.sync.get(['host', 'name'], resolve);
             });
-            
+
             if (!config.host || !config.name) {
               throw new Error('未找到服务器配置');
             }
-            
+
             console.log('使用配置处理LaTeX:', config);
-            
+
             // 调用format_latex函数处理文本
             const formatted = await format_latex(config.host, config.name, message.text);
-            
+
             // 清除超时
             clearTimeout(timeoutId);
             // 重置处理状态
             throttleData.isProcessing = false;
             throttleData.requestHash.delete(requestHash); // 完成后移除请求哈希
-            
+
             if (formatted) {
               sendResponse({ success: true, formatted });
             } else {
@@ -292,7 +292,7 @@ export default function Main() {
             // 重置处理状态
             throttleData.isProcessing = false;
             throttleData.requestHash.delete(requestHash); // 出错时也移除请求哈希
-            
+
             console.error('Error formatting LaTeX in sidebar:', error);
             sendResponse({ success: false, error: error.message || '未知错误' });
           }
@@ -334,7 +334,7 @@ export default function Main() {
           setIsFormatting(false);
           return;
         }
-        
+
         // 扣子服务器处理逻辑保持不变
         const workflowResult = await cozeService.executeWorkflow(kouziConfig.workflowId, {
           app_id: kouziConfig.appId,
@@ -366,7 +366,7 @@ export default function Main() {
         // 修改为直接使用run_llm_stream函数
         console.log('使用流式响应处理题干整理');
         setQuestion(''); // 清空之前的结果
-        
+
         // 直接调用run_llm_stream函数
         run_llm_stream(
           host,
@@ -434,7 +434,7 @@ export default function Main() {
           setIsCompleteeing(false);
           return;
         }
-        
+
         // 扣子服务器处理逻辑保持不变
         const workflowResult = await cozeService.executeWorkflow(kouziConfig.workflowId, {
           app_id: kouziConfig.appId,
@@ -466,7 +466,7 @@ export default function Main() {
         // 修改为直接使用run_llm_stream函数
         console.log('使用流式响应处理残题补全');
         setQuestion(''); // 清空之前的结果
-        
+
         // 直接调用run_llm_stream函数
         run_llm_stream(
           host,
@@ -537,7 +537,7 @@ export default function Main() {
     console.log('生成解答时的服务器类型:', serverType);
     console.log('CozeService状态:', cozeService);
     console.log('KouziConfig状态:', kouziConfig);
-    
+
     try {
       if (serverType === "扣子") {
         // 检查扣子服务器的必要组件是否已初始化
@@ -548,7 +548,7 @@ export default function Main() {
           setIsGeneratingAnswer(false);
           return;
         }
-        
+
         // 扣子服务器处理逻辑保持不变
         let imageFileId = null;
         if (selectedImage) {
@@ -612,19 +612,19 @@ export default function Main() {
         console.log('使用流式响应生成解答');
         setAnswer(''); // 清空之前的结果
         setAnswerThinkingChain(''); // 清空思维链数据
-        
+
         // 直接调用run_llm_stream函数
         run_llm_stream(
           host,
           name,
           'topic_answer',
           {
-            'topic': question, 
-            'discipline': subject, 
-            'image_data': selectedImage, 
-            'topic_type': selectedValue, 
-            'school_level': gradeLevel, 
-            'site': site, 
+            'topic': question,
+            'discipline': subject,
+            'image_data': selectedImage,
+            'topic_type': selectedValue,
+            'school_level': gradeLevel,
+            'site': site,
             'analysis': analysis
           },
           // 数据块处理函数
@@ -688,7 +688,7 @@ export default function Main() {
           setIsGeneratingAnalysis(false);
           return;
         }
-        
+
         // 扣子服务器处理逻辑保持不变
         let imageFileId = null;
         if (selectedImage) {
@@ -754,20 +754,20 @@ export default function Main() {
         console.log('使用流式响应生成解析');
         setAnalysis(''); // 清空之前的结果
         setAnalysisThinkingChain(''); // 清空思维链数据
-        
+
         // 直接调用run_llm_stream函数
         run_llm_stream(
           host,
           name,
           'topic_analysis',
           {
-            'topic': question, 
-            'answer': answer, 
-            'analysis': analysis, 
-            'discipline': subject, 
-            'image_data': selectedImage, 
-            'topic_type': selectedValue, 
-            'school_level': gradeLevel, 
+            'topic': question,
+            'answer': answer,
+            'analysis': analysis,
+            'discipline': subject,
+            'image_data': selectedImage,
+            'topic_type': selectedValue,
+            'school_level': gradeLevel,
             'site': site
           },
           // 数据块处理函数
@@ -850,7 +850,8 @@ export default function Main() {
     if (
       (activeTab === 'solving' && !features.jieti) ||
         (activeTab === 'ocr' && !features.ocr) ||
-        (activeTab === 'clue-claiming' && !features["clue-claiming"])
+        (activeTab === 'clue-claiming' && !features["clue-claiming"]) ||
+        (activeTab === 'audit' && !features.audit)
     ) {
       // Find the first enabled tab or default to settings
       if (features.jieti) {
@@ -863,7 +864,7 @@ export default function Main() {
         setActiveTab('settings');
       }
     }
-  }, [features.jieti, features.ocr, features["clue-claiming"], activeTab]);
+  }, [features.jieti, features.ocr, features["clue-claiming"], features.audit, activeTab]);
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
@@ -914,6 +915,13 @@ export default function Main() {
           status = changes["clue-claiming"].newValue;
         }
 
+        if ('audit' in changes) {
+          updatedFeatures.audit = changes.audit.newValue;
+          hasChanges = true;
+          changedFeatureName = '审核功能';
+          status = changes.audit.newValue;
+        }
+
         // Update state and show toast if any changes
         if (hasChanges) {
           setFeatures(updatedFeatures);
@@ -957,7 +965,7 @@ export default function Main() {
     }
   }, [serverType]);
 
-  return (<div className="w-full px-1 mt-2 overflow-hidden">
+  return (<div className="w-full px-1 mt-2">
             <div className="pb-1">
               <div className="tabs tabs-boxed inline-flex whitespace-nowrap min-w-full">
               <a className={`tab ${activeTab === 'settings' ? 'tab-active' : ''}`} onClick={() => handleTabChange('settings')}>设置</a>
@@ -970,15 +978,13 @@ export default function Main() {
               {features.topic_split && (
                 <a className={`tab ${activeTab === 'topic_split' ? 'tab-active' : ''}`} onClick={() => handleTabChange('topic_split')}>题目切割</a>
               )}
-              {/*
-              {features.audit && (
-                <a className={`tab ${activeTab === 'audit' ? 'tab-active' : ''}`} onClick={() => handleTabChange('audit')}>审核</a>
-              )}
-              */}
-              
+
               <div className="dropdown dropdown-end">
                 <label tabIndex={0} className="tab">更多 ▼</label>
-                <ul tabIndex={0} className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52 z-10">                  
+                <ul tabIndex={0} className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52 z-[9999]">
+                  {features.audit && (
+                    <li><a className={activeTab === 'audit' ? 'active' : ''} onClick={() => handleTabChange('audit')}>审核</a></li>
+                  )}
                   {features["clue-claiming"] && (
                     <li><a className={activeTab === 'clue-claiming' ? 'active' : ''} onClick={() => handleTabChange('clue-claiming')}>线索认领</a></li>
                   )}
@@ -1072,7 +1078,7 @@ export default function Main() {
               <MobileWebComponent />
             )}
             {activeTab === 'audit' && (
-              <AuditComponent 
+              <AuditComponent
                 host={host}
                 uname={name}
                 serverType={serverType}
