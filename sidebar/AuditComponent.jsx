@@ -81,7 +81,7 @@ const AuditComponent = ({ host, uname, serverType }) => {
           console.log('与background的连接已断开');
           setConnectionStatus('disconnected');
           portRef.current = null;
-          
+
           // 尝试重新连接，除非已达到最大尝试次数
           if (reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
             console.log(`尝试重新连接 (${reconnectAttemptsRef.current + 1}/${MAX_RECONNECT_ATTEMPTS})...`);
@@ -97,7 +97,7 @@ const AuditComponent = ({ host, uname, serverType }) => {
       } catch (error) {
         console.error('建立连接失败:', error);
         setConnectionStatus('disconnected');
-        
+
         // 尝试重新连接，除非已达到最大尝试次数
         if (reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
           reconnectTimeoutRef.current = setTimeout(() => {
@@ -128,7 +128,7 @@ const AuditComponent = ({ host, uname, serverType }) => {
             }
             portRef.current = null;
           }
-          
+
           // 尝试重新连接
           if (reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
             reconnectTimeoutRef.current = setTimeout(() => {
@@ -143,11 +143,11 @@ const AuditComponent = ({ host, uname, serverType }) => {
     // 组件卸载时清理
     return () => {
       clearInterval(heartbeatInterval);
-      
+
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
-      
+
       if (portRef.current) {
         try {
           portRef.current.disconnect();
@@ -161,10 +161,10 @@ const AuditComponent = ({ host, uname, serverType }) => {
 
   const startContentReview = async (text) => {
     if (!text) return;
-    
+
     setIsLoading(true);
     console.log('startContentReview called with serverType:', serverType, 'cozeService:', cozeService);
-    
+
     // 判断服务器类型
     if (serverType === "扣子") {
       // 如果cozeService为null，尝试重新初始化
@@ -174,7 +174,7 @@ const AuditComponent = ({ host, uname, serverType }) => {
         const config = await new Promise((resolve) => {
           chrome.storage.sync.get(['kouziAccessKey', 'kouziReviewWorkflowId', 'kouziAppId'], resolve);
         });
-        
+
         if (config.kouziAccessKey && config.kouziReviewWorkflowId && config.kouziAppId) {
           currentCozeService = new CozeService(config.kouziAccessKey);
           setCozeService(currentCozeService);
@@ -186,7 +186,7 @@ const AuditComponent = ({ host, uname, serverType }) => {
           return;
         }
       }
-      
+
       if (currentCozeService) {
       try {
         // 读取审核工作流ID
@@ -261,8 +261,8 @@ const AuditComponent = ({ host, uname, serverType }) => {
             } else if (streamData) {
               // 直接处理streamData
               try {
-                const parsedData = typeof streamData === 'string' 
-                  ? JSON.parse(streamData) 
+                const parsedData = typeof streamData === 'string'
+                  ? JSON.parse(streamData)
                   : streamData;
 
                 if (parsedData.type === "reasoning") {
@@ -297,41 +297,49 @@ const AuditComponent = ({ host, uname, serverType }) => {
       }
       }
     } else {
-      // 直接调用content_review函数
+      // 直接调用content_review函数 - 使用Sidebar的消息格式处理方式
       content_review(
         text,
         host,
         uname,
-        // 消息处理器
+        // 消息处理器 - 使用Sidebar的格式
         (eventData) => {
           try {
             // 检查是否是结束标志 [DONE]
             if (eventData === "[DONE]") {
               console.log("收到审核流结束标志 [DONE]");
-              return; // 不处理这个数据块，直接返回
+              setIsLoading(false);
+              return;
             }
-            
-            // 尝试解析数据
+
+            // 使用Sidebar的type字段解析方式
             let data;
-            
             try {
               data = JSON.parse(eventData);
-              
-              if (data.type === "reasoning") {
-                // 思维链数据 - 保留换行符
-                const text = data.text || '';
-                setThinkingChain(prev => prev + text);
-              } else {
-                // 常规内容数据 - 保留换行符
-                const text = data.text || data.content || '';
+            } catch (e) {
+              // 如果不是JSON格式，当作普通文本处理
+              if (eventData.trim() !== '[DONE]') {
+                setAuditResults(prev => prev + eventData);
+              }
+              return;
+            }
+
+            // 使用Sidebar的type字段解析方式
+            if (data.type === 'reasoning') {
+              // 思维链数据 - 保留换行符
+              setThinkingChain(prev => prev + (data.text || ''));
+            } else if (data.type === 'content') {
+              // 主要内容数据 - 保留换行符
+              setAuditResults(prev => prev + (data.text || ''));
+            } else {
+              // **修复：即使是非type格式的JSON，也当作内容处理，避免未解析JSON**
+              const text = data.text || data.content || data.result || JSON.stringify(data);
+              if (text) {
                 setAuditResults(prev => prev + text);
               }
-            } catch {
-              // 无法解析为JSON，作为普通文本处理 - 保留换行符
-              setAuditResults(prev => prev + eventData);
             }
           } catch (e) {
-            console.error('处理审核数据时出错:', e);
+            console.error('解析审核数据时出错:', e);
           }
         },
         // 错误处理器
@@ -352,7 +360,7 @@ const AuditComponent = ({ host, uname, serverType }) => {
     // 清空之前的结果
     setAuditResults('');
     setThinkingChain(''); // 清空思维链
-    
+
     // 如果是扣子服务器，也需要重新提取页面内容
     if (serverType === "扣子") {
       // 每次都重新提取页面内容，不使用缓存的extractedText
@@ -381,7 +389,7 @@ const AuditComponent = ({ host, uname, serverType }) => {
     // 清空之前的结果，但不设置加载状态（会由background.js通过消息通知）
     setAuditResults('');
     setThinkingChain(''); // 清空思维链
-    
+
     try {
       // 通过长连接发送消息
       portRef.current.postMessage({
@@ -391,7 +399,7 @@ const AuditComponent = ({ host, uname, serverType }) => {
       console.error('审核请求出错:', error);
       setAuditResults('审核失败：' + error.message);
       setIsLoading(false);
-      
+
       // 连接可能已经断开，尝试重新连接
       setConnectionStatus('disconnected');
       if (portRef.current) {
@@ -402,7 +410,7 @@ const AuditComponent = ({ host, uname, serverType }) => {
         }
         portRef.current = null;
       }
-      
+
       // 尝试重新连接
       if (reconnectAttemptsRef.current < MAX_RECONNECT_ATTEMPTS) {
         reconnectAttemptsRef.current++;
@@ -417,7 +425,7 @@ const AuditComponent = ({ host, uname, serverType }) => {
     <div className="container mx-auto px-1 mt-2">
       <div className="px-2 pt-2 pb-3 mb-4">
         <div className="mb-2">
-          <button 
+          <button
             className={`btn btn-sm w-full btn-primary ${isLoading ? 'opacity-90' : ''} relative`}
             onClick={handleAuditCheck}
             disabled={isLoading || connectionStatus !== 'connected'}
@@ -428,14 +436,14 @@ const AuditComponent = ({ host, uname, serverType }) => {
                 <span className="text-xs">审核中</span>
               </>
             ) : connectionStatus !== 'connected' ? '连接已断开' : '开始辅助审核检查'}
-            
+
             {/* 连接状态指示器 - 放在按钮内容右侧 */}
             <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center">
-              {connectionStatus === 'connected' ? 
+              {connectionStatus === 'connected' ?
                 <span className="text-xs px-1.5 py-0.5 bg-green-200 text-green-900 rounded-full flex items-center ml-1">
                   <span className="w-1.5 h-1.5 bg-green-600 rounded-full mr-0.5"></span>
                   <span className="text-[10px]">正常</span>
-                </span> : 
+                </span> :
                 <span className="text-xs px-1.5 py-0.5 bg-red-200 text-red-900 rounded-full flex items-center ml-1">
                   <span className="w-1.5 h-1.5 bg-red-600 rounded-full mr-0.5"></span>
                   <span className="text-[10px]">断开</span>
@@ -447,7 +455,7 @@ const AuditComponent = ({ host, uname, serverType }) => {
         {/* 提取文本显示区域 - 可折叠 */}
         {extractedText && (
           <div className="mb-3 border rounded-lg overflow-hidden">
-            <div 
+            <div
               className="bg-base-200 p-1 flex justify-between items-center cursor-pointer"
               onClick={() => setIsTextExpanded(!isTextExpanded)}
             >
@@ -480,7 +488,7 @@ const AuditComponent = ({ host, uname, serverType }) => {
         {/* 思维链显示区域 */}
         {thinkingChain && (
           <div className="mb-1 border rounded-lg overflow-hidden text-xs">
-            <div 
+            <div
               className="bg-base-200 p-1 flex justify-between items-center cursor-pointer"
               onClick={() => setIsThinkingExpanded(!isThinkingExpanded)}
             >
@@ -522,4 +530,4 @@ const AuditComponent = ({ host, uname, serverType }) => {
   );
 };
 
-export default AuditComponent; 
+export default AuditComponent;
