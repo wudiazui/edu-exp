@@ -230,7 +230,6 @@ const AuditComponent = ({ host, uname, serverType }) => {
                 console.log("忽略 data 中的 event: Done 事件");
                 return;
               }
-
               // 如果有data字段，尝试解析
               try {
                 const parsedData = typeof streamData.data === 'string'
@@ -247,6 +246,7 @@ const AuditComponent = ({ host, uname, serverType }) => {
                 } else {
                   // 其他数据，追加到审核结果
                   const text = parsedData.text || parsedData.content || streamData.data;
+                  const test = text.replace("{}")
                   setAuditResults(prev => prev + text);
                 }
               } catch (parseError) {
@@ -307,22 +307,12 @@ const AuditComponent = ({ host, uname, serverType }) => {
           try {
             // 检查是否是结束标志 [DONE]
             if (eventData === "[DONE]") {
-              console.log("收到审核流结束标志 [DONE]");
               setIsLoading(false);
               return;
             }
 
             // 使用Sidebar的type字段解析方式
-            let data;
-            try {
-              data = JSON.parse(eventData);
-            } catch (e) {
-              // 如果不是JSON格式，当作普通文本处理
-              if (eventData.trim() !== '[DONE]') {
-                setAuditResults(prev => prev + eventData);
-              }
-              return;
-            }
+            let data = JSON.parse(eventData);
 
             // 使用Sidebar的type字段解析方式
             if (data.type === 'reasoning') {
@@ -333,13 +323,16 @@ const AuditComponent = ({ host, uname, serverType }) => {
               setAuditResults(prev => prev + (data.text || ''));
             } else {
               // **修复：即使是非type格式的JSON，也当作内容处理，避免未解析JSON**
-              const text = data.text || data.content || data.result || JSON.stringify(data);
+              const text = data.text || data.topic || data.content || '';
               if (text) {
                 setAuditResults(prev => prev + text);
               }
             }
           } catch (e) {
-            console.error('解析审核数据时出错:', e);
+            // 如果不是JSON格式，当作普通文本处理
+            if (eventData.trim() !== '[DONE]') {
+               console.log('Chunk is not JSON format:', eventData);
+            }
           }
         },
         // 错误处理器
