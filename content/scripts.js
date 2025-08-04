@@ -721,8 +721,29 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   if (request.action === "periodic_message") {
     // 导入工具函数
     import('./utils.js').then(({ filterByKeywords }) => {
-      getAuditTaskList(request.params).then((res) => {
+      // 首先获取第一页来了解总页数
+      const firstPageParams = { ...request.params, pn: 1 };
+      getAuditTaskList(firstPageParams).then((res) => {
         if (res.errno === 0 && res.data) {
+          // 计算总页数
+          const totalCount = res.data.total || 0;
+          const pageSize = res.data.rn || 20;
+          const totalPages = Math.ceil(totalCount / pageSize);
+          
+          // 随机选择一个页面（如果总页数大于1）
+          let randomPage = 1;
+          if (totalPages > 1) {
+            randomPage = Math.floor(Math.random() * totalPages) + 1;
+          }
+          
+          console.log(`总任务数: ${totalCount}, 总页数: ${totalPages}, 随机选择第 ${randomPage} 页`);
+          
+          // 获取随机页面的数据
+          const randomPageParams = { ...request.params, pn: randomPage };
+          return getAuditTaskList(randomPageParams);
+        }
+      }).then((res) => {
+        if (res && res.errno === 0 && res.data) {
           // 显示获取到的任务列表数量
           console.log(`获取到的任务列表数量: ${res.data.list ? res.data.list.length : 0}`);
           // 获取包含和排除关键词列表

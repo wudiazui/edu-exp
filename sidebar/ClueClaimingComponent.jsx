@@ -39,7 +39,7 @@ export default function ClueClaimingComponent() {
     const saveTimer = setTimeout(() => {
       saveKeywords(includeKeywords, excludeKeywords);
     }, 300); // 防抖动，避免频繁保存
-    
+
     return () => clearTimeout(saveTimer);
   }, [includeKeywords, excludeKeywords]);
 
@@ -51,13 +51,13 @@ export default function ClueClaimingComponent() {
 
     // 发送消息到背景脚本
     const port = chrome.runtime.connect({ name: 'audit-task-label' });
-    
+
     port.postMessage({ type: 'GET_AUDIT_TASK_LABEL', selectedTaskType });
-    
+
     port.onMessage.addListener((response) => {
       if (isComponentMounted && response.errno === 0 && response.data?.filter) {
         setFilterData(response.data.filter);
-        
+
         const stepData = response.data.filter.find(f => f.id === 'step')?.list || [];
         const subjectData = response.data.filter.find(f => f.id === 'subject')?.list || [];
         const clueTypeData = response.data.filter.find(f => f.id === 'clueType')?.list || [];
@@ -65,7 +65,7 @@ export default function ClueClaimingComponent() {
         setSelectedGrade(stepData[0]?.name || '');
         setSelectedSubject(subjectData[0]?.name || '');
         setSelectedType(clueTypeData[0]?.name || '');
-        
+
         setIsLoading(false);
       }
     });
@@ -108,7 +108,7 @@ export default function ClueClaimingComponent() {
       if (changes.autoClaimingActive) {
         setAutoClaimingActive(changes.autoClaimingActive.newValue);
       }
-      
+
       // 处理同步存储变化（关键词）
       // 使用 keywordStorageModule 中定义的键名
       if (changes['clue_include_keywords']) {
@@ -167,12 +167,12 @@ export default function ClueClaimingComponent() {
       // Check for both possible message formats
       if (request.type === 'CLAIM_AUDIT_TASK_RESPONSE' || request.action === 'claimAuditTaskResponse') {
         setClaimResponse(request.data);
-        
+
         // Update successful claims counter
         if (request.data && request.data.total) {
           const newClaimCount = successfulClaims + request.data.total;
           setSuccessfulClaims(newClaimCount);
-          
+
           // 将更新后的认领计数发送到background脚本，用于下次认领时的限制
           if (autoClaimingActive) {
             chrome.runtime.sendMessage({
@@ -180,14 +180,14 @@ export default function ClueClaimingComponent() {
               successfulClaims: newClaimCount
             });
           }
-          
+
           // Check if we've reached the claim limit
           if (newClaimCount >= claimLimit && autoClaimingActive) {
             console.log(`已达到认领上限(${newClaimCount}/${claimLimit})，停止自动认领`);
             stopAutoClaiming();
           }
         }
-        
+
         // Reset the response after 3 seconds
         setTimeout(() => {
           setClaimResponse(null);
@@ -204,7 +204,7 @@ export default function ClueClaimingComponent() {
   const startAutoClaiming = async (interval = refreshInterval) => {
     // Reset successful claims counter when starting
     setSuccessfulClaims(0);
-    
+
     const stepData = selectedGrade;
     const subjectData = selectedSubject;
     const clueTypeData = selectedType;
@@ -218,7 +218,7 @@ export default function ClueClaimingComponent() {
       params: {
         pn: 1,
         rn: 20,
-        clueID: '', 
+        clueID: '',
         clueType: filterData.find(f => f.id === 'clueType')?.list.find(item => item.name === clueTypeData)?.id || 1,
         step: filterData.find(f => f.id === 'step')?.list.find(item => item.name === stepData)?.id || 1,
         subject: filterData.find(f => f.id === 'subject')?.list.find(item => item.name === subjectData)?.id || 2,
@@ -239,7 +239,7 @@ export default function ClueClaimingComponent() {
       {isLoading && <div className="my-1">Loading...</div>}
       <div className="flex flex-col gap-4 mb-4">
         <div className="form-control">
-            <select 
+            <select
               className="select select-bordered select-sm w-full"
               value={selectedTaskType}
               onChange={(e) => handleTaskTypeChange(e.target.value)}
@@ -250,8 +250,8 @@ export default function ClueClaimingComponent() {
         </div>
         <div className="flex gap-2">
           <div className="form-control w-1/3">
-            <select 
-              className="select select-bordered select-sm w-full" 
+            <select
+              className="select select-bordered select-sm w-full"
               value={selectedGrade}
               onChange={(e) => setSelectedGrade(e.target.value)}
             >
@@ -262,7 +262,7 @@ export default function ClueClaimingComponent() {
           </div>
 
           <div className="form-control w-1/3">
-            <select 
+            <select
               className="select select-bordered select-sm w-full"
               value={selectedSubject}
               onChange={(e) => setSelectedSubject(e.target.value)}
@@ -274,7 +274,7 @@ export default function ClueClaimingComponent() {
           </div>
 
           <div className="form-control w-1/3">
-            <select 
+            <select
               className="select select-bordered select-sm w-full"
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
@@ -306,7 +306,7 @@ export default function ClueClaimingComponent() {
                     }
                   }}
                 />
-                <button 
+                <button
                   className="btn btn-sm btn-primary btn-outline"
                   onClick={() => {
                     if (newIncludeKeyword.trim()) {
@@ -319,12 +319,12 @@ export default function ClueClaimingComponent() {
                 </button>
               </div>
             </div>
-            
+
             <div className="flex flex-wrap gap-2 min-h-[28px]">
               {includeKeywords.map((keyword, index) => (
                 <div key={index} className="flex items-center bg-blue-50 border border-blue-200 rounded-full px-3 py-1">
                   <span className="text-sm text-blue-700">{keyword}</span>
-                  <button 
+                  <button
                     className="ml-1.5 text-blue-400 hover:text-red-500 font-bold"
                     onClick={() => {
                       const newKeywords = [...includeKeywords];
@@ -357,7 +357,7 @@ export default function ClueClaimingComponent() {
                     }
                   }}
                 />
-                <button 
+                <button
                   className="btn btn-sm btn-primary btn-outline"
                   onClick={() => {
                     if (newExcludeKeyword.trim()) {
@@ -370,12 +370,12 @@ export default function ClueClaimingComponent() {
                 </button>
               </div>
             </div>
-            
+
             <div className="flex flex-wrap gap-2 min-h-[28px]">
               {excludeKeywords.map((keyword, index) => (
                 <div key={index} className="flex items-center bg-red-50 border border-red-200 rounded-full px-3 py-1">
                   <span className="text-sm text-red-700">{keyword}</span>
-                  <button 
+                  <button
                     className="ml-1.5 text-red-400 hover:text-red-600 font-bold"
                     onClick={() => {
                       const newKeywords = [...excludeKeywords];
@@ -400,7 +400,7 @@ export default function ClueClaimingComponent() {
               value={refreshInterval}
               onChange={(e) => {
                 const value = parseFloat(e.target.value);
-                if (value >= 0.5) { // 最小0.5秒
+                if (value >= 0.1) { // 最小0.1秒
                   setRefreshInterval(value);
                   chrome.storage.local.set({ autoClaimingInterval: value });
                   if (autoClaimingActive) {
@@ -410,11 +410,11 @@ export default function ClueClaimingComponent() {
                   }
                 }
               }}
-              min="0.5"
+              min="0.1"
               step="0.1"
             />
           </div>
-          
+
           <div className="flex items-center gap-2">
             <label className="text-sm">认领题目数量:</label>
             <input
@@ -434,7 +434,7 @@ export default function ClueClaimingComponent() {
         </div>
 
         <div className="flex gap-2">
-          <button 
+          <button
             className={`btn btn-primary flex-1 ${autoClaimingActive ? 'btn-error' : ''}`}
             onClick={autoClaimingActive ? stopAutoClaiming : startAutoClaiming}
             disabled={loading}
@@ -449,7 +449,7 @@ export default function ClueClaimingComponent() {
           </div>
         )}
       </div>
-      
+
       <div className="space-y-2">
         {claimResponse && (
           <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 rounded shadow-sm">

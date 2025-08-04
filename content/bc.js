@@ -31,15 +31,52 @@ async function formatOrganize(content) {
     }
   });
 
-  // 移除同行内容中的空格
-  const allElements = doc.querySelectorAll('p, li');
+  // 移除文本内容中的空格，但保持HTML结构不变
+  // 选择所有可能包含文本的元素，排除script、style等非可见元素
+  const allElements = doc.querySelectorAll('*:not(script):not(style):not(noscript):not(template):not(head):not(meta):not(title):not(link)');
   allElements.forEach(element => {
-    // 获取元素内的文本内容
-    let text = element.textContent;
-    // 移除所有空格
-    text = text.replace(/ +/g, '');
-    // 更新元素的文本内容
-    element.textContent = text;
+    // 跳过空元素和只包含空白字符的元素
+    if (!element.textContent || !element.textContent.trim()) {
+      return;
+    }
+    
+    // 跳过特定标签
+    const tagName = element.tagName.toLowerCase();
+    if (['script', 'style', 'noscript', 'template', 'head', 'meta', 'title', 'link'].includes(tagName)) {
+      return;
+    }
+    
+    // 使用TreeWalker来遍历所有文本节点，保持HTML结构
+    const walker = document.createTreeWalker(
+      element,
+      NodeFilter.SHOW_TEXT,
+      {
+        acceptNode: function(node) {
+          // 只处理可见文本节点，跳过空白节点和script/style中的文本
+          const parentTag = node.parentElement ? node.parentElement.tagName.toLowerCase() : '';
+          if (['script', 'style', 'noscript', 'template'].includes(parentTag)) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          if (node.textContent && node.textContent.trim()) {
+            return NodeFilter.FILTER_ACCEPT;
+          }
+          return NodeFilter.FILTER_REJECT;
+        }
+      },
+      false
+    );
+
+    const textNodes = [];
+    let node;
+    while (node = walker.nextNode()) {
+      textNodes.push(node);
+    }
+
+    // 仅处理文本节点中的空格，不影响HTML标签
+    textNodes.forEach(textNode => {
+      // 移除文本节点中的空格，但保留换行符
+      textNode.textContent = textNode.textContent.replace(/[ \t\r\f\v]+/g, '');
+    });
   });
 
   // 返回处理后的 HTML
