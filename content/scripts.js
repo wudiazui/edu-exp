@@ -989,13 +989,17 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
         const convertedText = request.text;
         const tempDiv = document.createElement('div');
         // Split text by newlines and wrap each line in p tags
-        // Preserve spaces by converting them to HTML non-breaking spaces
+        // Preserve spaces and special characters by converting them to HTML entities
         tempDiv.innerHTML = convertedText.split('\n')
           .map(line => {
-            // Convert regular spaces to HTML non-breaking spaces
-            //const lineWithPreservedSpaces = line.replace(/ /g, '&nbsp;');
-            //return `<p>${lineWithPreservedSpaces}</p>`;
-            return `<p>${line}</p>`
+            // Escape HTML special characters to prevent loss of $ and other symbols
+            const escapedLine = line
+              .replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;')
+              .replace(/'/g, '&#39;');
+            return `<p>${escapedLine}</p>`
           })
           .join('');
 
