@@ -679,6 +679,17 @@ export async function replaceLatexWithImagesInHtml(htmlText) {
   const tempDiv = document.createElement('div');
   tempDiv.innerHTML = htmlText;
 
+  // 保护已存在的数学公式图片，避免重复处理
+  const existingMathImages = tempDiv.querySelectorAll('img[data-math]');
+  const protectedElements = new Map();
+  
+  existingMathImages.forEach((img, index) => {
+    const placeholder = `__PROTECTED_MATH_IMG_${index}__`;
+    const protectedImg = img.cloneNode(true);
+    protectedElements.set(placeholder, protectedImg);
+    img.replaceWith(document.createTextNode(placeholder));
+  });
+
   // First, try to process the entire content as a whole to handle cross-element LaTeX
   const fullTextContent = tempDiv.textContent || tempDiv.innerText || '';
 
@@ -693,7 +704,7 @@ export async function replaceLatexWithImagesInHtml(htmlText) {
 
   if (crossElementMatches.length > 0) {
     // Found cross-element LaTeX, process the entire HTML as text first
-    let processedHtml = htmlText;
+    let processedHtml = tempDiv.innerHTML;
 
     // Convert \( and \) to $, \[ and \] to $, $$ to $ in the raw HTML
     processedHtml = processedHtml.replace(/\\\(/g, '$').replace(/\\\)/g, '$')
@@ -726,7 +737,12 @@ export async function replaceLatexWithImagesInHtml(htmlText) {
       }
     }
 
-    return processedHtml;
+    // 恢复保护的图片
+    let finalHtml = processedHtml;
+    for (const [placeholder, img] of protectedElements) {
+      finalHtml = finalHtml.replace(placeholder, img.outerHTML);
+    }
+    return finalHtml;
   }
 
   // No cross-element LaTeX found, use the original element-by-element processing
@@ -831,8 +847,12 @@ export async function replaceLatexWithImagesInHtml(htmlText) {
     await processElement(childElement);
   }
 
-  // Return the processed HTML
-  return tempDiv.innerHTML;
+  // 恢复保护的图片
+  let finalHtml = tempDiv.innerHTML;
+  for (const [placeholder, img] of protectedElements) {
+    finalHtml = finalHtml.replace(placeholder, img.outerHTML);
+  }
+  return finalHtml;
 }
 
 /**
