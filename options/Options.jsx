@@ -17,13 +17,13 @@ export default function Options() {
       category: "features",
       defaultEnabled: true,
     },
-    {
-      id: "clue-claiming",
-      name: "线索认领",
-      description: "启用线索自动认领功能",
-      category: "features",
-      defaultEnabled: false,
-    },
+    // {
+    //   id: "clue-claiming",
+    //   name: "线索认领",
+    //   description: "启用线索自动认领功能",
+    //   category: "features",
+    //   defaultEnabled: false,
+    // },
     {
       id: "audit",
       name: "审核功能",

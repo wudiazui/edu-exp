@@ -985,9 +985,9 @@ export default function Main() {
                   {features.audit && (
                     <li><a className={activeTab === 'audit' ? 'active' : ''} onClick={() => handleTabChange('audit')}>审核</a></li>
                   )}
-                  {features["clue-claiming"] && (
+                  {/* {features["clue-claiming"] && (
                     <li><a className={activeTab === 'clue-claiming' ? 'active' : ''} onClick={() => handleTabChange('clue-claiming')}>线索认领</a></li>
-                  )}
+                  )} */}
                   {features.documentation && (
                     <li><a className={activeTab === 'documentation' ? 'active' : ''} onClick={() => handleTabChange('documentation')}>文档</a></li>
                   )}
