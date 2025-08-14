@@ -9,6 +9,7 @@ import DocumentationComponent from './DocumentationComponent'; // 引入文档�
 import DocuScanComponent from './DocuScanComponent'; // 引入DocuScan组件
 import MobileWebComponent from './MobileWebComponent'; // 引入手机网页端组件
 import AuditComponent from './AuditComponent'; // 引入审核组件
+import WorkflowComponent from './WorkflowComponent'; // 引入工作流组件
 import { CozeService } from '../coze.js';
 // 从lib.js导入需要的网络请求函数
 import { run_llm, run_llm_stream, ocr_text, topic_split, content_review, format_latex } from '../lib.js';
@@ -44,7 +45,8 @@ export default function Main() {
     "documentation": true,
     "docuscan": true,
     "mobile-web": true,
-    "audit": true
+    "audit": true,
+    "workflow": true
   });
   const [serverType, setServerType] = useState(null);
   const [isSettingsLoading, setIsSettingsLoading] = useState(true);
@@ -950,6 +952,7 @@ export default function Main() {
     if (
       (activeTab === 'solving' && !features.jieti) ||
         (activeTab === 'ocr' && !features.ocr) ||
+        (activeTab === 'workflow' && !features.workflow) ||
         (activeTab === 'clue-claiming' && !features["clue-claiming"]) ||
         (activeTab === 'audit' && !features.audit)
     ) {
@@ -958,13 +961,15 @@ export default function Main() {
         setActiveTab('solving');
       } else if (features.ocr) {
         setActiveTab('ocr');
+      } else if (features.workflow) {
+        setActiveTab('workflow');
       } else if (features["clue-claiming"]) {
         setActiveTab('clue-claiming');
       } else {
         setActiveTab('settings');
       }
     }
-  }, [features.jieti, features.ocr, features["clue-claiming"], features.audit, activeTab]);
+  }, [features.jieti, features.ocr, features.workflow, features["clue-claiming"], features.audit, activeTab]);
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
@@ -1022,6 +1027,13 @@ export default function Main() {
           status = changes.audit.newValue;
         }
 
+        if ('workflow' in changes) {
+          updatedFeatures.workflow = changes.workflow.newValue;
+          hasChanges = true;
+          changedFeatureName = '工作流';
+          status = changes.workflow.newValue;
+        }
+
         // Update state and show toast if any changes
         if (hasChanges) {
           setFeatures(updatedFeatures);
@@ -1075,13 +1087,16 @@ export default function Main() {
               {features.ocr && (
                 <a className={`tab px-2 py-1 text-sm ${activeTab === 'ocr' ? 'tab-active' : ''}`} onClick={() => handleTabChange('ocr')}>文字识别</a>
               )}
-              {features.topic_split && (
-                <a className={`tab px-2 py-1 text-sm ${activeTab === 'topic_split' ? 'tab-active' : ''}`} onClick={() => handleTabChange('topic_split')}>题目切割</a>
+              {features.workflow && (
+                <a className={`tab px-2 py-1 text-sm ${activeTab === 'workflow' ? 'tab-active' : ''}`} onClick={() => handleTabChange('workflow')}>工作流</a>
               )}
 
               <div className="dropdown dropdown-end">
                 <label tabIndex={0} className="tab">更多 ▼</label>
                 <ul tabIndex={0} className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52 z-[9999]">
+                  {features.topic_split && (
+                    <li><a className={activeTab === 'topic_split' ? 'active' : ''} onClick={() => handleTabChange('topic_split')}>题目切割</a></li>
+                  )}
                   {features.audit && (
                     <li><a className={activeTab === 'audit' ? 'active' : ''} onClick={() => handleTabChange('audit')}>审核</a></li>
                   )}
@@ -1156,6 +1171,13 @@ export default function Main() {
             )}
             {activeTab === 'ocr' && (
               <OcrComponent
+                host={host}
+                uname={name}
+                serverType={serverType}
+              />
+            )}
+            {activeTab === 'workflow' && (
+              <WorkflowComponent
                 host={host}
                 uname={name}
                 serverType={serverType}
