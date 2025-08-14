@@ -25,6 +25,7 @@ export default function Main() {
   const [isCompleteeing, setIsCompleteeing] = useState(false);
   const [isGeneratingAnswer, setIsGeneratingAnswer] = useState(false);
   const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
+  const [workflowStep, setWorkflowStep] = useState(null); // 工作流步骤状态
   const [host, setHost] = React.useState('https://bedu.pingfury.top');
   const [name, setName] = useState('');
   const [activeTab, setActiveTab] = useState('solving');
@@ -533,6 +534,8 @@ export default function Main() {
 
   const handleGenerateAnswer = async () => {
     setIsGeneratingAnswer(true);
+    // 重置工作流状态，开始新的工作流
+    setWorkflowStep('generating_answer');
     // 添加诊断日志
     console.log('生成解答时的服务器类型:', serverType);
     console.log('CozeService状态:', cozeService);
@@ -598,7 +601,24 @@ export default function Main() {
               : workflowResult.data;
 
             if (parsedData && parsedData.topic) {
-               setAnswer(parsedData.topic.trim());
+              const finalAnswer = parsedData.topic.trim();
+              setAnswer(finalAnswer);
+              // 在完成生成解答后，自动填入解答并继续生成解析
+              setTimeout(() => {
+                if (finalAnswer.trim()) {
+                  // 自动填入解答
+                  chrome.runtime.sendMessage({
+                    type: "answer",
+                    text: finalAnswer
+                  });
+                  // 设置工作流步骤为已填入解答
+                  setWorkflowStep('answer_filled');
+                  // 延迟后自动开始生成解析
+                  setTimeout(() => {
+                    handleGenerateAnalysis();
+                  }, 500);
+                }
+              }, 100);
             } else {
               console.error('Invalid workflow result format');
             }
@@ -667,7 +687,26 @@ export default function Main() {
           () => {
             setIsGeneratingAnswer(false);
             // 流式响应完成后，根据site条件执行 removeEmptyLinesFromString
-            setAnswer(prev => site === 'bc' ? prev : removeEmptyLinesFromString(prev, gradeLevel === "小学"));
+            setAnswer(prev => {
+              const finalAnswer = site === 'bc' ? prev : removeEmptyLinesFromString(prev, gradeLevel === "小学");
+              // 在完成生成解答后，自动填入解答并继续生成解析
+              setTimeout(() => {
+                if (finalAnswer.trim()) {
+                  // 自动填入解答
+                  chrome.runtime.sendMessage({
+                    type: "answer",
+                    text: finalAnswer
+                  });
+                  // 设置工作流步骤为已填入解答
+                  setWorkflowStep('answer_filled');
+                  // 延迟后自动开始生成解析
+                  setTimeout(() => {
+                    handleGenerateAnalysis();
+                  }, 500);
+                }
+              }, 100);
+              return finalAnswer;
+            });
           }
         );
       }
@@ -740,7 +779,20 @@ export default function Main() {
               : workflowResult.data;
 
             if (parsedData && parsedData.topic) {
-               setAnalysis(parsedData.topic.trim());
+              const finalAnalysis = parsedData.topic.trim();
+              setAnalysis(finalAnalysis);
+              // 在完成生成解析后，自动填入解析
+              setTimeout(() => {
+                if (finalAnalysis.trim()) {
+                  // 自动填入解析
+                  chrome.runtime.sendMessage({
+                    type: "analysis",
+                    text: finalAnalysis
+                  });
+                  // 设置工作流步骤为已填入解析，完成整个流程
+                  setWorkflowStep('analysis_filled');
+                }
+              }, 100);
             } else {
               console.error('Invalid workflow result format');
             }
@@ -810,7 +862,22 @@ export default function Main() {
           () => {
             setIsGeneratingAnalysis(false);
             // 流式响应完成后，根据site条件执行 removeEmptyLinesFromString
-            setAnalysis(prev => site === 'bc' ? prev : removeEmptyLinesFromString(prev, gradeLevel === "小学"));
+            setAnalysis(prev => {
+              const finalAnalysis = site === 'bc' ? prev : removeEmptyLinesFromString(prev, gradeLevel === "小学");
+              // 在完成生成解析后，自动填入解析
+              setTimeout(() => {
+                if (finalAnalysis.trim()) {
+                  // 自动填入解析
+                  chrome.runtime.sendMessage({
+                    type: "analysis",
+                    text: finalAnalysis
+                  });
+                  // 设置工作流步骤为已填入解析，完成整个流程
+                  setWorkflowStep('analysis_filled');
+                }
+              }, 100);
+              return finalAnalysis;
+            });
           }
         );
       }
@@ -1051,6 +1118,7 @@ export default function Main() {
                 setSite={setSite}
                 setAnswerThinkingChain={setAnswerThinkingChain}
                 setAnalysisThinkingChain={setAnalysisThinkingChain}
+                workflowStep={workflowStep}
               />
             )}
             {activeTab === 'ocr' && (

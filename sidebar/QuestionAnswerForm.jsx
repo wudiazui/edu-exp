@@ -39,6 +39,7 @@ const QuestionAnswerForm = ({
   setSite,
   setAnswerThinkingChain,
   setAnalysisThinkingChain,
+  workflowStep = null,
 }) => {
   const [autoRenderFormula, setAutoRenderFormula] = useState(true);
   const [deepThinking, setDeepThinking] = useState(false);
