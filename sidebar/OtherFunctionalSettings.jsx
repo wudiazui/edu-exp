@@ -5,10 +5,11 @@ const OtherFunctionalSettings = () => {
   const [autoRenderFormula, setAutoRenderFormula] = useState(true);
   const [strongFormatting, setStrongFormatting] = useState(false);
   const [deepThinking, setDeepThinking] = useState(false);
+  const [autoWorkflow, setAutoWorkflow] = useState(true);
 
   useEffect(() => {
     // 从存储中读取设置
-    chrome.storage.sync.get(['autoRenderFormula', 'strongFormatting', 'deepThinking'], (result) => {
+    chrome.storage.sync.get(['autoRenderFormula', 'strongFormatting', 'deepThinking', 'autoWorkflow'], (result) => {
       if (result.autoRenderFormula === undefined) {
         // 如果存储中没有值，使用并保存默认值
         const defaultValue = true;
@@ -35,6 +36,15 @@ const OtherFunctionalSettings = () => {
       } else {
         setDeepThinking(result.deepThinking);
       }
+
+      if (result.autoWorkflow === undefined) {
+        // 如果存储中没有值，使用并保存默认值
+        const defaultValue = true;
+        chrome.storage.sync.set({ autoWorkflow: defaultValue });
+        setAutoWorkflow(defaultValue);
+      } else {
+        setAutoWorkflow(result.autoWorkflow);
+      }
     });
   }, []);
 
@@ -54,6 +64,12 @@ const OtherFunctionalSettings = () => {
     setDeepThinking(checked);
     // 保存设置到存储
     chrome.storage.sync.set({ deepThinking: checked });
+  };
+
+  const handleAutoWorkflowChange = (checked) => {
+    setAutoWorkflow(checked);
+    // 保存设置到存储
+    chrome.storage.sync.set({ autoWorkflow: checked });
   };
 
   return (
@@ -99,6 +115,17 @@ const OtherFunctionalSettings = () => {
                 className="toggle toggle-primary"
                 checked={deepThinking}
                 onChange={(e) => handleDeepThinkingChange(e.target.checked)}
+              />
+            </label>
+          </div>
+          <div className="form-control">
+            <label className="label cursor-pointer">
+              <span className="label-text">自动工作流</span>
+              <input
+                type="checkbox"
+                className="toggle toggle-primary"
+                checked={autoWorkflow}
+                onChange={(e) => handleAutoWorkflowChange(e.target.checked)}
               />
             </label>
           </div>

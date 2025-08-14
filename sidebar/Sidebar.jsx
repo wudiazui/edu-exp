@@ -26,6 +26,7 @@ export default function Main() {
   const [isGeneratingAnswer, setIsGeneratingAnswer] = useState(false);
   const [isGeneratingAnalysis, setIsGeneratingAnalysis] = useState(false);
   const [workflowStep, setWorkflowStep] = useState(null); // 工作流步骤状态
+  const [autoWorkflow, setAutoWorkflow] = useState(true); // 自动工作流开关
   const [host, setHost] = React.useState('https://bedu.pingfury.top');
   const [name, setName] = useState('');
   const [activeTab, setActiveTab] = useState('solving');
@@ -181,6 +182,26 @@ export default function Main() {
     };
 
     loadServerType();
+  }, []);
+
+  // Load autoWorkflow from storage
+  useEffect(() => {
+    chrome.storage.sync.get(['autoWorkflow'], (result) => {
+      setAutoWorkflow(result.autoWorkflow ?? true);
+    });
+
+    // 监听存储变更
+    const handleStorageChange = (changes, namespace) => {
+      if (namespace === 'sync' && 'autoWorkflow' in changes) {
+        setAutoWorkflow(changes.autoWorkflow.newValue ?? true);
+      }
+    };
+
+    chrome.storage.onChanged.addListener(handleStorageChange);
+
+    return () => {
+      chrome.storage.onChanged.removeListener(handleStorageChange);
+    };
   }, []);
 
   // Save serverType to storage when it changes
@@ -603,22 +624,25 @@ export default function Main() {
             if (parsedData && parsedData.topic) {
               const finalAnswer = parsedData.topic.trim();
               setAnswer(finalAnswer);
-              // 在完成生成解答后，自动填入解答并继续生成解析
-              setTimeout(() => {
-                if (finalAnswer.trim()) {
-                  // 自动填入解答
-                  chrome.runtime.sendMessage({
-                    type: "answer",
-                    text: finalAnswer
-                  });
-                  // 设置工作流步骤为已填入解答
-                  setWorkflowStep('answer_filled');
-                  // 延迟后自动开始生成解析
-                  setTimeout(() => {
-                    handleGenerateAnalysis();
-                  }, 500);
-                }
-              }, 100);
+              // 检查是否启用自动工作流
+              if (autoWorkflow) {
+                // 在完成生成解答后，自动填入解答并继续生成解析
+                setTimeout(() => {
+                  if (finalAnswer.trim()) {
+                    // 自动填入解答
+                    chrome.runtime.sendMessage({
+                      type: "answer",
+                      text: finalAnswer
+                    });
+                    // 设置工作流步骤为已填入解答
+                    setWorkflowStep('answer_filled');
+                    // 延迟后自动开始生成解析
+                    setTimeout(() => {
+                      handleGenerateAnalysis();
+                    }, 500);
+                  }
+                }, 100);
+              }
             } else {
               console.error('Invalid workflow result format');
             }
@@ -689,22 +713,25 @@ export default function Main() {
             // 流式响应完成后，根据site条件执行 removeEmptyLinesFromString
             setAnswer(prev => {
               const finalAnswer = site === 'bc' ? prev : removeEmptyLinesFromString(prev, gradeLevel === "小学");
-              // 在完成生成解答后，自动填入解答并继续生成解析
-              setTimeout(() => {
-                if (finalAnswer.trim()) {
-                  // 自动填入解答
-                  chrome.runtime.sendMessage({
-                    type: "answer",
-                    text: finalAnswer
-                  });
-                  // 设置工作流步骤为已填入解答
-                  setWorkflowStep('answer_filled');
-                  // 延迟后自动开始生成解析
-                  setTimeout(() => {
-                    handleGenerateAnalysis();
-                  }, 500);
-                }
-              }, 100);
+              // 检查是否启用自动工作流
+              if (autoWorkflow) {
+                // 在完成生成解答后，自动填入解答并继续生成解析
+                setTimeout(() => {
+                  if (finalAnswer.trim()) {
+                    // 自动填入解答
+                    chrome.runtime.sendMessage({
+                      type: "answer",
+                      text: finalAnswer
+                    });
+                    // 设置工作流步骤为已填入解答
+                    setWorkflowStep('answer_filled');
+                    // 延迟后自动开始生成解析
+                    setTimeout(() => {
+                      handleGenerateAnalysis();
+                    }, 500);
+                  }
+                }, 100);
+              }
               return finalAnswer;
             });
           }
@@ -781,18 +808,21 @@ export default function Main() {
             if (parsedData && parsedData.topic) {
               const finalAnalysis = parsedData.topic.trim();
               setAnalysis(finalAnalysis);
-              // 在完成生成解析后，自动填入解析
-              setTimeout(() => {
-                if (finalAnalysis.trim()) {
-                  // 自动填入解析
-                  chrome.runtime.sendMessage({
-                    type: "analysis",
-                    text: finalAnalysis
-                  });
-                  // 设置工作流步骤为已填入解析，完成整个流程
-                  setWorkflowStep('analysis_filled');
-                }
-              }, 100);
+              // 检查是否启用自动工作流
+              if (autoWorkflow) {
+                // 在完成生成解析后，自动填入解析
+                setTimeout(() => {
+                  if (finalAnalysis.trim()) {
+                    // 自动填入解析
+                    chrome.runtime.sendMessage({
+                      type: "analysis",
+                      text: finalAnalysis
+                    });
+                    // 设置工作流步骤为已填入解析，完成整个流程
+                    setWorkflowStep('analysis_filled');
+                  }
+                }, 100);
+              }
             } else {
               console.error('Invalid workflow result format');
             }
@@ -864,18 +894,21 @@ export default function Main() {
             // 流式响应完成后，根据site条件执行 removeEmptyLinesFromString
             setAnalysis(prev => {
               const finalAnalysis = site === 'bc' ? prev : removeEmptyLinesFromString(prev, gradeLevel === "小学");
-              // 在完成生成解析后，自动填入解析
-              setTimeout(() => {
-                if (finalAnalysis.trim()) {
-                  // 自动填入解析
-                  chrome.runtime.sendMessage({
-                    type: "analysis",
-                    text: finalAnalysis
-                  });
-                  // 设置工作流步骤为已填入解析，完成整个流程
-                  setWorkflowStep('analysis_filled');
-                }
-              }, 100);
+              // 检查是否启用自动工作流
+              if (autoWorkflow) {
+                // 在完成生成解析后，自动填入解析
+                setTimeout(() => {
+                  if (finalAnalysis.trim()) {
+                    // 自动填入解析
+                    chrome.runtime.sendMessage({
+                      type: "analysis",
+                      text: finalAnalysis
+                    });
+                    // 设置工作流步骤为已填入解析，完成整个流程
+                    setWorkflowStep('analysis_filled');
+                  }
+                }, 100);
+              }
               return finalAnalysis;
             });
           }
