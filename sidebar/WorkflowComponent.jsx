@@ -3,6 +3,7 @@ import { ocr_text, run_llm_stream, topic_type_list, discipline_list } from '../l
 import { removeEmptyLinesFromString } from '../text.js';
 import ImageUploader from './ImageUploader.jsx';
 import CopyButton from './CopyButton.jsx';
+import { CozeService } from '../coze.js';
 
 // 扣子服务器的固定学科和题型映射
 const KOUZI_SUBJECT_TYPES = {
@@ -58,6 +59,8 @@ const WorkflowComponent = ({ host, uname, serverType }) => {
   const [selectOptions, setSelectOptions] = useState([]);
   const [disciplines, setDisciplines] = useState([]);
   const [autoWorkflow, setAutoWorkflow] = useState(true); // 自动工作流开关
+  const [cozeService, setCozeService] = useState(null);
+  const [kouziConfig, setKouziConfig] = useState(null);
 
   const gradeLevels = ['小学', '初中', '高中', '大学'];
 
@@ -145,6 +148,27 @@ const WorkflowComponent = ({ host, uname, serverType }) => {
     fetchDisciplines();
   }, [host, uname, serverType, subject, selectedValue]);
 
+  // Initialize CozeService when serverType is "扣子"
+  useEffect(() => {
+    if (serverType === "扣子") {
+      chrome.storage.sync.get(['kouziAccessKey', 'kouziSolveWorkflowId', 'kouziAppId'], (result) => {
+        if (result.kouziAccessKey && result.kouziSolveWorkflowId && result.kouziAppId) {
+          setCozeService(new CozeService(result.kouziAccessKey));
+          setKouziConfig({
+            workflowId: result.kouziSolveWorkflowId,
+            appId: result.kouziAppId
+          });
+        } else {
+          console.error('Missing required Kouzi configuration');
+        }
+      });
+    } else {
+      // 当切换到非扣子服务器时，清理相关状态
+      setCozeService(null);
+      setKouziConfig(null);
+    }
+  }, [serverType]);
+
   const handleStartSolving = async () => {
     if (!selectedImage) {
       alert('请先选择或粘贴一张图片');
@@ -160,10 +184,74 @@ const WorkflowComponent = ({ host, uname, serverType }) => {
     try {
       // 第一步：文字识别
       console.log('开始文字识别...');
-      const recognizedText = await ocr_text({ 
-        'image_data': selectedImage,
-        'orc_type': ''
-      }, host, uname);
+      let recognizedText;
+      
+      if (serverType === "扣子" && cozeService) {
+        // 扣子服务器OCR处理
+        // Convert base64 to blob
+        const base64Data = selectedImage.split(',')[1];
+        const byteCharacters = atob(base64Data);
+        const byteArrays = [];
+        for (let offset = 0; offset < byteCharacters.length; offset += 1024) {
+          const slice = byteCharacters.slice(offset, offset + 1024);
+          const byteNumbers = new Array(slice.length);
+          for (let i = 0; i < slice.length; i++) {
+            byteNumbers[i] = slice.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          byteArrays.push(byteArray);
+        }
+        const blob = new Blob(byteArrays, { type: 'image/jpeg' });
+        const file = new File([blob], 'image.jpg', { type: 'image/jpeg' });
+
+        // Get OCR workflow ID from storage
+        const ocrResult = await new Promise((resolve) => {
+          chrome.storage.sync.get(['kouziOcrWorkflowId', 'kouziAppId'], resolve);
+        });
+
+        if (ocrResult.kouziOcrWorkflowId && ocrResult.kouziAppId) {
+          // Upload file and execute OCR workflow
+          const uploadResult = await cozeService.uploadFile(file);
+          
+          const workflowResult = await cozeService.executeWorkflow(ocrResult.kouziOcrWorkflowId, {
+            app_id: ocrResult.kouziAppId,
+            parameters: {
+              img: {
+                type: "image",
+                file_id: uploadResult.id
+              },
+              orc_type: '' // 默认模式
+            }
+          });
+
+          if (workflowResult && workflowResult.data) {
+            try {
+              const parsedData = typeof workflowResult.data === 'string' 
+                ? JSON.parse(workflowResult.data) 
+                : workflowResult.data;
+              
+              if (parsedData && parsedData.text) {
+                recognizedText = parsedData.text;
+              } else {
+                throw new Error('OCR识别失败：未获取到识别结果');
+              }
+            } catch (error) {
+              console.error('Error parsing OCR workflow result:', error);
+              throw new Error('OCR识别失败：数据解析错误');
+            }
+          } else {
+            throw new Error('OCR识别失败：未获取到识别结果');
+          }
+        } else {
+          throw new Error('扣子OCR配置不完整，请检查设置');
+        }
+      } else {
+        // 官方服务器OCR处理
+        recognizedText = await ocr_text({ 
+          'image_data': selectedImage,
+          'orc_type': ''
+        }, host, uname);
+      }
 
       if (!recognizedText) {
         throw new Error('文字识别失败');
@@ -176,50 +264,66 @@ const WorkflowComponent = ({ host, uname, serverType }) => {
       console.log('开始生成解答...');
       setAnswer('');
       
-      await new Promise((resolve, reject) => {
-        run_llm_stream(
-          host,
-          uname,
-          'topic_answer',
-          {
-            'topic': recognizedText,
-            'discipline': subject,
-            'image_data': selectedImage,
-            'topic_type': selectedValue,
-            'school_level': gradeLevel,
-            'site': site
-          },
-          // 数据块处理函数
-          (chunk) => {
-            try {
-              if (chunk.trim() === '[DONE]') {
-                return;
-              }
+      if (serverType === "扣子") {
+        // 检查扣子服务器的必要组件是否已初始化
+        if (!cozeService || !kouziConfig) {
+          console.error('扣子服务器配置未完成初始化');
+          setAnswer('扣子服务器配置未完成，请检查设置页面的扣子配置');
+          setIsProcessing(false);
+          return;
+        }
 
-              const data = JSON.parse(chunk);
-              if (data.type === 'content') {
-                setAnswer(prev => prev + (data.text || ''));
-              } else {
-                const text = data.text || data.topic || data.content || '';
-                if (text) {
-                  setAnswer(prev => prev + text);
-                }
-              }
-            } catch (e) {
-              if (chunk.trim() !== '[DONE]') {
-                console.log('Chunk is not JSON format:', chunk);
-              }
+        // 扣子服务器处理逻辑
+        let imageFileId = null;
+        if (selectedImage) {
+          // Convert base64 to blob
+          const base64Data = selectedImage.split(',')[1];
+          const byteCharacters = atob(base64Data);
+          const byteArrays = [];
+          for (let offset = 0; offset < byteCharacters.length; offset += 1024) {
+            const slice = byteCharacters.slice(offset, offset + 1024);
+            const byteNumbers = new Array(slice.length);
+            for (let i = 0; i < slice.length; i++) {
+              byteNumbers[i] = slice.charCodeAt(i);
             }
-          },
-          // 错误处理函数
-          (error) => {
-            console.error('解答生成出错:', error);
-            reject(error);
-          },
-          // 完成处理函数
-          () => {
-            setAnswer(prev => {
-              const finalAnswer = site === 'bc' ? prev : removeEmptyLinesFromString(prev, gradeLevel === "小学");
+            const byteArray = new Uint8Array(byteNumbers);
+            byteArrays.push(byteArray);
+          }
+          const blob = new Blob(byteArrays, { type: 'image/jpeg' });
+          const file = new File([blob], 'image.jpg', { type: 'image/jpeg' });
+
+          // Upload file
+          const uploadResult = await cozeService.uploadFile(file);
+          imageFileId = uploadResult.id;
+        }
+
+        const workflowResult = await cozeService.executeWorkflow(kouziConfig.workflowId, {
+          app_id: kouziConfig.appId,
+          parameters: {
+            type: 'answer',
+            topic: recognizedText,
+            discipline: subject,
+            topic_type: selectedValue,
+            school_level: gradeLevel,
+            site: site,
+            ...(imageFileId && {
+              image: {
+                type: "image",
+                file_id: imageFileId
+              }
+            })
+          }
+        });
+
+        if (workflowResult && workflowResult.data) {
+          try {
+            const parsedData = typeof workflowResult.data === 'string'
+              ? JSON.parse(workflowResult.data)
+              : workflowResult.data;
+
+            if (parsedData && parsedData.topic) {
+              const finalAnswer = parsedData.topic.trim();
+              setAnswer(finalAnswer);
               
               // 检查是否启用自动工作流
               if (autoWorkflow) {
@@ -239,13 +343,86 @@ const WorkflowComponent = ({ host, uname, serverType }) => {
               setTimeout(() => {
                 generateAnalysis(recognizedText, finalAnswer);
               }, 500);
-              
-              return finalAnswer;
-            });
-            resolve();
+            } else {
+              console.error('Invalid workflow result format');
+            }
+          } catch (error) {
+            console.error('Error parsing workflow result:', error);
           }
-        );
-      });
+        }
+      } else {
+        // 官方服务器处理逻辑
+        await new Promise((resolve, reject) => {
+          run_llm_stream(
+            host,
+            uname,
+            'topic_answer',
+            {
+              'topic': recognizedText,
+              'discipline': subject,
+              'image_data': selectedImage,
+              'topic_type': selectedValue,
+              'school_level': gradeLevel,
+              'site': site
+            },
+            // 数据块处理函数
+            (chunk) => {
+              try {
+                if (chunk.trim() === '[DONE]') {
+                  return;
+                }
+
+                const data = JSON.parse(chunk);
+                if (data.type === 'content') {
+                  setAnswer(prev => prev + (data.text || ''));
+                } else {
+                  const text = data.text || data.topic || data.content || '';
+                  if (text) {
+                    setAnswer(prev => prev + text);
+                  }
+                }
+              } catch (e) {
+                if (chunk.trim() !== '[DONE]') {
+                  console.log('Chunk is not JSON format:', chunk);
+                }
+              }
+            },
+            // 错误处理函数
+            (error) => {
+              console.error('解答生成出错:', error);
+              reject(error);
+            },
+            // 完成处理函数
+            () => {
+              setAnswer(prev => {
+                const finalAnswer = site === 'bc' ? prev : removeEmptyLinesFromString(prev, gradeLevel === "小学");
+                
+                // 检查是否启用自动工作流
+                if (autoWorkflow) {
+                  // 在完成生成解答后，自动填入解答并继续生成解析
+                  setTimeout(() => {
+                    if (finalAnswer.trim()) {
+                      // 自动填入解答
+                      chrome.runtime.sendMessage({
+                        type: "answer",
+                        text: finalAnswer
+                      });
+                    }
+                  }, 100);
+                }
+                
+                // 解答完成后，开始生成解析
+                setTimeout(() => {
+                  generateAnalysis(recognizedText, finalAnswer);
+                }, 500);
+                
+                return finalAnswer;
+              });
+              resolve();
+            }
+          );
+        });
+      }
 
     } catch (error) {
       console.error('工作流执行出错:', error);
@@ -260,52 +437,68 @@ const WorkflowComponent = ({ host, uname, serverType }) => {
       console.log('开始生成解析...');
       setAnalysis('');
 
-      await new Promise((resolve, reject) => {
-        run_llm_stream(
-          host,
-          uname,
-          'topic_analysis',
-          {
-            'topic': question,
-            'answer': answerText,
-            'analysis': '',
-            'discipline': subject,
-            'image_data': selectedImage,
-            'topic_type': selectedValue,
-            'school_level': gradeLevel,
-            'site': site
-          },
-          // 数据块处理函数
-          (chunk) => {
-            try {
-              if (chunk.trim() === '[DONE]') {
-                return;
-              }
+      if (serverType === "扣子") {
+        // 检查扣子服务器的必要组件是否已初始化
+        if (!cozeService) {
+          console.error('扣子服务器配置未完成初始化');
+          setAnalysis('扣子服务器配置未完成，请检查设置页面的扣子配置');
+          setIsProcessing(false);
+          return;
+        }
 
-              const data = JSON.parse(chunk);
-              if (data.type === 'content') {
-                setAnalysis(prev => prev + (data.text || ''));
-              } else {
-                const text = data.text || data.topic || data.content || '';
-                if (text) {
-                  setAnalysis(prev => prev + text);
-                }
-              }
-            } catch (e) {
-              if (chunk.trim() !== '[DONE]') {
-                console.log('Chunk is not JSON format:', chunk);
-              }
+        // 扣子服务器处理逻辑
+        let imageFileId = null;
+        if (selectedImage) {
+          // Convert base64 to blob
+          const base64Data = selectedImage.split(',')[1];
+          const byteCharacters = atob(base64Data);
+          const byteArrays = [];
+          for (let offset = 0; offset < byteCharacters.length; offset += 1024) {
+            const slice = byteCharacters.slice(offset, offset + 1024);
+            const byteNumbers = new Array(slice.length);
+            for (let i = 0; i < slice.length; i++) {
+              byteNumbers[i] = slice.charCodeAt(i);
             }
-          },
-          // 错误处理函数
-          (error) => {
-            console.error('解析生成出错:', error);
-            reject(error);
-          },
-          // 完成处理函数
-          () => {
-            setAnalysis(prev => {
-              const finalAnalysis = site === 'bc' ? prev : removeEmptyLinesFromString(prev, gradeLevel === "小学");
+            const byteArray = new Uint8Array(byteNumbers);
+            byteArrays.push(byteArray);
+          }
+          const blob = new Blob(byteArrays, { type: 'image/jpeg' });
+          const file = new File([blob], 'image.jpg', { type: 'image/jpeg' });
+
+          // Upload file
+          const uploadResult = await cozeService.uploadFile(file);
+          imageFileId = uploadResult.id;
+        }
+
+        const workflowResult = await cozeService.executeWorkflow(kouziConfig.workflowId, {
+          app_id: kouziConfig.appId,
+          parameters: {
+            type: 'analysis',
+            topic: question,
+            answer: answerText,
+            analysis: '',
+            discipline: subject,
+            topic_type: selectedValue,
+            school_level: gradeLevel,
+            site: site,
+            ...(imageFileId && {
+              image: {
+                type: "image",
+                file_id: imageFileId
+              }
+            })
+          }
+        });
+
+        if (workflowResult && workflowResult.data) {
+          try {
+            const parsedData = typeof workflowResult.data === 'string'
+              ? JSON.parse(workflowResult.data)
+              : workflowResult.data;
+
+            if (parsedData && parsedData.topic) {
+              const finalAnalysis = parsedData.topic.trim();
+              setAnalysis(finalAnalysis);
               setCurrentStep('completed');
               setIsProcessing(false);
               
@@ -322,13 +515,85 @@ const WorkflowComponent = ({ host, uname, serverType }) => {
                   }
                 }, 100);
               }
-              
-              return finalAnalysis;
-            });
-            resolve();
+            } else {
+              console.error('Invalid workflow result format');
+            }
+          } catch (error) {
+            console.error('Error parsing workflow result:', error);
           }
-        );
-      });
+        }
+      } else {
+        // 官方服务器处理逻辑
+        await new Promise((resolve, reject) => {
+          run_llm_stream(
+            host,
+            uname,
+            'topic_analysis',
+            {
+              'topic': question,
+              'answer': answerText,
+              'analysis': '',
+              'discipline': subject,
+              'image_data': selectedImage,
+              'topic_type': selectedValue,
+              'school_level': gradeLevel,
+              'site': site
+            },
+            // 数据块处理函数
+            (chunk) => {
+              try {
+                if (chunk.trim() === '[DONE]') {
+                  return;
+                }
+
+                const data = JSON.parse(chunk);
+                if (data.type === 'content') {
+                  setAnalysis(prev => prev + (data.text || ''));
+                } else {
+                  const text = data.text || data.topic || data.content || '';
+                  if (text) {
+                    setAnalysis(prev => prev + text);
+                  }
+                }
+              } catch (e) {
+                if (chunk.trim() !== '[DONE]') {
+                  console.log('Chunk is not JSON format:', chunk);
+                }
+              }
+            },
+            // 错误处理函数
+            (error) => {
+              console.error('解析生成出错:', error);
+              reject(error);
+            },
+            // 完成处理函数
+            () => {
+              setAnalysis(prev => {
+                const finalAnalysis = site === 'bc' ? prev : removeEmptyLinesFromString(prev, gradeLevel === "小学");
+                setCurrentStep('completed');
+                setIsProcessing(false);
+                
+                // 检查是否启用自动工作流
+                if (autoWorkflow) {
+                  // 在完成生成解析后，自动填入解析
+                  setTimeout(() => {
+                    if (finalAnalysis.trim()) {
+                      // 自动填入解析
+                      chrome.runtime.sendMessage({
+                        type: "analysis",
+                        text: finalAnalysis
+                      });
+                    }
+                  }, 100);
+                }
+                
+                return finalAnalysis;
+              });
+              resolve();
+            }
+          );
+        });
+      }
 
     } catch (error) {
       console.error('解析生成出错:', error);
