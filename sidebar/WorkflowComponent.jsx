@@ -57,6 +57,7 @@ const WorkflowComponent = ({ host, uname, serverType }) => {
   const [site, setSite] = useState('bd');
   const [selectOptions, setSelectOptions] = useState([]);
   const [disciplines, setDisciplines] = useState([]);
+  const [autoWorkflow, setAutoWorkflow] = useState(true); // 自动工作流开关
 
   const gradeLevels = ['小学', '初中', '高中', '大学'];
 
@@ -67,6 +68,26 @@ const WorkflowComponent = ({ host, uname, serverType }) => {
         setSite(result.site);
       }
     });
+  }, []);
+
+  // Load autoWorkflow from storage
+  useEffect(() => {
+    chrome.storage.sync.get(['autoWorkflow'], (result) => {
+      setAutoWorkflow(result.autoWorkflow ?? true);
+    });
+
+    // 监听存储变更
+    const handleStorageChange = (changes, namespace) => {
+      if (namespace === 'sync' && 'autoWorkflow' in changes) {
+        setAutoWorkflow(changes.autoWorkflow.newValue ?? true);
+      }
+    };
+
+    chrome.storage.onChanged.addListener(handleStorageChange);
+
+    return () => {
+      chrome.storage.onChanged.removeListener(handleStorageChange);
+    };
   }, []);
 
   // 获取学科和题型数据
@@ -200,6 +221,20 @@ const WorkflowComponent = ({ host, uname, serverType }) => {
             setAnswer(prev => {
               const finalAnswer = site === 'bc' ? prev : removeEmptyLinesFromString(prev, gradeLevel === "小学");
               
+              // 检查是否启用自动工作流
+              if (autoWorkflow) {
+                // 在完成生成解答后，自动填入解答并继续生成解析
+                setTimeout(() => {
+                  if (finalAnswer.trim()) {
+                    // 自动填入解答
+                    chrome.runtime.sendMessage({
+                      type: "answer",
+                      text: finalAnswer
+                    });
+                  }
+                }, 100);
+              }
+              
               // 解答完成后，开始生成解析
               setTimeout(() => {
                 generateAnalysis(recognizedText, finalAnswer);
@@ -273,6 +308,21 @@ const WorkflowComponent = ({ host, uname, serverType }) => {
               const finalAnalysis = site === 'bc' ? prev : removeEmptyLinesFromString(prev, gradeLevel === "小学");
               setCurrentStep('completed');
               setIsProcessing(false);
+              
+              // 检查是否启用自动工作流
+              if (autoWorkflow) {
+                // 在完成生成解析后，自动填入解析
+                setTimeout(() => {
+                  if (finalAnalysis.trim()) {
+                    // 自动填入解析
+                    chrome.runtime.sendMessage({
+                      type: "analysis",
+                      text: finalAnalysis
+                    });
+                  }
+                }, 100);
+              }
+              
               return finalAnalysis;
             });
             resolve();
@@ -522,7 +572,7 @@ const WorkflowComponent = ({ host, uname, serverType }) => {
             {currentStep === 'completed' && (
               <button
                 onClick={handleReset}
-                className="btn btn-outline btn-sm w-full"
+                className="btn btn-outline btn-sm w-full rounded-xl"
               >
                 重新开始
               </button>
