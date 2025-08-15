@@ -1057,18 +1057,96 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
       return false;
     }
 
+    // 处理HTML内容中的图片，上传并替换URL
+    async function processImagesInHtml(htmlContent) {
+      try {
+        // 使用正则表达式匹配所有img标签
+        const imgRegex = /<img[^>]+src\s*=\s*["']([^"']+)["'][^>]*>/g;
+        let processedHtml = htmlContent;
+        const matches = [];
+        let match;
+
+        // 收集所有图片URL
+        while ((match = imgRegex.exec(htmlContent)) !== null) {
+          matches.push({
+            fullMatch: match[0],
+            src: match[1]
+          });
+        }
+
+        console.log(`找到 ${matches.length} 个图片需要处理`);
+
+        // 如果有图片需要处理，显示通知
+        let notificationId = null;
+        if (matches.length > 0) {
+          notificationId = showNotification(`正在处理 ${matches.length} 个图片...`, 'info', true);
+        }
+
+        // 处理每个图片
+        for (const imageMatch of matches) {
+          try {
+            console.log(`开始处理图片: ${imageMatch.src}`);
+            
+            // 获取图片并转换为blob
+            const response = await fetch(imageMatch.src);
+            if (!response.ok) {
+              console.warn(`无法获取图片: ${imageMatch.src}`);
+              continue;
+            }
+            
+            const blob = await response.blob();
+            
+            // 上传图片
+            const uploadResponse = await img_upload(blob);
+            
+            if (uploadResponse && uploadResponse.data && uploadResponse.data.cdnUrl) {
+              // 创建纯净的img标签，只保留src属性
+              const cleanImgTag = `<img src="${uploadResponse.data.cdnUrl}">`;
+              
+              // 替换HTML中的整个img标签
+              processedHtml = processedHtml.replace(imageMatch.fullMatch, cleanImgTag);
+              console.log(`图片上传成功，新URL: ${uploadResponse.data.cdnUrl}`);
+            } else {
+              console.warn(`图片上传失败: ${imageMatch.src}`);
+            }
+            
+          } catch (error) {
+            console.error(`处理图片失败: ${imageMatch.src}`, error);
+            // 继续处理其他图片，不中断整个流程
+          }
+        }
+
+        // 隐藏处理通知并显示完成通知
+        if (notificationId) {
+          hideNotification(notificationId);
+          const successCount = matches.length;
+          showNotification(`图片处理完成，已处理 ${successCount} 个图片`, 'success');
+        }
+
+        return processedHtml;
+      } catch (error) {
+        console.error('处理HTML中的图片时出错:', error);
+        // 出错时返回原始内容
+        return htmlContent;
+      }
+    }
+
     // 专门用于题干HTML填入的函数
-    function fillQuestionHtmlContent(containerSelector) {
+    async function fillQuestionHtmlContent(containerSelector) {
       const container = u(containerSelector);
       const textContainer = container.find('.w-e-text-container');
       const editorContainer = textContainer.find('.w-e-text');
 
       if (editorContainer.length) {
-        // 直接使用HTML内容，不进行任何转义处理，但包装在<p>标签中
+        // 处理HTML内容中的图片
         const rawHtmlContent = request.text;
-        const htmlContent = `<p>${rawHtmlContent}</p>`;
         
         console.log('题干HTML填入原始内容:', rawHtmlContent);
+        
+        // 处理图片URL替换
+        const processedHtmlContent = await processImagesInHtml(rawHtmlContent);
+        const htmlContent = `<p>${processedHtmlContent}</p>`;
+        
         console.log('题干HTML填入处理后内容:', htmlContent);
         
         // 检查是否为追加模式，默认为替换模式
@@ -1143,7 +1221,7 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
     } else if (request.type === "topic") {
       fillEditorContent('[id^="stem-edit-"]');
     } else if (request.type === "question_html") {
-      fillQuestionHtmlContent('[id^="stem-edit-"]');
+      await fillQuestionHtmlContent('[id^="stem-edit-"]');
     } else if (request.type === "documentassistant") {
       fillEditorContent('[id="documentassistant"]');
     }

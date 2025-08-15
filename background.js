@@ -503,6 +503,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       try {
         console.log('[Background] 接收到图片URL:', request.imageUrl);
         
+        // 获取搜索设置
+        const searchSettings = await new Promise((resolve) => {
+          chrome.storage.sync.get(['searchServerUrl', 'searchCookie', 'searchSessionId'], (result) => {
+            resolve(result);
+          });
+        });
+        
+        // 使用配置的服务器地址，如果没有配置则使用默认地址
+        const serverUrl = searchSettings.searchServerUrl || 'http://127.0.0.1:8088/askstream';
+        
         // 创建FormData
         const formData = new FormData();
         const imageUrl = request.imageUrl;
@@ -511,12 +521,28 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         // 直接传递URL给后端处理，避免CORS问题
         formData.append('imageUrl', imageUrl);
         
-        // 发送到本地服务
-        console.log('[Background] 向本地服务发送请求...');
-        const serviceResponse = await fetch('http://127.0.0.1:8088/askstream', {
+        // 构建请求选项
+        const requestOptions = {
           method: 'POST',
           body: formData
-        });
+        };
+        
+        // 如果有配置Cookie，添加到请求头
+        if (searchSettings.searchCookie) {
+          requestOptions.headers = {
+            'Cookie': searchSettings.searchCookie
+          };
+        }
+        
+        // 如果有会话ID，添加到FormData
+        if (searchSettings.searchSessionId) {
+          formData.append('sessionId', searchSettings.searchSessionId);
+        }
+        
+        // 发送到配置的服务器
+        console.log('[Background] 向服务器发送请求:', serverUrl);
+        console.log('[Background] 请求配置:', requestOptions);
+        const serviceResponse = await fetch(serverUrl, requestOptions);
         
         if (!serviceResponse.ok) {
           throw new Error(`服务请求失败: ${serviceResponse.status} ${serviceResponse.statusText}`);

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { user_info, reset_fingerprint } from "../lib";
 import CharacterInsertionSettings from "./CharacterInsertionSettings";
 import OtherFunctionalSettings from "./OtherFunctionalSettings";
+import SearchSettings from "./SearchSettings";
 
 const ApiSettingsForm = ({
   host,
@@ -363,6 +364,7 @@ const ApiSettingsForm = ({
 
       <CharacterInsertionSettings />
       <OtherFunctionalSettings />
+      <SearchSettings />
     </div>
   );
 };
