@@ -1057,6 +1057,83 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
       return false;
     }
 
+    // 专门用于题干HTML填入的函数
+    function fillQuestionHtmlContent(containerSelector) {
+      const container = u(containerSelector);
+      const textContainer = container.find('.w-e-text-container');
+      const editorContainer = textContainer.find('.w-e-text');
+
+      if (editorContainer.length) {
+        // 直接使用HTML内容，不进行任何转义处理，但包装在<p>标签中
+        const rawHtmlContent = request.text;
+        const htmlContent = `<p>${rawHtmlContent}</p>`;
+        
+        console.log('题干HTML填入原始内容:', rawHtmlContent);
+        console.log('题干HTML填入处理后内容:', htmlContent);
+        
+        // 检查是否为追加模式，默认为替换模式
+        const isAppend = request.append === true;
+
+        if (isAppend) {
+          // 追加模式：保留原有内容，添加新内容
+          const currentContent = editorContainer.html();
+          editorContainer.html(currentContent + htmlContent);
+        } else {
+          // 替换模式：直接替换全部内容
+          editorContainer.html(htmlContent);
+        }
+
+        sendFixEvent(editorContainer.first());
+
+        // 渲染数学公式
+        (async () => {
+          try {
+            // 先检查是否启用了自动渲染
+            const result = await new Promise(resolve => {
+              chrome.storage.sync.get(['autoRenderFormula'], resolve);
+            });
+
+            // 如果未启用自动渲染，直接返回
+            if (!result.autoRenderFormula) {
+              console.log('自动渲染已禁用，跳过数学公式渲染');
+              return;
+            }
+
+            // Show loading notification
+            const notificationId = showNotification('正在渲染数学公式...', 'info', true);
+
+            // Render math formulas
+            const renderedHtml = await replaceLatexWithImagesInHtml(editorContainer.html());
+            editorContainer.html(renderedHtml);
+
+            // Trigger editor events to update - get the native DOM element
+            sendFixEvent(editorContainer.first());
+
+            // Hide loading notification and show success
+            hideNotification(notificationId);
+            showNotification('数学公式渲染完成', 'success');
+          } catch (error) {
+            showNotification('数学公式渲染失败：' + error.message, 'error');
+            console.error('Math rendering error:', error);
+          }
+        })();
+
+        // 触发输入框的聚焦和失焦事件
+        const editorElement = editorContainer.first();
+        if (editorElement) {
+          editorElement.focus();
+          setTimeout(() => {
+            editorElement.blur();
+          }, 100);
+        }
+
+        console.log(`题干HTML内容填入完成: ${containerSelector}`);
+        return true;
+      }
+
+      return false;
+    }
+
     if (request.type === "answer") {
       fillEditorContent('[id^="answer-edit-"]');
       // Also fill reference if it exists
@@ -1065,6 +1142,8 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
       fillEditorContent('[id^="analyse-edit-"]');
     } else if (request.type === "topic") {
       fillEditorContent('[id^="stem-edit-"]');
+    } else if (request.type === "question_html") {
+      fillQuestionHtmlContent('[id^="stem-edit-"]');
     } else if (request.type === "documentassistant") {
       fillEditorContent('[id="documentassistant"]');
     }

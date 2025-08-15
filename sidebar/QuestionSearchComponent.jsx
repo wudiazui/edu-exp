@@ -1,4 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
+import CopyButton from './CopyButton.jsx';
+import katex from 'katex';
+import 'katex/dist/katex.min.css';
 
 const QuestionSearchComponent = ({ host, uname, serverType }) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -6,11 +9,116 @@ const QuestionSearchComponent = ({ host, uname, serverType }) => {
   const [thinkingChain, setThinkingChain] = useState('');
   const [isThinkingExpanded, setIsThinkingExpanded] = useState(true);
   const [connectionStatus, setConnectionStatus] = useState('connected');
+  const [questionContent, setQuestionContent] = useState('');
+  const [answerContent, setAnswerContent] = useState('');
+  const [searchResponse, setSearchResponse] = useState(null);
+  const [renderedQuestionHtml, setRenderedQuestionHtml] = useState('');
+  const [renderedAnswerHtml, setRenderedAnswerHtml] = useState('');
   const portRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const reconnectAttemptsRef = useRef(0);
   const MAX_RECONNECT_ATTEMPTS = 5;
   const RECONNECT_DELAY = 2000; // 2秒
+  
+  // 辅助函数：清理HTML内容，保留纯文本
+  const cleanHtmlContent = (htmlContent) => {
+    if (!htmlContent) return '';
+    // 创建一个临时div元素来解析HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = htmlContent;
+    return tempDiv.textContent || tempDiv.innerText || '';
+  };
+
+  // 使用 KaTeX 渲染数学公式
+  const renderMathWithKaTeX = (content) => {
+    if (!content) return '';
+    
+    let result = content;
+    
+    try {
+      // 处理行内数学公式 $...$
+      result = result.replace(/\$([^$\n]+?)\$/g, (match, formula) => {
+        try {
+          const html = katex.renderToString(formula.trim(), {
+            throwOnError: false,
+            displayMode: false
+          });
+          return html;
+        } catch (error) {
+          console.error('行内公式渲染错误:', error);
+          return `<span style="color:red;">$${formula}$</span>`;
+        }
+      });
+      
+      // 处理块级数学公式 $$...$$
+      result = result.replace(/\$\$([^$]+?)\$\$/g, (match, formula) => {
+        try {
+          const html = katex.renderToString(formula.trim(), {
+            throwOnError: false,
+            displayMode: true
+          });
+          return `<div style="text-align: center; margin: 10px 0;">${html}</div>`;
+        } catch (error) {
+          console.error('块级公式渲染错误:', error);
+          return `<div style="color:red; text-align: center;">$$${formula}$$</div>`;
+        }
+      });
+      
+      // 处理 \(...\) 格式的行内公式
+      result = result.replace(/\\\(([^)]+?)\\\)/g, (match, formula) => {
+        try {
+          const html = katex.renderToString(formula.trim(), {
+            throwOnError: false,
+            displayMode: false
+          });
+          return html;
+        } catch (error) {
+          console.error('行内公式渲染错误:', error);
+          return `<span style="color:red;">\\(${formula}\\)</span>`;
+        }
+      });
+      
+      // 处理 \[...\] 格式的块级公式
+      result = result.replace(/\\\[([^\\]+?)\\\]/g, (match, formula) => {
+        try {
+          const html = katex.renderToString(formula.trim(), {
+            throwOnError: false,
+            displayMode: true
+          });
+          return `<div style="text-align: center; margin: 10px 0;">${html}</div>`;
+        } catch (error) {
+          console.error('块级公式渲染错误:', error);
+          return `<div style="color:red; text-align: center;">\\[${formula}\\]</div>`;
+        }
+      });
+      
+    } catch (error) {
+      console.error('数学公式渲染总体错误:', error);
+      return content; // 返回原始内容
+    }
+    
+    return result;
+  };
+
+  // 渲染问题内容
+  useEffect(() => {
+    if (questionContent) {
+      const rendered = renderMathWithKaTeX(questionContent);
+      setRenderedQuestionHtml(rendered);
+    } else {
+      setRenderedQuestionHtml('');
+    }
+  }, [questionContent]);
+
+  // 渲染答案内容
+  useEffect(() => {
+    if (answerContent) {
+      const rendered = renderMathWithKaTeX(answerContent);
+      setRenderedAnswerHtml(rendered);
+    } else {
+      setRenderedAnswerHtml('');
+    }
+  }, [answerContent]);
 
   // 设置与background.js的长连接
   useEffect(() => {
@@ -35,6 +143,31 @@ const QuestionSearchComponent = ({ host, uname, serverType }) => {
           } else if (message.action === "question_search_result" && message.data) {
             console.log('question search result:', message.data);
             setSearchResults(message.data);
+            
+            // 解析搜索响应数据
+            try {
+              const responseData = typeof message.data === 'string' ? JSON.parse(message.data) : message.data;
+              setSearchResponse(responseData);
+              
+              // 提取问题内容
+              if (responseData.question && responseData.question.content) {
+                setQuestionContent(responseData.question.content);
+              } else {
+                console.warn('搜索响应中未找到问题内容');
+              }
+              
+              // 提取答案内容
+              if (responseData.answer && Array.isArray(responseData.answer) && responseData.answer.length > 0 && responseData.answer[0].content) {
+                setAnswerContent(responseData.answer[0].content);
+              } else {
+                console.warn('搜索响应中未找到答案内容');
+              }
+            } catch (error) {
+              console.error('解析搜索响应数据失败:', error);
+              // 如果JSON解析失败，显示原始数据
+              setSearchResults(message.data);
+            }
+            
             setIsLoading(false);
           } else if (message.action === "question_search_loading_state") {
             // 处理加载状态更新
@@ -129,6 +262,11 @@ const QuestionSearchComponent = ({ host, uname, serverType }) => {
     // 清空之前的结果
     setSearchResults('');
     setThinkingChain(''); // 清空思维链
+    setQuestionContent('');
+    setAnswerContent('');
+    setSearchResponse(null);
+    setRenderedQuestionHtml('');
+    setRenderedAnswerHtml('');
 
     if (!portRef.current) {
       console.error('未建立与background的连接');
@@ -139,6 +277,11 @@ const QuestionSearchComponent = ({ host, uname, serverType }) => {
     // 清空之前的结果，但不设置加载状态（会由background.js通过消息通知）
     setSearchResults('');
     setThinkingChain(''); // 清空思维链
+    setQuestionContent('');
+    setAnswerContent('');
+    setSearchResponse(null);
+    setRenderedQuestionHtml('');
+    setRenderedAnswerHtml('');
 
     try {
       // 通过长连接发送消息
@@ -173,7 +316,7 @@ const QuestionSearchComponent = ({ host, uname, serverType }) => {
 
   return (
     <div className="container mx-auto px-1 mt-2">
-      <div className="px-2 pt-2 pb-3 mb-4">
+      <div className="">
         <div className="mb-2">
           <button
             className={`btn btn-sm w-full btn-primary ${isLoading ? 'opacity-90' : ''} relative`}
@@ -230,7 +373,49 @@ const QuestionSearchComponent = ({ host, uname, serverType }) => {
           </div>
         )}
 
-        {searchResults && (
+        {/* 问题内容显示区域 */}
+        {questionContent && (
+          <div className="mb-3 p-4 bg-blue-50 rounded-lg shadow-sm border border-blue-200">
+            <div className="flex justify-between items-center pb-2 border-b border-blue-200">
+              <h3 className="text-md font-medium text-blue-800">题目</h3>
+              <div className="flex gap-1 items-center">
+                <button
+                  onClick={() => {
+                    chrome.runtime.sendMessage({
+                      type: "question_html",
+                      text: questionContent
+                    });
+                  }}
+                  className="btn btn-xs btn-outline flex items-center gap-1"
+                >
+                  填入
+                </button>
+                <CopyButton text={questionContent} />
+              </div>
+            </div>
+            <div 
+              className="text-sm leading-relaxed mt-2 text-gray-700 overflow-auto prose prose-sm max-w-none"
+              dangerouslySetInnerHTML={{ __html: renderedQuestionHtml || questionContent }}
+            />
+          </div>
+        )}
+
+        {/* 答案内容显示区域 */}
+        {answerContent && (
+          <div className="mb-3 p-4 bg-green-50 rounded-lg shadow-sm border border-green-200">
+            <div className="flex justify-between items-center pb-2 border-b border-green-200">
+              <h3 className="text-md font-medium text-green-800">解答</h3>
+              <CopyButton text={answerContent} />
+            </div>
+            <div 
+              className="text-sm leading-relaxed mt-2 text-gray-700 overflow-auto prose prose-sm max-w-none"
+              dangerouslySetInnerHTML={{ __html: renderedAnswerHtml || answerContent }}
+            />
+          </div>
+        )}
+
+        {/* 原始搜索结果（可选显示，用于调试） */}
+        {searchResults && !questionContent && !answerContent && (
           <div className="mb-3 p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-200">
             <h3 className="text-md font-medium mb-3 pb-2 border-b border-gray-200 text-purple-800">搜索结果</h3>
             <div className="whitespace-pre-wrap text-sm leading-relaxed mt-2 text-gray-700 overflow-auto">
@@ -239,9 +424,6 @@ const QuestionSearchComponent = ({ host, uname, serverType }) => {
           </div>
         )}
 
-        <div className="text-sm text-gray-500 mt-2">
-          <p>提示: 题干搜索功能会获取页面指定图片并发送到本地服务进行处理。</p>
-        </div>
       </div>
     </div>
   );

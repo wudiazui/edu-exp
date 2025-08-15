@@ -753,7 +753,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   // Handle fill answer/analysis messages
-  if (request.type === "answer" || request.type === "analysis" || request.type === "topic" || request.type === "documentassistant") {
+  if (request.type === "answer" || request.type === "analysis" || request.type === "topic" || request.type === "question_html" || request.type === "documentassistant") {
     // Forward the message to the active tab
     chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
       if (tabs[0]) {
