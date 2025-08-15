@@ -1,4 +1,4 @@
-import {getAuditTaskLabelformat_latex, format_latex} from "./lib.js";
+import {getAuditTaskLabel, format_latex} from "./lib.js";
 import { tex2svg } from "./tex2svg.js";
 import { renderMarkdownWithMath } from "./markdown-renderer.js";
 // 使用动态导入，而不是静态导入
@@ -252,6 +252,9 @@ chrome.commands.onCommand.addListener((command) => {
 // 存储当前激活的审核端口连接
 let activeAuditPort = null;
 
+// 存储当前激活的题干搜索端口连接
+let activeQuestionSearchPort = null;
+
 // 添加连接端口监听器
 chrome.runtime.onConnect.addListener((port) => {
   if (port.name === 'audit-task-label') {
@@ -334,6 +337,68 @@ chrome.runtime.onConnect.addListener((port) => {
       // 清除引用
       if (activeAuditPort === port) {
         activeAuditPort = null;
+      }
+    });
+  }
+  
+  // 处理题干搜索长连接
+  if (port.name === 'question-search-channel') {
+    console.log('已建立题干搜索长连接');
+    // 保存当前活动的题干搜索端口
+    activeQuestionSearchPort = port;
+    
+    // 监听从侧边栏发来的消息
+    port.onMessage.addListener((request) => {
+      // 处理心跳请求
+      if (request.action === "heartbeat") {
+        // 响应心跳，确认连接仍然活跃
+        port.postMessage({
+          action: "heartbeat_response",
+          timestamp: Date.now()
+        });
+        return;
+      }
+      
+      // 处理题干搜索开始请求
+      if (request.action === "start_question_search") {
+        // 向侧边栏发送加载开始状态
+        port.postMessage({
+          action: "question_search_loading_state",
+          isLoading: true
+        });
+        
+        // 获取当前活动标签页
+        chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+          if (tabs && tabs[0]) {
+            // 转发消息到内容脚本，明确指定主框架
+            chrome.tabs.sendMessage(tabs[0].id, {
+              action: "start_question_search"
+            }, { frameId: 0 }, response => {
+              // 若有直接响应，立即转发回侧边栏
+              if (response) {
+                port.postMessage({
+                  action: "question_search_result",
+                  data: response.data
+                });
+              }
+            });
+          } else {
+            // 如果没有找到活动标签页，返回错误
+            port.postMessage({
+              action: "question_search_result",
+              data: "未找到活动标签页"
+            });
+          }
+        });
+      }
+    });
+    
+    // 监听连接断开
+    port.onDisconnect.addListener(() => {
+      console.log('题干搜索长连接已断开');
+      // 清除引用
+      if (activeQuestionSearchPort === port) {
+        activeQuestionSearchPort = null;
       }
     });
   }
@@ -430,6 +495,164 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       });
     }
     return true; // Indicates async response
+  }
+
+  // 处理从content script接收到的图片URL
+  if (request.action === "question_search_image_url") {
+    (async () => {
+      try {
+        console.log('[Background] 接收到图片URL:', request.imageUrl);
+        
+        // 创建FormData
+        const formData = new FormData();
+        const imageUrl = request.imageUrl;
+        
+        console.log('[Background] 直接传递图片URL给后端');
+        // 直接传递URL给后端处理，避免CORS问题
+        formData.append('imageUrl', imageUrl);
+        
+        // 发送到本地服务
+        console.log('[Background] 向本地服务发送请求...');
+        const serviceResponse = await fetch('http://127.0.0.1:8088/askstream', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (!serviceResponse.ok) {
+          throw new Error(`服务请求失败: ${serviceResponse.status} ${serviceResponse.statusText}`);
+        }
+        
+        const result = await serviceResponse.json();
+        console.log('[Background] 本地服务响应:', result);
+        
+        // 构建响应数据
+        let responseData = '';
+        if (result && result.k12Item) {
+          // 如果有k12Item数据，格式化输出
+          responseData = JSON.stringify(result.k12Item, null, 2);
+        } else if (result && result.error) {
+          // 如果有错误信息
+          responseData = `搜索失败: ${result.error}`;
+        } else {
+          // 其他情况，显示原始结果
+          responseData = JSON.stringify(result, null, 2);
+        }
+        
+        // 发送结果到sidebar
+        if (activeQuestionSearchPort) {
+          activeQuestionSearchPort.postMessage({
+            action: "question_search_result",
+            data: responseData
+          });
+        }
+        
+      } catch (error) {
+        console.error('[Background] 题干搜索处理失败:', error);
+        
+        // 发送错误到sidebar
+        if (activeQuestionSearchPort) {
+          activeQuestionSearchPort.postMessage({
+            action: "question_search_result",
+            data: `搜索过程中出错: ${error.message}`,
+            error: error.message
+          });
+        }
+      }
+    })();
+    return true;
+  }
+
+  // 处理发送图片到本地服务的请求
+  if (request.action === "send_image_to_service") {
+    (async () => {
+      try {
+        console.log('Background处理图片到服务请求，图片数据:', request.imageData);
+        
+        // 创建FormData
+        const formData = new FormData();
+        
+        const imageData = request.imageData;
+        
+        // 检查是否是base64数据
+        if (imageData.startsWith('data:')) {
+          console.log('处理base64图片数据');
+          // 将base64转换为blob
+          const response = await fetch(imageData);
+          const blob = await response.blob();
+          formData.append('image', blob, 'image.png');
+        } else if (imageData.startsWith('http://') || imageData.startsWith('https://')) {
+          console.log('处理图片URL，直接传递给后端');
+          // 直接传递URL给后端处理，避免CORS问题
+          formData.append('imageUrl', imageData);
+        } else {
+          throw new Error('不支持的图片数据格式');
+        }
+        
+        // 发送到本地服务
+        console.log('向本地服务发送请求...');
+        const serviceResponse = await fetch('http://127.0.0.1:8088/askstream', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (!serviceResponse.ok) {
+          throw new Error(`服务请求失败: ${serviceResponse.status} ${serviceResponse.statusText}`);
+        }
+        
+        const result = await serviceResponse.json();
+        console.log('本地服务响应:', result);
+        
+        sendResponse({
+          success: true,
+          result: result
+        });
+      } catch (error) {
+        console.error('发送图片到本地服务失败:', error);
+        sendResponse({
+          success: false,
+          error: error.message
+        });
+      }
+    })();
+    return true; // 保持消息通道开放以等待异步响应
+  }
+
+  // 处理跨域图片获取请求
+  if (request.action === "fetch_cross_origin_image") {
+    (async () => {
+      try {
+        // 使用background script的权限获取跨域图片
+        const response = await fetch(request.url);
+        if (!response.ok) {
+          throw new Error(`图片获取失败: ${response.status} ${response.statusText}`);
+        }
+        
+        const blob = await response.blob();
+        
+        // 将blob转换为base64
+        const reader = new FileReader();
+        reader.onload = () => {
+          sendResponse({
+            success: true,
+            dataUrl: reader.result
+          });
+        };
+        reader.onerror = () => {
+          sendResponse({
+            success: false,
+            error: '图片转换失败'
+          });
+        };
+        reader.readAsDataURL(blob);
+      } catch (error) {
+        console.error('跨域图片获取失败:', error);
+        sendResponse({
+          success: false,
+          error: error.message
+        });
+      }
+    })();
+    return true; // 保持消息通道开放以等待异步响应
   }
 
   // 处理format_latex消息
@@ -596,6 +819,26 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         action: "audit_content_extract",
         html: request.html,
         rawData: request.rawData,
+        error: request.error
+      });
+    }
+    return true;
+  }
+
+  // 从内容脚本接收题干搜索结果并转发到扩展页面
+  if (request.action === "question_search_result") {
+    // 如果有活动的题干搜索端口，通过端口发送
+    if (activeQuestionSearchPort) {
+      activeQuestionSearchPort.postMessage({
+        action: "question_search_result",
+        data: request.data,
+        error: request.error
+      });
+    } else {
+      // 如果没有活动端口，使用广播方式
+      chrome.runtime.sendMessage({
+        action: "question_search_result",
+        data: request.data,
         error: request.error
       });
     }

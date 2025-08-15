@@ -24,6 +24,9 @@ import { extractAuditContent } from './auditContentExtractor.js';
 // 导入抽屉模块
 import { checkURLAndAddDrawerButton } from './drawerModule.js';
 
+// 导入题干搜索模块
+import { executeQuestionSearch } from './questionSearchModule.js';
+
 // 初始化加载关键词
 loadKeywordsFromStorage();
 
@@ -1121,6 +1124,36 @@ chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
         content: '无法提取页面内容: ' + (error.message || '未知错误')
       });
     }
+    return true;
+  }
+
+  if (request.action === "start_question_search") {
+    // 处理题干搜索请求 - 只读取图片src
+    try {
+      console.log('[Content] 开始执行题干搜索...');
+      
+      // 调用题干搜索模块，直接获取图片src
+      const imageSrc = executeQuestionSearch();
+      
+      console.log('[Content] 图片src获取完成，发送给background处理');
+      
+      // 发送图片src到background.js进行后续处理
+      chrome.runtime.sendMessage({
+        action: "question_search_image_url",
+        imageUrl: imageSrc
+      });
+      
+    } catch (error) {
+      console.error('[Content] 题干搜索失败:', error);
+      
+      // 发送错误信息到background.js
+      chrome.runtime.sendMessage({
+        action: "question_search_result",
+        data: `获取图片src失败: ${error.message}`,
+        error: error.message
+      });
+    }
+    
     return true;
   }
 

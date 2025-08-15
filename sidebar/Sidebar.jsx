@@ -10,6 +10,7 @@ import DocuScanComponent from './DocuScanComponent'; // 引入DocuScan组件
 import MobileWebComponent from './MobileWebComponent'; // 引入手机网页端组件
 import AuditComponent from './AuditComponent'; // 引入审核组件
 import WorkflowComponent from './WorkflowComponent'; // 引入工作流组件
+import QuestionSearchComponent from './QuestionSearchComponent'; // 引入题干搜索组件
 import { CozeService } from '../coze.js';
 // 从lib.js导入需要的网络请求函数
 import { run_llm, run_llm_stream, ocr_text, topic_split, content_review, format_latex } from '../lib.js';
@@ -46,7 +47,8 @@ export default function Main() {
     "docuscan": true,
     "mobile-web": true,
     "audit": true,
-    "workflow": true
+    "workflow": true,
+    "question_search": true
   });
   const [serverType, setServerType] = useState(null);
   const [isSettingsLoading, setIsSettingsLoading] = useState(true);
@@ -954,7 +956,8 @@ export default function Main() {
         (activeTab === 'ocr' && !features.ocr) ||
         (activeTab === 'workflow' && !features.workflow) ||
         (activeTab === 'clue-claiming' && !features["clue-claiming"]) ||
-        (activeTab === 'audit' && !features.audit)
+        (activeTab === 'audit' && !features.audit) ||
+        (activeTab === 'question_search' && !features.question_search)
     ) {
       // Find the first enabled tab or default to settings
       if (features.jieti) {
@@ -969,7 +972,7 @@ export default function Main() {
         setActiveTab('settings');
       }
     }
-  }, [features.jieti, features.ocr, features.workflow, features["clue-claiming"], features.audit, activeTab]);
+  }, [features.jieti, features.ocr, features.workflow, features["clue-claiming"], features.audit, features.question_search, activeTab]);
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
@@ -1032,6 +1035,13 @@ export default function Main() {
           hasChanges = true;
           changedFeatureName = '工作流';
           status = changes.workflow.newValue;
+        }
+
+        if ('question_search' in changes) {
+          updatedFeatures.question_search = changes.question_search.newValue;
+          hasChanges = true;
+          changedFeatureName = '题干搜索';
+          status = changes.question_search.newValue;
         }
 
         // Update state and show toast if any changes
@@ -1099,6 +1109,9 @@ export default function Main() {
                   )}
                   {features.audit && (
                     <li><a className={activeTab === 'audit' ? 'active' : ''} onClick={() => handleTabChange('audit')}>审核</a></li>
+                  )}
+                  {features.question_search && (
+                    <li><a className={activeTab === 'question_search' ? 'active' : ''} onClick={() => handleTabChange('question_search')}>题干搜索</a></li>
                   )}
                   {/* {features["clue-claiming"] && (
                     <li><a className={activeTab === 'clue-claiming' ? 'active' : ''} onClick={() => handleTabChange('clue-claiming')}>线索认领</a></li>
@@ -1204,6 +1217,13 @@ export default function Main() {
             )}
             {activeTab === 'audit' && (
               <AuditComponent
+                host={host}
+                uname={name}
+                serverType={serverType}
+              />
+            )}
+            {activeTab === 'question_search' && (
+              <QuestionSearchComponent
                 host={host}
                 uname={name}
                 serverType={serverType}
