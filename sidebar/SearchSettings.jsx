@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 const SearchSettings = () => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [searchServerUrl, setSearchServerUrl] = useState('http://127.0.0.1:8088/askstream');
+  const [searchServerUrl, setSearchServerUrl] = useState('https://ustjapi.pingfury.top/');
   const [searchCookie, setSearchCookie] = useState('');
   const [searchSessionId, setSearchSessionId] = useState('');
 
@@ -13,7 +13,7 @@ const SearchSettings = () => {
         setSearchServerUrl(result.searchServerUrl);
       } else {
         // 如果没有存储值，保存默认值
-        const defaultUrl = 'http://127.0.0.1:8088/askstream';
+        const defaultUrl = 'https://ustjapi.pingfury.top/';
         chrome.storage.sync.set({ searchServerUrl: defaultUrl });
         setSearchServerUrl(defaultUrl);
       }
@@ -61,9 +61,12 @@ const SearchSettings = () => {
             type="text"
             value={searchServerUrl}
             onChange={(e) => handleSearchServerUrlChange(e.target.value)}
-            placeholder="输入搜索服务器地址"
+            placeholder="https://example.com/"
             className="input input-bordered input-sm"
           />
+          <label className="label">
+            <span className="label-text-alt text-gray-500">仅输入域名部分，无需包含具体路径</span>
+          </label>
         </div>
         
         <div className="form-control w-full mt-2">

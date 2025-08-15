@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import CopyButton from './CopyButton.jsx';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
+import { user_info } from '../lib.js';
 
 const QuestionSearchComponent = ({ host, uname, serverType }) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -271,6 +272,52 @@ const QuestionSearchComponent = ({ host, uname, serverType }) => {
     if (!portRef.current) {
       console.error('未建立与background的连接');
       setSearchResults('连接已断开，请刷新页面重试');
+      return;
+    }
+
+    // 验证用户信息
+    try {
+      console.log('开始验证用户信息...');
+      const userInfo = await user_info(host, uname);
+      
+      if (!userInfo) {
+        setSearchResults('用户信息验证失败，请检查服务器地址和用户名');
+        return;
+      }
+
+      // 检查搜索权限：账户未过期 OR coze权限为true（满足其中一个即可）
+      let hasValidAccess = false;
+      let errorMessage = '';
+
+      // 检查账户是否过期
+      let isAccountValid = false;
+      if (userInfo.exp_time) {
+        const expTime = new Date(userInfo.exp_time);
+        const currentTime = new Date();
+        isAccountValid = currentTime <= expTime;
+        if (!isAccountValid) {
+          errorMessage += '账户已过期；';
+        }
+      }
+
+      // 检查 coze 权限
+      const hasCozePermission = userInfo.coze === true;
+      if (!hasCozePermission) {
+        errorMessage += '未开通搜索功能权限；';
+      }
+
+      // 只要满足其中一个条件即可
+      hasValidAccess = isAccountValid || hasCozePermission;
+
+      if (!hasValidAccess) {
+        setSearchResults(`搜索功能不可用：${errorMessage}请续费或联系管理员开通权限`);
+        return;
+      }
+
+      console.log('用户信息验证通过，开始搜索...');
+    } catch (error) {
+      console.error('用户信息验证失败:', error);
+      setSearchResults('用户信息验证失败：' + error.message);
       return;
     }
 

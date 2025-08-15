@@ -511,7 +511,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         });
         
         // 使用配置的服务器地址，如果没有配置则使用默认地址
-        const serverUrl = searchSettings.searchServerUrl || 'http://127.0.0.1:8088/askstream';
+        const baseUrl = searchSettings.searchServerUrl || 'https://ustjapi.pingfury.top/';
+        // 确保URL以/结尾，然后拼接路径
+        const serverUrl = baseUrl.endsWith('/') ? baseUrl + 'askstream' : baseUrl + '/askstream';
         
         // 创建FormData
         const formData = new FormData();
