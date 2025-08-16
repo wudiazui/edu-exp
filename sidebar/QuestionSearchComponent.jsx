@@ -260,6 +260,9 @@ const QuestionSearchComponent = ({ host, uname, serverType }) => {
   }, []);
 
   const handleQuestionSearch = async () => {
+    // 立即设置加载状态，提供即时反馈
+    setIsLoading(true);
+    
     // 清空之前的结果
     setSearchResults('');
     setThinkingChain(''); // 清空思维链
@@ -272,6 +275,7 @@ const QuestionSearchComponent = ({ host, uname, serverType }) => {
     if (!portRef.current) {
       console.error('未建立与background的连接');
       setSearchResults('连接已断开，请刷新页面重试');
+      setIsLoading(false); // 重置加载状态
       return;
     }
 
@@ -282,6 +286,7 @@ const QuestionSearchComponent = ({ host, uname, serverType }) => {
       
       if (!userInfo) {
         setSearchResults('用户信息验证失败，请检查服务器地址和用户名');
+        setIsLoading(false); // 重置加载状态
         return;
       }
 
@@ -311,6 +316,7 @@ const QuestionSearchComponent = ({ host, uname, serverType }) => {
 
       if (!hasValidAccess) {
         setSearchResults(`搜索功能不可用：${errorMessage}请续费或联系管理员开通权限`);
+        setIsLoading(false); // 重置加载状态
         return;
       }
 
@@ -318,6 +324,7 @@ const QuestionSearchComponent = ({ host, uname, serverType }) => {
     } catch (error) {
       console.error('用户信息验证失败:', error);
       setSearchResults('用户信息验证失败：' + error.message);
+      setIsLoading(false); // 重置加载状态
       return;
     }
 
@@ -338,7 +345,7 @@ const QuestionSearchComponent = ({ host, uname, serverType }) => {
     } catch (error) {
       console.error('题干搜索请求出错:', error);
       setSearchResults('搜索失败：' + error.message);
-      setIsLoading(false);
+      setIsLoading(false); // 确保重置加载状态
 
       // 连接可能已经断开，尝试重新连接
       setConnectionStatus('disconnected');

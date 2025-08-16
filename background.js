@@ -523,17 +523,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         // 直接传递URL给后端处理，避免CORS问题
         formData.append('imageUrl', imageUrl);
         
-        // 构建请求选项
-        const requestOptions = {
-          method: 'POST',
-          body: formData
-        };
-        
-        // 如果有配置Cookie，添加到请求头
+        // 如果有配置Cookie，添加到FormData作为参数
         if (searchSettings.searchCookie) {
-          requestOptions.headers = {
-            'Cookie': searchSettings.searchCookie
-          };
+          formData.append('cookies', searchSettings.searchCookie);
         }
         
         // 如果有会话ID，添加到FormData
@@ -541,13 +533,48 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           formData.append('sessionId', searchSettings.searchSessionId);
         }
         
+        // 构建请求选项
+        const requestOptions = {
+          method: 'POST',
+          body: formData
+        };
+        
         // 发送到配置的服务器
         console.log('[Background] 向服务器发送请求:', serverUrl);
         console.log('[Background] 请求配置:', requestOptions);
         const serviceResponse = await fetch(serverUrl, requestOptions);
         
         if (!serviceResponse.ok) {
-          throw new Error(`服务请求失败: ${serviceResponse.status} ${serviceResponse.statusText}`);
+          // 尝试获取详细的错误信息
+          let errorMessage = `服务请求失败: ${serviceResponse.status} ${serviceResponse.statusText}`;
+          try {
+            const errorResponse = await serviceResponse.text();
+            console.log('[Background] 服务器错误响应内容:', errorResponse);
+            
+            if (errorResponse) {
+              // 尝试解析JSON错误信息
+              try {
+                const errorJson = JSON.parse(errorResponse);
+                console.log('[Background] 解析后的错误JSON:', errorJson);
+                if (errorJson.error) {
+                  errorMessage = `请求失败 (${serviceResponse.status}): ${errorJson.error}`;
+                } else if (errorJson.message) {
+                  errorMessage = `请求失败 (${serviceResponse.status}): ${errorJson.message}`;
+                } else {
+                  errorMessage = `请求失败 (${serviceResponse.status}): ${errorResponse}`;
+                }
+              } catch (parseError) {
+                // 如果不是JSON，直接使用文本内容
+                console.log('[Background] 响应不是JSON格式，使用原始文本');
+                errorMessage = `请求失败 (${serviceResponse.status}): ${errorResponse}`;
+              }
+            }
+          } catch (readError) {
+            console.warn('[Background] 无法读取错误响应内容:', readError);
+          }
+          
+          console.error('[Background] 最终错误信息:', errorMessage);
+          throw new Error(errorMessage);
         }
         
         const result = await serviceResponse.json();
