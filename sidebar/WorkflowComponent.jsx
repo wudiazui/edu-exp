@@ -29,7 +29,7 @@ const KOUZI_SUBJECT_TYPES = {
   },
   shuxue: {
     name: "数学",
-    types: ["问答", "单选", "填空", "计算题", "解方程", "简便计算"]
+    types: ["问答", "单选", "填空", "计算题", "解方程", "简便计算", "证明题"]
   },
   lishi: {
     name: "历史",
@@ -220,7 +220,7 @@ const WorkflowComponent = ({ host, uname, serverType }) => {
                 type: "image",
                 file_id: uploadResult.id
               },
-              orc_type: '' // 默认模式
+              orc_type: 'only_topic' // 题干模式
             }
           });
 
@@ -249,7 +249,7 @@ const WorkflowComponent = ({ host, uname, serverType }) => {
         // 官方服务器OCR处理
         recognizedText = await ocr_text({ 
           'image_data': selectedImage,
-          'orc_type': ''
+          'orc_type': 'only_topic'
         }, host, uname);
       }
 

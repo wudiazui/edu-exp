@@ -214,7 +214,7 @@ const QuestionSearchComponent = ({ host, uname, serverType }) => {
             }, RECONNECT_DELAY);
           } else {
             console.error('达到最大重连次数，停止重连');
-            setSearchResults(prev => prev + '\n\n连接已断开，请刷新页面重试。');
+            setSearchResults(prev => prev + '\n\n🔌 连接已断开\n\n已尝试多次重连失败，请：\n• 刷新页面重试\n• 重新启动浏览器\n• 检查插件是否正常运行');
           }
         });
       } catch (error) {
@@ -297,7 +297,7 @@ const QuestionSearchComponent = ({ host, uname, serverType }) => {
 
     if (!portRef.current) {
       console.error('未建立与background的连接');
-      setSearchResults('连接已断开，请刷新页面重试');
+      setSearchResults('🔌 连接已断开\n\n请刷新页面或重新启动插件后重试');
       setIsLoading(false); // 重置加载状态
       return;
     }
@@ -308,7 +308,7 @@ const QuestionSearchComponent = ({ host, uname, serverType }) => {
       const userInfo = await user_info(host, uname);
       
       if (!userInfo) {
-        setSearchResults('用户信息验证失败，请检查服务器地址和用户名');
+        setSearchResults('❌ 用户信息验证失败\n\n请检查以下设置：\n• 服务器地址是否正确\n• 用户名是否正确\n• 网络连接是否正常');
         setIsLoading(false); // 重置加载状态
         return;
       }
@@ -338,7 +338,7 @@ const QuestionSearchComponent = ({ host, uname, serverType }) => {
       hasValidAccess = isAccountValid || hasCozePermission;
 
       if (!hasValidAccess) {
-        setSearchResults(`搜索功能不可用：${errorMessage}请续费或联系管理员开通权限`);
+        setSearchResults(`🚫 搜索功能不可用\n\n原因：${errorMessage}\n\n解决方案：\n• 账户续费延期\n• 联系管理员开通搜索权限\n• 检查账户状态`);
         setIsLoading(false); // 重置加载状态
         return;
       }
@@ -346,7 +346,7 @@ const QuestionSearchComponent = ({ host, uname, serverType }) => {
       console.log('用户信息验证通过，开始搜索...');
     } catch (error) {
       console.error('用户信息验证失败:', error);
-      setSearchResults('用户信息验证失败：' + error.message);
+      setSearchResults('⚠️ 用户信息验证失败\n\n错误详情：' + error.message + '\n\n💡 建议：\n• 检查网络连接\n• 确认服务器地址正确\n• 稍后重试');
       setIsLoading(false); // 重置加载状态
       return;
     }
@@ -367,7 +367,7 @@ const QuestionSearchComponent = ({ host, uname, serverType }) => {
       });
     } catch (error) {
       console.error('题干搜索请求出错:', error);
-      setSearchResults('搜索失败：' + error.message);
+      setSearchResults('搜索过程中出错：' + error.message + '\n\n💡 解决建议：如经常出现此错误，请前往"设置" → "搜索设置"更换搜索cookie和会话ID');
       setIsLoading(false); // 确保重置加载状态
 
       // 连接可能已经断开，尝试重新连接
@@ -420,6 +420,14 @@ const QuestionSearchComponent = ({ host, uname, serverType }) => {
                 </span>}
             </div>
           </button>
+          
+          {/* 题型和搜索提示 */}
+          <div className="mt-2 space-y-1">
+            <div className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded border-l-2 border-orange-300">
+              <span className="font-medium">⚠️ 搜索异常提示：</span>
+              如经常出现"搜索过程中出错"，请在"设置" → "搜索设置"中更换搜索cookie和会话ID
+            </div>
+          </div>
         </div>
 
         {/* 思维链显示区域 */}

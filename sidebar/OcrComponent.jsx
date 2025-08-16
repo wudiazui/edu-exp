@@ -117,6 +117,7 @@ const OcrComponent = ({ host, uname, serverType }) => {
             <option value="">默认模式</option>
             <option value="html">下划线模式</option>
             <option value="latex">LaTeX模式</option>
+            <option value="only_topic">题干模式</option>
           </select>
         </div>
 
