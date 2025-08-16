@@ -151,16 +151,39 @@ const QuestionSearchComponent = ({ host, uname, serverType }) => {
               setSearchResponse(responseData);
               
               // 提取问题内容
+              let questionFound = false;
               if (responseData.question && responseData.question.content) {
                 setQuestionContent(responseData.question.content);
-              } else {
+                questionFound = true;
+              } else if (responseData.question) {
+                // 如果 question.content 不存在，尝试直接使用 question 字段
+                setQuestionContent(responseData.question);
+                questionFound = true;
+                console.log('使用 question 字段作为题干内容');
+              }
+              
+              if (!questionFound) {
                 console.warn('搜索响应中未找到问题内容');
               }
               
               // 提取答案内容
+              let answerFound = false;
               if (responseData.answer && Array.isArray(responseData.answer) && responseData.answer.length > 0 && responseData.answer[0].content) {
                 setAnswerContent(responseData.answer[0].content);
-              } else {
+                answerFound = true;
+              } else if (responseData.answer && Array.isArray(responseData.answer) && responseData.answer.length > 0) {
+                // 如果 answer[0].content 不存在，尝试直接使用 answer[0]
+                setAnswerContent(responseData.answer[0]);
+                answerFound = true;
+                console.log('使用 answer[0] 字段作为解答内容');
+              } else if (responseData.answer) {
+                // 如果 answer 不是数组，直接使用 answer 字段
+                setAnswerContent(responseData.answer);
+                answerFound = true;
+                console.log('使用 answer 字段作为解答内容');
+              }
+              
+              if (!answerFound) {
                 console.warn('搜索响应中未找到答案内容');
               }
             } catch (error) {
