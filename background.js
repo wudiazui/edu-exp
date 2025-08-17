@@ -1,4 +1,4 @@
-import {getAuditTaskLabel, format_latex} from "./lib.js";
+import { format_latex } from "./lib.js";
 import { tex2svg } from "./tex2svg.js";
 import { renderMarkdownWithMath } from "./markdown-renderer.js";
 // 使用动态导入，而不是静态导入
@@ -75,48 +75,6 @@ chrome.runtime.onInstalled.addListener(() => {
         parentId: "baidu-submenu",
         contexts: ["all"]
       });
-      chrome.contextMenus.create({
-        id: "send-review-to-sidebar",
-        title: "开始辅助审核",
-        parentId: "baidu-submenu",
-        contexts: ["all"]
-      });
-      chrome.contextMenus.create({
-        id: "format-math",
-        title: "渲染数学公式",
-        parentId: "baidu-submenu",
-        contexts: ["all"]
-      });
-      chrome.contextMenus.create({
-        id: "math-img",
-        title: "渲染竖式计算",
-        parentId: "baidu-submenu",
-        contexts: ["selection"]
-      });
-      chrome.contextMenus.create({
-        id: "auto-fill-blank",
-        title: "自动填入答案",
-        parentId: "baidu-submenu",
-        contexts: ["selection"]
-      });
-      chrome.contextMenus.create({
-        id: "auto-fill-options",
-        title: "自动填入选项",
-        parentId: "baidu-submenu",
-        contexts: ["selection"]
-      });
-      chrome.contextMenus.create({
-        id: "topic-split",
-        title: "题目切割",
-        parentId: "baidu-submenu",
-        contexts: ["all"]
-      });
-      chrome.contextMenus.create({
-        id: "image-white-background",
-        title: "图片白底",
-        parentId: "baidu-submenu",
-        contexts: ["image"]
-      });
     });
 
     // Create "百川" submenu
@@ -184,29 +142,8 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === "send-topic") {
     chrome.tabs.sendMessage(tab.id, { action: "send_topic" });
   }
-  if (info.menuItemId === "send-review-to-sidebar") {
-    chrome.tabs.sendMessage(tab.id, { action: "send_review_to_sidebar" });
-  }
-  if (info.menuItemId === "format-math") {
-    chrome.tabs.sendMessage(tab.id, { action: "format_math" });
-  }
-  if (info.menuItemId === "math-img") {
-    chrome.tabs.sendMessage(tab.id, { action: "math_img" });
-  }
-  if (info.menuItemId === "auto-fill-blank") {
-    chrome.tabs.sendMessage(tab.id, { action: "auto_fill_blank" });
-  }
-  if (info.menuItemId === "auto-fill-options") {
-    chrome.tabs.sendMessage(tab.id, { action: "auto_fill_options" });
-  }
-  if (info.menuItemId === "topic-split") {
-    chrome.tabs.sendMessage(tab.id, { action: "topic_split" });
-  }
   if (info.menuItemId === "format-organize") {
     chrome.tabs.sendMessage(tab.id, { action: "format_organize" });
-  }
-  if (info.menuItemId === "image-white-background") {
-    chrome.tabs.sendMessage(tab.id, { action: "image_white_background", srcUrl: info.srcUrl });
   }
   if (info.menuItemId.startsWith('insert-char-')) {
     const shortcutName = info.menuItemId.replace('insert-char-', '');
@@ -234,16 +171,10 @@ chrome.commands.onCommand.addListener((command) => {
       switch (command) {
       case 'font-format':
         chrome.tabs.sendMessage(tab.id, { action: "font_format" });
-          break;
-        case 'format-math':
-          chrome.tabs.sendMessage(tab.id, { action: "format_math" });
-          break;
-        case 'math-img':
-          chrome.tabs.sendMessage(tab.id, { action: "math_img" });
-          break;
-        case 'send-topic':
-          chrome.tabs.sendMessage(tab.id, { action: "send_topic" });
-          break;
+        break;
+      case 'send-topic':
+        chrome.tabs.sendMessage(tab.id, { action: "send_topic" });
+        break;
       }
     }
   });
@@ -727,85 +658,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true; // 保持消息通道开放以等待异步响应
   }
 
-  // 处理认领任务响应的转发
-  if (request.action === "claimAuditTaskResponse") {
-    chrome.runtime.sendMessage({
-      type: 'CLAIM_AUDIT_TASK_RESPONSE',
-      data: request.data
-    });
-    return true;
-  }
-
-  // 处理自动认领的开始和停止
-  if (request.action === "start_auto_claiming") {
-    chrome.storage.local.get(['autoClaimingInterval'], (result) => {
-      const interval = request.interval || (result.autoClaimingInterval * 1000) || 1000;
-      autoClaimingActive = true;
-      // 初始化已认领计数
-      currentSuccessfulClaims = request.successfulClaims || 0;
-      // 获取认领数量限制
-      const claimLimit = request.claimLimit || 10;
-      
-      chrome.storage.local.set({
-        autoClaimingActive: true,
-        autoClaimingInterval: interval / 1000  // 保存为秒
-      });
-
-      if (autoClaimingTimer) {
-        clearInterval(autoClaimingTimer);
-        autoClaimingTimer = null;
-      }
-
-      console.log('[Background] Polling interval:', interval, 'ms');
-      autoClaimingTimer = setInterval(() => {
-        // 获取所有标签页
-        chrome.tabs.query({}, (tabs) => {
-          tabs.forEach(tab => {
-            // 向每个标签页发送消息
-            chrome.tabs.sendMessage(tab.id, {
-              action: "periodic_message",
-              message: "自动认领中",
-              timestamp: new Date().toISOString(),
-              params: request.params,
-              includeKeywords: request.includeKeywords || [], // 传递包含关键词列表
-              excludeKeywords: request.excludeKeywords || [],  // 传递排除关键词列表
-              claimLimit: request.claimLimit || 10, // 传递认领数量限制，默认为10
-              successfulClaims: currentSuccessfulClaims // 传递当前已认领数量
-            });
-          });
-        });
-      }, interval);
-
-      sendResponse({ status: "started" });
-    });
-    return true;  // 保持消息通道开放
-  }
-
-  if (request.action === "stop_auto_claiming") {
-    autoClaimingActive = false;
-    chrome.storage.local.set({ autoClaimingActive: false });
-    if (autoClaimingTimer) {
-      clearInterval(autoClaimingTimer);
-      autoClaimingTimer = null;
-    }
-    // 重置已认领计数
-    currentSuccessfulClaims = 0;
-    sendResponse({ status: "stopped" });
-    return true;
-  }
-  
-  // 处理更新认领计数的消息
-  if (request.action === "update_claim_count") {
-    currentSuccessfulClaims = request.successfulClaims;
-    console.log('[Background] 更新已认领计数:', currentSuccessfulClaims);
-    sendResponse({ status: "updated" });
-    return true;
-  }
-
-  if (request.action === "get_auto_claiming_status") {
-    sendResponse({ autoClaimingActive });
-    return true;
-  }
 
   // Handle fill answer/analysis messages
   if (request.type === "answer" || request.type === "analysis" || request.type === "topic" || request.type === "question_html" || request.type === "documentassistant") {
@@ -838,50 +690,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     createCharacterMenus();
   }
 
-  // 处理审核功能相关的消息转发
-  if (request.action === "start_audit_check") {
-    // 获取当前活动标签页
-    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-      if (tabs && tabs[0]) {
-        // 转发消息到内容脚本, 明确指定主框架
-        chrome.tabs.sendMessage(tabs[0].id, {
-          action: "start_audit_check"
-        }, { frameId: 0 });
-      } else {
-        // 如果没有找到活动标签页，返回错误
-        chrome.runtime.sendMessage({
-          action: "audit_content_result",
-          error: "未找到活动标签页"
-        });
-      }
-    });
-    return true;
-  }
-
-  // 从内容脚本接收消息并转发到扩展页面
-  if (request.action === "audit_content_extract") {
-    // 如果有活动的审核端口，通过端口发送
-    if (activeAuditPort) {
-      activeAuditPort.postMessage({
-        action: "audit_content_extract",
-        html: request.html,
-        rawData: request.rawData,
-        error: request.error
-      });
-    } else {
-      // 如果没有活动端口，使用广播方式
-      chrome.runtime.sendMessage({
-        action: "audit_content_extract",
-        html: request.html,
-        rawData: request.rawData,
-        error: request.error
-      });
-    }
-    return true;
-  }
-
-  // 从内容脚本接收题干搜索结果并转发到扩展页面
-  if (request.action === "question_search_result") {
+    // 从内容脚本接收题干搜索结果并转发到扩展页面
+    if (request.action === "question_search_result") {
     // 如果有活动的题干搜索端口，通过端口发送
     if (activeQuestionSearchPort) {
       activeQuestionSearchPort.postMessage({
