@@ -22,30 +22,6 @@
       "background.js"
     ]
   },
-  "content_scripts": [
-    {
-      "matches": [
-        "https://easylearn.baidu.com/*"
-      ],
-      "js": [
-        "content/scripts.js"
-      ],
-      "css": [
-        "./css/main.css"
-      ]
-    },
-    {
-      "matches": [
-        "https://www.baichuanweb.com/*"
-      ],
-      "js": [
-        "content/bc.js"
-      ],
-      "css": [
-        "./css/bc.css"
-      ]
-    }
-  ],
   "chromium:action": {
     "default_icon": {
       "48": "icccc.png"
